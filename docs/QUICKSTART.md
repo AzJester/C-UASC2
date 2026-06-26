@@ -31,7 +31,17 @@ The browser UI is the front end to everything below. Served by c2-core, it runs 
 **LIVE** mode (driven by the real bus and engagement gates). The *same* page,
 opened standalone, runs an embedded **SIM** (the shareable, zero-install build).
 
-What to show, in order:
+**Fastest path — Auto-play brief.** Click **▶ Auto-play brief** for a ~90-second
+hands-free run that narrates itself: swarm inbound → fuse → track-quality gate →
+remote tasking → any-sensor/any-shooter engagement → C2 node loss → fight continues
+→ outcomes. Any click takes over manual control. This is the one to show leadership.
+
+The **outcomes scoreboard** (top-right) keeps the running score: threats defeated,
+leakers, average time-to-defeat, engagements, and the headline metric —
+**% of engagements that paired a sensor and shooter from different vendors** (the
+any-shooter / anti-lock-in argument, quantified).
+
+To drive it manually, in order:
 1. **Fused picture.** Hostiles (red) and a friendly (blue) are tracked from several
    sensors at once — one coherent picture, not per-vendor screens.
 2. **Track quality gates fires.** Click an inbound hostile; try **Engage** — it's
@@ -43,7 +53,10 @@ What to show, in order:
    engagement runs to COMPLETE. (Imperative 5.)
 5. **Positive control.** Try to engage the **friendly**, switch the operator role to
    **OBS**, or set **WEAPONS HOLD** — each is denied with a reason. (docs/05.)
-6. **Resilience.** Hit **Simulate node loss** — a second C2 node continues the fight
+6. **No vendor lock-in.** Hit **Swap radar vendor** — the radar's adapter changes
+   vendor mid-scenario with zero integration and no track loss (conformance to the
+   government-owned interface is the only requirement). (docs/02.)
+7. **Resilience.** Hit **Simulate node loss** — a second C2 node continues the fight
    off the same shared COP. **Launch swarm** shows scale.
 
 ## Option B — No Docker (local Python)
