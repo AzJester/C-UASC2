@@ -98,6 +98,7 @@
     color: var(--faint);
   }
   .stat.hostile .v { color: var(--hostile); }
+  .stat.blue .v { color: var(--friend); }
   .stat.ready .v { color: var(--neutral); }
 
   .modechip {
@@ -224,6 +225,35 @@
     line-height: 1.1;
   }
   .sb-xv .sub { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+  /* echelon federation HUD (top-left) */
+  .fedhud {
+    position: absolute;
+    top: 12px; left: 12px;
+    width: 196px;
+    background: rgba(8, 11, 16, 0.82);
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 11px 12px;
+    backdrop-filter: blur(3px);
+    z-index: 4;
+  }
+  .fedhud h4 {
+    margin: 0 0 8px;
+    font-family: var(--mono);
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .fed-node { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .fed-node .fd-dot { width: 9px; height: 9px; border-radius: 50%; background: #2b3744; flex: none; box-shadow: 0 0 0 1px #1f2937; }
+  .fed-node.on .fd-dot { background: var(--neutral); box-shadow: 0 0 6px rgba(70,198,110,0.6); }
+  .fed-node .fd-id { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+  .fed-node .fd-role { font-size: 10px; color: var(--muted); margin-left: auto; text-transform: uppercase; letter-spacing: 0.06em; }
+  .fed-link { width: 2px; height: 9px; margin-left: 3px; background: #2b3744; }
+  .fed-link.on { background: var(--neutral); }
+  .fed-note { margin-top: 7px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.04em; color: var(--neutral); }
+  .fed-note.dim { color: var(--faint); }
 
   /* auto-play narrator caption */
   .narrator {
@@ -498,8 +528,8 @@
       <span>Common Operating Picture</span>
     </div>
     <div class="stat-group">
-      <div class="stat"><div class="v" id="sTracks">0</div><div class="k">Tracks</div></div>
-      <div class="stat hostile"><div class="v" id="sHostile">0</div><div class="k">Hostile</div></div>
+      <div class="stat hostile"><div class="v" id="sRed">0</div><div class="k">Red</div></div>
+      <div class="stat blue"><div class="v" id="sBlue">0</div><div class="k">Blue</div></div>
       <div class="stat ready"><div class="v" id="sReady">0</div><div class="k">Effectors</div></div>
       <div class="stat"><div class="v" id="sEng">0</div><div class="k">Engaged</div></div>
       <div class="stat"><div class="v" id="sFps">60</div><div class="k">FPS</div></div>
@@ -513,12 +543,22 @@
       <div class="nodelost" id="nodeLost"></div>
       <div class="narrator" id="narrator"></div>
       <div class="scoreboard" id="scoreboard"></div>
+      <div class="fedhud" id="fedhud"></div>
       <div class="legend" id="legend"></div>
       <div class="hint">click a track to select &middot; sensors &#9634; &middot; effectors &#9670;</div>
     </div>
 
     <aside class="rail">
       <div class="rail-scroll">
+        <div class="card">
+          <h3>COP View</h3>
+          <div class="seg" id="viewSeg">
+            <button data-v="ALL" aria-pressed="true">ALL</button>
+            <button data-v="RED">RED</button>
+            <button data-v="BLUE">BLUE</button>
+          </div>
+        </div>
+
         <div class="card" id="trackCard">
           <h3>Selected Track</h3>
           <div id="trackBody"><p class="empty">No track selected. Click a contact on the plot.</p></div>
@@ -560,6 +600,7 @@
       <button class="sbtn" id="btnSwarm">Launch swarm</button>
       <button class="sbtn" id="btnRaid">Mass raid</button>
       <button class="sbtn" id="btnSwap">Swap radar vendor</button>
+      <button class="sbtn" id="btnEchelon">Integrate up-echelon</button>
       <button class="sbtn danger" id="btnNode">Simulate node loss</button>
       <button class="sbtn" id="btnReset">Reset</button>
       <span class="grow"></span>
@@ -583,6 +624,11 @@
     UNKNOWN: "#9aa7b5", NEUTRAL: "#46c66e", PENDING: "#9aa7b5", ASSUMED_FRIEND: "#3da5ff",
   };
   const ACCENT = "#39a0c4";
+  // Red = threat picture, Blue = friendly force picture (MIL-STD identity bins).
+  const RED_IDS = new Set(["HOSTILE", "SUSPECT"]);
+  const BLUE_IDS = new Set(["FRIEND", "ASSUMED_FRIEND", "NEUTRAL"]);
+  const isRed = (t) => RED_IDS.has(t.identity);
+  const isBlue = (t) => BLUE_IDS.has(t.identity);
   const MIN_TQ = { EW_JAMMER: 8, RF_TAKEOVER: 8, NET_CAPTURE: 9, DIRECTED_ENERGY: 10, KINETIC_GUN: 11, KINETIC_INTERCEPTOR: 12 };
   const EFFECT_FOR = { EW_JAMMER: "EW_DEFEAT", RF_TAKEOVER: "RF_TAKEOVER", NET_CAPTURE: "NET_CAPTURE", DIRECTED_ENERGY: "DIRECTED_ENERGY", KINETIC_GUN: "KINETIC", KINETIC_INTERCEPTOR: "KINETIC" };
   const ENGAGEABLE = new Set(["HOSTILE", "SUSPECT"]);
@@ -640,6 +686,8 @@
     stats: { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, defeatTimes: [] },
     pendingEng: new Map(),                 // LIVE: engagementId -> {trackId, t0, firstSeen}
     autoplay: { running: false, timer: null },
+    view: "ALL",                            // ALL | RED | BLUE COP filter
+    echelon: { bn: false, rgt: false },     // up-echelon federation state
   };
 
   function isCrossVendor(track, eff) {
@@ -693,12 +741,19 @@
     S.tracks.set(id, t);
     return t;
   }
-  function spawnFriend() {
+  // Blue force air track: patrols a loiter box, never dives the asset, not engageable.
+  function spawnBlue(opts = {}) {
     const id = "TRK-" + (++S.seq);
+    const ox = opts.ox != null ? opts.ox : -2300, oy = opts.oy != null ? opts.oy : 1700;
+    const orad = opts.orad || 700, orbit = Math.random() * Math.PI * 2;
     const t = {
-      trackId: id, identity: "FRIEND", classificationType: "ROTARY",
-      x: -2600, y: 1900, speed: 22, heading: 0, tq: 13,
-      contributingSensors: ["SEN-RAD-01"], state: "ACTIVE", fade: 1, orbit: 0, jitter: 0,
+      trackId: id,
+      identity: opts.identity || "FRIEND",
+      classificationType: opts.cls || "ROTARY",
+      ox, oy, orad, orbit, ospeed: opts.ospeed || 0.25,
+      x: ox + Math.cos(orbit) * orad, y: oy + Math.sin(orbit) * orad,
+      speed: opts.speed || 22, heading: 0, tq: opts.tq || 13,
+      contributingSensors: ["SEN-RAD-01"], state: "ACTIVE", fade: 1, jitter: 0, firstSeen: perf(),
     };
     S.tracks.set(id, t);
     return t;
@@ -708,10 +763,10 @@
   function simTick(dt) {
     for (const t of S.tracks.values()) {
       if (t.state === "NEUTRALIZED") { t.fade = Math.max(0, t.fade - dt * 0.6); continue; }
-      if (t.identity === "FRIEND") {
-        t.orbit = (t.orbit || 0) + dt * 0.25;
-        t.x = -2300 + Math.cos(t.orbit) * 700;
-        t.y = 1700 + Math.sin(t.orbit) * 700;
+      if (isBlue(t)) {
+        t.orbit = (t.orbit || 0) + dt * (t.ospeed || 0.25);
+        t.x = (t.ox || 0) + Math.cos(t.orbit) * (t.orad || 700);
+        t.y = (t.oy || 0) + Math.sin(t.orbit) * (t.orad || 700);
       } else {
         // steer toward asset with a little weave
         const desired = Math.atan2(-t.y, -t.x);
@@ -728,12 +783,12 @@
       }
       t.contributingSensors = contrib;
       const target = clamp(3 + covering * 3, 0, covering >= 2 ? 11 : 7);
-      if (t.identity !== "FRIEND") {
+      if (!isBlue(t)) {
         if (t.tq < target) t.tq = Math.min(target, t.tq + dt * 1.2);
         else if (covering === 0 && t.tq > 2) t.tq -= dt * 0.5;
       }
       // leaker check
-      if (t.identity !== "FRIEND" && dist(t.x, t.y, 0, 0) < 250) {
+      if (!isBlue(t) && dist(t.x, t.y, 0, 0) < 250) {
         S.stats.leakers++;
         logEvent("LEAKER", "LEAKER", `${t.trackId} reached defended asset`);
         S.tracks.delete(t.trackId);
@@ -974,8 +1029,12 @@
     // defended asset
     drawAsset(cx, cy);
 
-    // tracks (+ engagement beams)
-    for (const t of S.tracks.values()) drawTrack(t);
+    // tracks (+ engagement beams), filtered by the Red/Blue COP view
+    for (const t of S.tracks.values()) {
+      if (S.view === "RED" && !isRed(t)) continue;
+      if (S.view === "BLUE" && !isBlue(t)) continue;
+      drawTrack(t);
+    }
 
     requestAnimationFrame(loop);
   }
@@ -1093,8 +1152,10 @@
   // ---- render right rail ----
   function renderRail() {
     renderScoreboard();
-    $("sTracks").textContent = [...S.tracks.values()].filter((t) => t.state !== "NEUTRALIZED").length;
-    $("sHostile").textContent = [...S.tracks.values()].filter((t) => t.identity === "HOSTILE" && t.state !== "NEUTRALIZED").length;
+    renderFederation();
+    const active = [...S.tracks.values()].filter((t) => t.state !== "NEUTRALIZED");
+    $("sRed").textContent = active.filter(isRed).length;
+    $("sBlue").textContent = active.filter(isBlue).length;
     $("sReady").textContent = S.effectors.filter((e) => e.mag > 0).length + "/" + S.effectors.length;
     $("sEng").textContent = S.engaged;
 
@@ -1193,6 +1254,7 @@
   }
   bindSeg("roleSeg", "role");
   bindSeg("wcsSeg", "wcs");
+  bindSeg("viewSeg", "view");
 
   $("btnSwarm").onclick = () => {
     if (S.live) { toast("ok", "swarm is driven by the scenario engine in LIVE mode"); return; }
@@ -1215,6 +1277,7 @@
   };
   $("btnAuto").onclick = autoplay;
   $("btnSwap").onclick = swapVendor;
+  $("btnEchelon").onclick = integrateEchelon;
   $("btnNode").onclick = () => toggleNode();
   $("btnReset").onclick = () => { if (S.autoplay.running) stopAutoplay(); resetScenario(); };
 
@@ -1226,6 +1289,7 @@
       nl.textContent = "\u26A0 C2-NODE-01 OFFLINE \u2014 NODE-02 ASSUMED CONTROL (shared COP intact)";
       nl.classList.add("on");
       logEvent("INFO", "INFO", "C2-NODE-01 lost \u00B7 NODE-02 continues from shared COP");
+      if (S.echelon.bn) logEvent("INFO", "INFO", "BN-7 retains the shared COP \u2014 regiment picture intact");
       toast("ok", "Node lost \u2014 fight continues on NODE-02");
     } else {
       S.node = "C2-NODE-01"; nl.classList.remove("on");
@@ -1262,6 +1326,34 @@
       '<div class="sb-xv"><div class="l">Cross-vendor pairings</div>' +
       `<div class="big">${pct}%</div>` +
       `<div class="sub">${xv} of ${eng} shots crossed a vendor boundary</div></div>`;
+  }
+
+  // ---- echelon federation (Battalion / Regiment) ----
+  function renderFederation() {
+    const node = (id, role, on) =>
+      `<div class="fed-node ${on ? "on" : ""}"><span class="fd-dot"></span><span class="fd-id">${id}</span><span class="fd-role">${role}</span></div>`;
+    $("fedhud").innerHTML =
+      "<h4>Echelon Federation</h4>" +
+      node(S.node, "Site C2", true) +
+      `<div class="fed-link ${S.echelon.bn ? "on" : ""}"></div>` +
+      node("BN-7", "Battalion", S.echelon.bn) +
+      `<div class="fed-link ${S.echelon.rgt ? "on" : ""}"></div>` +
+      node("RGT-3", "Regiment", S.echelon.rgt) +
+      (S.echelon.bn
+        ? '<div class="fed-note">Red + Blue COP shared up-echelon</div>'
+        : '<div class="fed-note dim">site COP only \u2014 not federated</div>');
+  }
+  async function integrateEchelon() {
+    if (S.echelon.bn && S.echelon.rgt) { toast("ok", "Already federated to BN-7 and RGT-3"); return; }
+    logEvent("INFO", "INFO", "Federating up-echelon (leaf-node join to the common bus)\u2026");
+    await sleep(500);
+    S.echelon.bn = true; renderFederation();
+    logEvent("GRANTED", "GRANTED", "BN-7 (Battalion) LINKED \u00B7 Red+Blue COP, tracks, engagements shared");
+    toast("ok", "BN-7 Battalion linked");
+    await sleep(650);
+    S.echelon.rgt = true; renderFederation();
+    logEvent("GRANTED", "GRANTED", "RGT-3 (Regiment) LINKED \u00B7 regiment COP synced");
+    toast("ok", "RGT-3 linked \u00B7 federated in ~1.2s (conformance, not bespoke integration)");
   }
 
   // ---- auto-play vignette ----
@@ -1316,7 +1408,7 @@
       }
       await sleep(3500); autoGuard();
 
-      setNarrator("02 \u00B7 Fuse", "One fused picture from radar, RF, and EO/IR \u2014 not three vendor screens");
+      setNarrator("02 \u00B7 Fuse", "One fused Red + Blue picture from radar, RF, and EO/IR \u2014 not three vendor screens");
       await sleep(4000); autoGuard();
 
       const t = pickInRangeHostile();
@@ -1336,16 +1428,20 @@
       await engageMany(3, "06 \u00B7 Distributed pairing");
       autoGuard();
 
-      setNarrator("07 \u00B7 Resilience", "Simulating C2 node loss\u2026");
+      setNarrator("07 \u00B7 Echelon", "Rapidly integrating with Battalion and Regiment \u2014 same interface, no bespoke work");
+      await integrateEchelon();
+      await sleep(1800); autoGuard();
+
+      setNarrator("08 \u00B7 Resilience", "Simulating C2 node loss\u2026");
       if (!S.nodeLost) toggleNode(true);
       await sleep(3000); autoGuard();
-      setNarrator("07 \u00B7 Resilience", "NODE-02 assumes control from the shared COP \u2014 the fight continues");
+      setNarrator("08 \u00B7 Resilience", "NODE-02 + BN-7 hold the shared COP \u2014 the fight continues");
       await sleep(2500); autoGuard();
-      await engageMany(3, "07 \u00B7 Resilience");
+      await engageMany(3, "08 \u00B7 Resilience");
       autoGuard();
 
       const pct = S.stats.engagements ? Math.round((100 * S.stats.crossVendor) / S.stats.engagements) : 0;
-      setNarrator("08 \u00B7 Outcomes", `${S.stats.defeated} defeated \u00B7 ${pct}% cross-vendor pairings \u00B7 government-owned interfaces: any sensor, any shooter`);
+      setNarrator("09 \u00B7 Outcomes", `${S.stats.defeated} defeated \u00B7 ${pct}% cross-vendor pairings \u00B7 federated to BN/RGT \u00B7 any sensor, any shooter`);
       await sleep(6500); autoGuard();
       setNarrator(null, null);
       logEvent("INFO", "INFO", "AUTO-PLAY brief complete");
@@ -1361,8 +1457,15 @@
     S.effectors = JSON.parse(JSON.stringify(EFFECTORS));
     S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, defeatTimes: [] };
     S.pendingEng.clear();
+    S.echelon = { bn: false, rgt: false };
+    S.view = "ALL"; applySeg("viewSeg", "view", "ALL");
     S.nodeLost = false; S.node = "C2-NODE-01"; $("nodeLost").classList.remove("on");
-    if (!S.live) { spawnFriend(); spawnHostile({ bearing: -0.6, r: 4200, tq: 5, cls: "MULTIROTOR" }); }
+    if (!S.live) {
+      spawnBlue({ identity: "FRIEND", cls: "ROTARY", ox: -2300, oy: 1700, orad: 700, ospeed: 0.25 });
+      spawnBlue({ identity: "ASSUMED_FRIEND", cls: "FIXED_WING", ox: 2400, oy: 1500, orad: 1100, ospeed: 0.18, speed: 60 });
+      spawnBlue({ identity: "FRIEND", cls: "UAS_GROUP_2", ox: 200, oy: 2700, orad: 600, ospeed: 0.3 });
+      spawnHostile({ bearing: -0.6, r: 4200, tq: 5, cls: "MULTIROTOR" });
+    }
     $("log").innerHTML = "";
     logEvent("INFO", "INFO", "Scenario reset");
     renderRail();

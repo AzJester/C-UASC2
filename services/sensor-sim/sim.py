@@ -52,6 +52,7 @@ SENSORS = [
 ]
 
 TYPES = ["MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "FIXED_WING"]
+BLUE_IDS = {"FRIEND", "ASSUMED_FRIEND", "NEUTRAL"}   # friendly force (Blue) picture
 
 
 def _now() -> str:
@@ -84,7 +85,8 @@ def _envelope(message_type: str, component: str, node_id: str, payload: dict) ->
 class Track:
     _seq = 1000
 
-    def __init__(self, identity: str, x: float, y: float, speed: float, tq: float, cls: str):
+    def __init__(self, identity: str, x: float, y: float, speed: float, tq: float, cls: str,
+                 ox: float = 0.0, oy: float = 0.0, orad: float = 700.0, ospeed: float = 0.25):
         Track._seq += 1
         self.id = f"TRK-{Track._seq}"
         self.identity = identity
@@ -94,14 +96,19 @@ class Track:
         self.heading = math.atan2(-y, -x)  # toward asset
         self.tq = tq
         self.contrib: list[str] = []
+        self.ox, self.oy, self.orad, self.ospeed = ox, oy, orad, ospeed
         self.orbit = 0.0
         self.alive = True
 
+    def is_blue(self) -> bool:
+        return self.identity in BLUE_IDS
+
     def step(self, dt: float) -> None:
-        if self.identity == "FRIEND":
-            self.orbit += dt * 0.25
-            self.x = -2300 + math.cos(self.orbit) * 700
-            self.y = 1700 + math.sin(self.orbit) * 700
+        if self.is_blue():
+            # Blue force air: loiter on a patrol box, never dive the asset.
+            self.orbit += dt * self.ospeed
+            self.x = self.ox + math.cos(self.orbit) * self.orad
+            self.y = self.oy + math.sin(self.orbit) * self.orad
         else:
             desired = math.atan2(-self.y, -self.x)
             err = ((desired - self.heading + math.pi * 3) % (math.tau)) - math.pi
@@ -111,7 +118,7 @@ class Track:
         # fusion: track quality from sensor coverage
         contrib = [s["id"] for s in SENSORS if math.hypot(self.x - s["x"], self.y - s["y"]) <= s["range"]]
         self.contrib = contrib
-        if self.identity != "FRIEND":
+        if not self.is_blue():
             target = min(11 if len(contrib) >= 2 else 7, 3 + len(contrib) * 3)
             if self.tq < target:
                 self.tq = min(target, self.tq + dt * 1.2)
@@ -145,13 +152,17 @@ class Track:
 class Scenario:
     def __init__(self):
         self.tracks: dict[str, Track] = {}
-        self._spawn_friend()
+        # Blue force air (friendly) picture
+        self._spawn_blue("FRIEND", -2300, 1700, 700, 0.25, "ROTARY", 22)
+        self._spawn_blue("ASSUMED_FRIEND", 2400, 1500, 1100, 0.18, "FIXED_WING", 60)
+        self._spawn_blue("FRIEND", 200, 2700, 600, 0.30, "UAS_GROUP_2", 20)
+        # Red (threat) picture
         self._spawn_hostile(bearing=-0.6, r=4200, tq=5, cls="MULTIROTOR")
         self._spawn_wave(6)
         self._wave_timer = 0.0
 
-    def _spawn_friend(self):
-        t = Track("FRIEND", -2300, 1700, 22, 13, "ROTARY")
+    def _spawn_blue(self, identity, ox, oy, orad, ospeed, cls, speed):
+        t = Track(identity, ox + orad, oy, speed, 13, cls, ox=ox, oy=oy, orad=orad, ospeed=ospeed)
         self.tracks[t.id] = t
 
     def _spawn_hostile(self, bearing=None, r=None, tq=4, cls=None, speed=None):
@@ -183,7 +194,7 @@ class Scenario:
             self._spawn_wave(random.randint(2, 4))
         for t in list(self.tracks.values()):
             t.step(dt)
-            if t.identity != "FRIEND" and t.range_to_asset() < 250:
+            if not t.is_blue() and t.range_to_asset() < 250:
                 log.info("LEAKER: %s reached defended asset", t.id)
                 self.tracks.pop(t.id, None)
 

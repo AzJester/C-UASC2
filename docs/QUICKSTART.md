@@ -41,6 +41,16 @@ leakers, average time-to-defeat, engagements, and the headline metric —
 **% of engagements that paired a sensor and shooter from different vendors** (the
 any-shooter / anti-lock-in argument, quantified).
 
+The **Red/Blue picture**: the status bar shows live **Red** (threat) and **Blue**
+(friendly force) counts, and the **COP View** control (ALL / RED / BLUE) filters the
+plot to each. Blue tracks (friendly CAP, ISR, UAS) patrol and are never engageable.
+
+The **echelon federation HUD** (top-left) shows this Site C2 node and its links to
+**BN-7 (Battalion)** and **RGT-3 (Regiment)**. **Integrate up-echelon** federates in
+~1.2s — joining a leaf node to the common bus, so the Red+Blue COP, tracks, and
+engagements are shared upward with no bespoke integration. If the site node is then
+lost, Battalion still holds the shared picture.
+
 To drive it manually, in order:
 1. **Fused picture.** Hostiles (red) and a friendly (blue) are tracked from several
    sensors at once — one coherent picture, not per-vendor screens.
