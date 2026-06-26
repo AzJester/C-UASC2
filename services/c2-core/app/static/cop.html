@@ -502,6 +502,7 @@
       <div class="stat hostile"><div class="v" id="sHostile">0</div><div class="k">Hostile</div></div>
       <div class="stat ready"><div class="v" id="sReady">0</div><div class="k">Effectors</div></div>
       <div class="stat"><div class="v" id="sEng">0</div><div class="k">Engaged</div></div>
+      <div class="stat"><div class="v" id="sFps">60</div><div class="k">FPS</div></div>
       <span class="modechip" id="modeChip" data-mode="SIM">SIM</span>
     </div>
   </div>
@@ -557,6 +558,7 @@
       <span class="lbl">Scenario</span>
       <button class="sbtn primary" id="btnAuto">&#9654; Auto-play brief</button>
       <button class="sbtn" id="btnSwarm">Launch swarm</button>
+      <button class="sbtn" id="btnRaid">Mass raid</button>
       <button class="sbtn" id="btnSwap">Swap radar vendor</button>
       <button class="sbtn danger" id="btnNode">Simulate node loss</button>
       <button class="sbtn" id="btnReset">Reset</button>
@@ -599,12 +601,27 @@
     { sensorId: "SEN-RF-02",  sensorType: "RF",    vendor: "Vendor B", x: 1700,  y: 1300,  range: 5200 },
     { sensorId: "SEN-EO-03",  sensorType: "EO_IR", vendor: "Vendor C", x: -1800, y: 1000,  range: 3600 },
   ];
+  // A layered, distributed effector mix spread to the edge of the AO: soft-kill
+  // (EW / RF takeover) reaches farthest, directed energy and interceptors in the
+  // middle, gun and net capture for the inner keep. Distinct vendors make the
+  // cross-vendor pairing story richer. The canonical model competes the box behind
+  // each interface (docs/04 section 3.2).
   const EFFECTORS = [
-    { effectorId: "EFF-EW-01",  effectorType: "EW_JAMMER",       vendor: "Vendor D", x: 350,  y: 300,  maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
-    { effectorId: "EFF-DE-02",  effectorType: "DIRECTED_ENERGY", vendor: "Vendor B", x: 650,  y: -650, maxRange: 3000, mag: 100, cap: 100, unit: "%" },
-    { effectorId: "EFF-GUN-03", effectorType: "KINETIC_GUN",     vendor: "Vendor E", x: -450, y: -350, maxRange: 2400, mag: 240, cap: 240, unit: "rds" },
+    { effectorId: "EFF-EW-01",  effectorType: "EW_JAMMER",           vendor: "Vendor D", x: 350,   y: 300,   maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
+    { effectorId: "EFF-RF-02",  effectorType: "RF_TAKEOVER",         vendor: "Vendor F", x: -1500, y: -1200, maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
+    { effectorId: "EFF-INT-03", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor H", x: 1200,  y: 1700,  maxRange: 4600, mag: 8,   cap: 8,   unit: "rounds" },
+    { effectorId: "EFF-HPM-04", effectorType: "DIRECTED_ENERGY",     vendor: "Vendor G", x: 1850,  y: -800,  maxRange: 2800, mag: 100, cap: 100, unit: "%" },
+    { effectorId: "EFF-LAS-05", effectorType: "DIRECTED_ENERGY",     vendor: "Vendor B", x: -1900, y: 650,   maxRange: 3200, mag: 100, cap: 100, unit: "%" },
+    { effectorId: "EFF-GUN-06", effectorType: "KINETIC_GUN",         vendor: "Vendor E", x: -450,  y: -350,  maxRange: 2400, mag: 240, cap: 240, unit: "rds" },
+    { effectorId: "EFF-NET-07", effectorType: "NET_CAPTURE",         vendor: "Vendor I", x: -300,  y: 900,   maxRange: 1800, mag: 6,   cap: 6,   unit: "nets" },
   ];
   const sensorVendor = (id) => (SENSORS.find((s) => s.sensorId === id) || {}).vendor;
+
+  // Browser scalability: cap total tracks so the sim never runs away, and switch
+  // to level-of-detail rendering (no per-track labels/leaders) above a threshold so
+  // hundreds of contacts still render at full frame rate.
+  const MAX_TRACKS = 1200;
+  const LOD_THRESHOLD = 60;
 
   // ---- state ----
   const S = {
@@ -653,6 +670,7 @@
 
   // ---- track factory (SIM) ----
   function spawnHostile(opts = {}) {
+    if (S.tracks.size >= MAX_TRACKS) return null;   // hard cap (browser scalability)
     const id = "TRK-" + (++S.seq);
     const bearing = opts.bearing != null ? opts.bearing : Math.random() * Math.PI * 2;
     const r = opts.r != null ? opts.r : AO_RADIUS - 1200;
@@ -740,9 +758,13 @@
   function bestEffector(t) {
     const f = feasibleEffectors(t).filter((e) => t.tq >= MIN_TQ[e.effectorType]);
     if (!f.length) return null;
-    // prefer the lowest-collateral effect that meets threshold, then most magazine
-    const order = { EW_JAMMER: 0, RF_TAKEOVER: 1, NET_CAPTURE: 2, DIRECTED_ENERGY: 3, KINETIC_GUN: 4, KINETIC_INTERCEPTOR: 5 };
-    f.sort((a, b) => (order[a.effectorType] - order[b.effectorType]) || (b.mag - a.mag));
+    // Distributed weapon pairing: engage with the nearest capable effector, so the
+    // layered/edge set is used by threat geometry rather than one long-range system
+    // dominating. Tie-break toward more magazine remaining (husband depleted systems).
+    f.sort((a, b) => {
+      const da = dist(t.x, t.y, a.x, a.y), db = dist(t.x, t.y, b.x, b.y);
+      return da - db || (b.mag / b.cap) - (a.mag / a.cap);
+    });
     return f[0];
   }
 
@@ -788,7 +810,8 @@
       return;
     }
     const eff = a.eff;
-    eff.mag = Math.max(0, eff.mag - (eff.effectorType === "KINETIC_GUN" ? 20 : 10));
+    const MAG_COST = { KINETIC_GUN: 20, KINETIC_INTERCEPTOR: 1, NET_CAPTURE: 1, EW_JAMMER: 8, RF_TAKEOVER: 8, DIRECTED_ENERGY: 5 };
+    eff.mag = Math.max(0, eff.mag - (MAG_COST[eff.effectorType] || 10));
     const engId = "ENG-" + (++S.seq);
     const xv = isCrossVendor(t, eff);
     t.state = "ENGAGING";
@@ -821,11 +844,11 @@
     // ensure the live node knows our sensors/effectors so /cop drawing has context
     for (const s of SENSORS) {
       try { await fetch("sensors", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sensorId: s.sensorId, sensorType: s.sensorType === "EO_IR" ? "EO_IR" : s.sensorType, taskable: true }) }); } catch (e) {}
+        body: JSON.stringify({ sensorId: s.sensorId, sensorType: s.sensorType, vendor: s.vendor, taskable: true }) }); } catch (e) {}
     }
     for (const e of S.effectors) {
       try { await fetch("effectors", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ effectorId: e.effectorId, effectorType: e.effectorType, readiness: "READY",
+        body: JSON.stringify({ effectorId: e.effectorId, effectorType: e.effectorType, vendor: e.vendor, readiness: "READY",
           magazine: { remaining: e.mag, capacity: e.cap, unit: e.unit },
           engagementEnvelope: { location: latlon(e.x, e.y), maxRangeMeters: e.maxRange } }) }); } catch (err) {}
     }
@@ -912,6 +935,7 @@
   function draw() {
     const { w, h, cx, cy, scale } = VIEW;
     ctx.clearRect(0, 0, w, h);
+    S._lod = S.tracks.size > LOD_THRESHOLD;   // simplify track glyphs at scale
 
     // range rings
     ctx.strokeStyle = "#16202c";
@@ -997,19 +1021,39 @@
     const x = sx(t.x), y = sy(t.y);
     const col = COLORS[t.identity] || COLORS.UNKNOWN;
     const sel = t.trackId === S.selected;
-    ctx.save();
-    ctx.globalAlpha = t.fade != null ? t.fade : 1;
+    const alpha = t.fade != null ? t.fade : 1;
 
-    // engagement beam
+    // engagement beam (kept even at scale - only a few are ever active at once)
     if (t.state === "ENGAGING" && t.engEff) {
       const e = S.effectors.find((ef) => ef.effectorId === t.engEff);
       if (e) {
         const pulse = 0.5 + 0.5 * Math.sin(perf() / 80);
+        ctx.save();
         ctx.strokeStyle = `rgba(255,176,46,${0.35 + pulse * 0.5})`;
         ctx.lineWidth = 1 + pulse * 1.6;
         ctx.beginPath(); ctx.moveTo(sx(e.x), sy(e.y)); ctx.lineTo(x, y); ctx.stroke();
+        ctx.restore();
       }
     }
+
+    // level-of-detail: above LOD_THRESHOLD tracks, non-selected contacts render as
+    // simple dots (no leader line, no per-track text) so hundreds stay at 60fps.
+    if (S._lod && !sel) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      if (t.state === "NEUTRALIZED") {
+        ctx.fillStyle = "#3a4452";
+        ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+      } else {
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+      return;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
 
     // selection ring
     if (sel) {
@@ -1019,7 +1063,7 @@
       ctx.beginPath(); ctx.arc(x, y, 18 + 2 * Math.sin(perf() / 300), 0, Math.PI * 2); ctx.stroke();
     }
 
-    // glyph: friendly = circle, hostile/suspect = chevron-ish, neutralized = x
+    // glyph: friendly = circle, hostile/suspect = diamond, neutralized = x
     ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.fillStyle = col;
     if (t.state === "NEUTRALIZED") {
       ctx.strokeStyle = "#5a6472";
@@ -1027,7 +1071,6 @@
     } else if (t.identity === "FRIEND" || t.identity === "ASSUMED_FRIEND" || t.identity === "NEUTRAL") {
       ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.stroke();
     } else {
-      // diamond for hostile/suspect/unknown with velocity leader line
       ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.closePath(); ctx.stroke();
       if (t.heading != null) {
         // leader line: meters +y is north, screen y is inverted, so negate sin
@@ -1037,7 +1080,7 @@
       }
     }
 
-    // TQ tag + id
+    // TQ tag + id (skipped in LOD)
     if (t.state !== "NEUTRALIZED") {
       ctx.fillStyle = "#9fb0c4"; ctx.font = "9px " + MONO; ctx.textAlign = "left";
       ctx.fillText(`${t.trackId.replace("TRK-", "")} TQ${Math.floor(t.tq)}`, x + 10, y + 3);
@@ -1157,6 +1200,18 @@
     for (let i = 0; i < 8; i++) spawnHostile({ bearing: b + (i - 4) * 0.09, r: 4900 + (i % 3) * 160, speed: 26 + Math.random() * 12, cls: "UAS_GROUP_1", tq: 4 });
     logEvent("INFO", "INFO", "SWARM inbound \u00B7 8 contacts");
     toast("ok", "Swarm launched \u00B7 8 inbound");
+  };
+  $("btnRaid").onclick = () => {
+    if (S.live) { toast("ok", "scale is driven by the scenario engine in LIVE mode"); return; }
+    const N = 120, c = Math.random() * Math.PI * 2;
+    let n = 0;
+    for (let i = 0; i < N; i++) {
+      const b = c + (Math.random() - 0.5) * 2.1;
+      const r = 4200 + Math.random() * 2200;
+      if (spawnHostile({ bearing: b, r, speed: 22 + Math.random() * 18, cls: Math.random() < 0.5 ? "UAS_GROUP_1" : "MULTIROTOR", tq: 4 })) n++;
+    }
+    logEvent("INFO", "INFO", `MASS RAID inbound \u00B7 ${n} contacts (${S.tracks.size} total)`);
+    toast("ok", `Mass raid \u00B7 ${n} inbound \u00B7 ${S.tracks.size} total tracks`);
   };
   $("btnAuto").onclick = autoplay;
   $("btnSwap").onclick = swapVendor;
@@ -1330,11 +1385,18 @@
 
   // ---- main loops ----
   let lastT = perf();
+  let fpsFrames = 0, fpsT = perf();
   function loop() {
     const now = perf();
     const dt = Math.min(0.05, (now - lastT) / 1000);
     lastT = now;
     if (!S.live) simTick(dt);
+    fpsFrames++;
+    if (now - fpsT >= 500) {
+      const el = $("sFps");
+      if (el) el.textContent = Math.round((fpsFrames * 1000) / (now - fpsT));
+      fpsFrames = 0; fpsT = now;
+    }
     draw();   // draw() schedules the next frame
   }
 
