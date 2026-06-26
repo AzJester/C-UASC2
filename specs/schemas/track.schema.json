@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuas.mil/schemas/track.schema.json",
+  "title": "Track",
+  "description": "A fused single-integrated-air-picture track, the unit of the COP. Cursor-on-Target aligned, JSON-native. Engagement eligibility is gated on trackQuality and identity (see docs/04).",
+  "type": "object",
+  "required": ["trackId", "kinematics", "trackQuality", "identity", "timeObserved"],
+  "additionalProperties": false,
+  "properties": {
+    "trackId": { "type": "string", "description": "Stable id for this system track across updates." },
+    "kinematics": {
+      "type": "object",
+      "required": ["position"],
+      "additionalProperties": false,
+      "properties": {
+        "position": {
+          "type": "object",
+          "required": ["lat", "lon", "altMeters"],
+          "additionalProperties": false,
+          "properties": {
+            "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+            "lon": { "type": "number", "minimum": -180, "maximum": 180 },
+            "altMeters": { "type": "number", "description": "Height above WGS84 ellipsoid in meters." },
+            "frame": { "type": "string", "enum": ["WGS84"], "default": "WGS84" }
+          }
+        },
+        "velocity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "speedMps": { "type": "number", "minimum": 0 },
+            "courseDeg": { "type": "number", "minimum": 0, "maximum": 360 },
+            "verticalRateMps": { "type": "number" }
+          }
+        }
+      }
+    },
+    "covariance": {
+      "type": "object",
+      "description": "Positional uncertainty; tighter covariance (more/better sensors) raises trackQuality.",
+      "additionalProperties": false,
+      "properties": {
+        "horizontalMeters": { "type": "number", "minimum": 0 },
+        "verticalMeters": { "type": "number", "minimum": 0 }
+      }
+    },
+    "trackQuality": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 15,
+      "description": "Track Quality (TQ) 0-15. The comparable score every node uses to gate engagement, independent of which sensors contributed."
+    },
+    "identity": {
+      "type": "string",
+      "enum": ["PENDING", "UNKNOWN", "SUSPECT", "FRIEND", "ASSUMED_FRIEND", "NEUTRAL", "HOSTILE"],
+      "description": "Combat identity from fused CID. Gates engagement together with ROE."
+    },
+    "classificationType": {
+      "type": "string",
+      "enum": ["FIXED_WING", "ROTARY", "MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "UAS_GROUP_3", "UNKNOWN"],
+      "default": "UNKNOWN",
+      "description": "Platform/type classification (informs weapon-target pairing)."
+    },
+    "contributingSensors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Provenance: sensors whose detections built this track. Enables cross-cue tasking to raise TQ."
+    },
+    "timeObserved": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC3339 time of the latest contributing observation. Effectors reject orders on stale tracks."
+    },
+    "timeToLiveSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Track ages out of the COP after this many seconds without update."
+    }
+  }
+}

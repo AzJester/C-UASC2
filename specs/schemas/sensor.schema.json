@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuas.mil/schemas/sensor.schema.json",
+  "title": "SensorStatus",
+  "description": "Sensor registration/health/coverage. Published periodically to cuas.sensor.status.{sensorId} and returned by the C2 registry.",
+  "type": "object",
+  "required": ["sensorId", "sensorType", "readiness"],
+  "additionalProperties": false,
+  "properties": {
+    "sensorId": { "type": "string" },
+    "sensorType": { "type": "string", "enum": ["RADAR", "RF", "EO_IR", "ACOUSTIC", "FUSION_INPUT", "OTHER"] },
+    "vendor": { "type": "string", "description": "Informational; the sensor is interchangeable behind the government interface." },
+    "readiness": { "type": "string", "enum": ["READY", "DEGRADED", "OFFLINE", "MAINTENANCE"] },
+    "mode": { "type": "string", "description": "Current operating mode (e.g., SEARCH, TRACK, DWELL)." },
+    "taskable": { "type": "boolean", "default": true, "description": "Whether the sensor accepts remote tasking (Imperative 4)." },
+    "coverage": {
+      "type": "object",
+      "description": "Coverage volume the sensor can observe.",
+      "additionalProperties": false,
+      "properties": {
+        "center": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "lat": { "type": "number" },
+            "lon": { "type": "number" }
+          }
+        },
+        "rangeMeters": { "type": "number", "minimum": 0 },
+        "minAltMeters": { "type": "number" },
+        "maxAltMeters": { "type": "number" }
+      }
+    },
+    "softwareVersion": { "type": "string", "description": "Adapter/firmware version; reported for OTA fleet posture." },
+    "timeReported": { "type": "string", "format": "date-time" }
+  }
+}

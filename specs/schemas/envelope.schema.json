@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuas.mil/schemas/envelope.schema.json",
+  "title": "Message Envelope",
+  "description": "Common wrapper for every message on the C-UAS C2 bus. The payload is one canonical type, discriminated by messageType. Government-owned interface (Imperative 2).",
+  "type": "object",
+  "required": ["messageId", "schemaVersion", "messageType", "source", "classification", "timeCreated", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique id; also used for replay/dedup detection."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "SemVer of the interface contract this message conforms to. Consumers route/validate by version."
+    },
+    "messageType": {
+      "type": "string",
+      "enum": ["Track", "Detection", "SensorTask", "SensorStatus", "EffectorStatus", "EngagementOrder", "EngagementStatus", "C2Directive"],
+      "description": "Discriminator selecting the payload schema."
+    },
+    "source": {
+      "type": "object",
+      "required": ["nodeId", "componentType"],
+      "additionalProperties": false,
+      "properties": {
+        "nodeId": { "type": "string", "description": "Identity of the publishing component (Zero Trust principal)." },
+        "componentType": { "type": "string", "enum": ["sensor", "effector", "c2", "fusion", "gateway"] }
+      }
+    },
+    "classification": {
+      "type": "string",
+      "description": "Security marking enforced end to end (banner, ACLs, cross-domain guards).",
+      "enum": ["UNCLASSIFIED", "CUI", "CONFIDENTIAL", "SECRET", "TOP_SECRET"]
+    },
+    "timeCreated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC3339 creation time at the source."
+    },
+    "signature": {
+      "type": "string",
+      "description": "Detached signature over the canonical message bytes (Zero Trust). Optional in the reference scaffold; required in production."
+    },
+    "payload": {
+      "type": "object",
+      "description": "One canonical type, matching messageType."
+    }
+  }
+}

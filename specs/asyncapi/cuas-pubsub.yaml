@@ -1,0 +1,151 @@
+asyncapi: 3.0.0
+info:
+  title: C-UAS C2 Pub/Sub Backbone (Government-Owned Interface)
+  version: 1.0.0
+  description: >
+    The publish/subscribe contract that stitches together heterogeneous sensors,
+    effectors, and C2 nodes at the edge and at echelon (Imperative 3). Producers and
+    consumers address topics, never each other, which is what makes any-sensor /
+    any-shooter mechanically possible.
+
+    Subjects are hierarchical (NATS-style) so consumers can subscribe with wildcards
+    (e.g. cuas.track.fused.> for all fused tracks). The same contract runs at the
+    edge tier and the echelon tier; the canonical payloads are transport-independent
+    (see docs/decisions/0001-pubsub-backbone.md).
+  contact:
+    name: C-UAS C2 Interface Design Authority (illustrative)
+defaultContentType: application/json
+servers:
+  edge:
+    host: localhost:4222
+    protocol: nats
+    description: Edge leaf broker (site/battery). Survives isolated.
+  echelon:
+    host: nats-echelon:4222
+    protocol: nats
+    description: Echelon broker cluster (cloud/enclave). Federated to edge via leaf links.
+channels:
+  detections:
+    address: cuas.track.detection.{sensorId}
+    description: Raw per-sensor detections before fusion (QoS tier T2).
+    parameters:
+      sensorId: { description: Producing sensor id }
+    messages:
+      Detection: { $ref: "#/components/messages/Detection" }
+  fusedTracks:
+    address: cuas.track.fused.{regionId}
+    description: Fused single-integrated-air-picture tracks; the COP feed (QoS tier T2, latest-value).
+    parameters:
+      regionId: { description: Geographic shard of the COP }
+    messages:
+      Track: { $ref: "#/components/messages/Track" }
+  sensorTasks:
+    address: cuas.sensor.task.{sensorId}
+    description: Remote tasking commands to a sensor (QoS tier T1, persisted).
+    parameters:
+      sensorId: { description: Target sensor id }
+    messages:
+      SensorTask: { $ref: "#/components/messages/SensorTask" }
+  sensorStatus:
+    address: cuas.sensor.status.{sensorId}
+    description: Sensor health/mode/coverage (QoS tier T3, periodic).
+    parameters:
+      sensorId: { description: Reporting sensor id }
+    messages:
+      SensorStatus: { $ref: "#/components/messages/SensorStatus" }
+  effectorStatus:
+    address: cuas.effector.status.{effectorId}
+    description: Effector availability/magazine/mode (QoS tier T3, periodic).
+    parameters:
+      effectorId: { description: Reporting effector id }
+    messages:
+      EffectorStatus: { $ref: "#/components/messages/EffectorStatus" }
+  engagementOrders:
+    address: cuas.engagement.order.{effectorId}
+    description: Fire orders to an effector (QoS tier T0 safety/fires; persisted, prioritized, lowest latency).
+    parameters:
+      effectorId: { description: Engaging effector id }
+    messages:
+      EngagementOrder: { $ref: "#/components/messages/EngagementOrder" }
+  engagementStatus:
+    address: cuas.engagement.status.{engagementId}
+    description: Engagement lifecycle feedback (QoS tier T0).
+    parameters:
+      engagementId: { description: Engagement id being reported }
+    messages:
+      EngagementStatus: { $ref: "#/components/messages/EngagementStatus" }
+  audit:
+    address: cuas.audit.{domain}
+    description: Immutable non-repudiation record stream (QoS tier T4, persisted).
+    parameters:
+      domain: { description: Audit domain (tasking | engagement | authority) }
+    messages:
+      AuditRecord: { $ref: "#/components/messages/AuditRecord" }
+operations:
+  publishDetection:
+    action: send
+    channel: { $ref: "#/channels/detections" }
+    summary: A sensor adapter publishes detections.
+  consumeDetectionsForFusion:
+    action: receive
+    channel: { $ref: "#/channels/detections" }
+    summary: The fusion service consumes detections to build tracks.
+  publishFusedTrack:
+    action: send
+    channel: { $ref: "#/channels/fusedTracks" }
+    summary: The fusion service publishes fused tracks to the COP.
+  consumeCop:
+    action: receive
+    channel: { $ref: "#/channels/fusedTracks" }
+    summary: C2 nodes and the UI consume the fused COP.
+  taskSensor:
+    action: send
+    channel: { $ref: "#/channels/sensorTasks" }
+    summary: A C2 node publishes a (post-authority, post-arbitration) sensor task.
+  orderEngagement:
+    action: send
+    channel: { $ref: "#/channels/engagementOrders" }
+    summary: An authorized C2 node publishes a fire order with an authorityToken.
+  reportEngagementStatus:
+    action: send
+    channel: { $ref: "#/channels/engagementStatus" }
+    summary: An effector adapter reports the engagement lifecycle.
+components:
+  messages:
+    Track:
+      name: Track
+      contentType: application/json
+      payload: { $ref: "#/components/schemas/Envelope" }
+    Detection:
+      name: Detection
+      contentType: application/json
+      payload: { $ref: "#/components/schemas/Envelope" }
+    SensorTask:
+      name: SensorTask
+      contentType: application/json
+      payload: { $ref: "#/components/schemas/Envelope" }
+    SensorStatus:
+      name: SensorStatus
+      contentType: application/json
+      payload: { $ref: "#/components/schemas/Envelope" }
+    EffectorStatus:
+      name: EffectorStatus
+      contentType: application/json
+      payload: { $ref: "#/components/schemas/Envelope" }
+    EngagementOrder:
+      name: EngagementOrder
+      contentType: application/json
+      payload: { $ref: "#/components/schemas/Envelope" }
+    EngagementStatus:
+      name: EngagementStatus
+      contentType: application/json
+      payload: { $ref: "#/components/schemas/Envelope" }
+    AuditRecord:
+      name: AuditRecord
+      contentType: application/json
+      payload: { $ref: "#/components/schemas/Envelope" }
+  schemas:
+    # Every message is the common Envelope; payload is the canonical type keyed by
+    # messageType. The JSON Schema files in specs/schemas/ are the source of truth.
+    Envelope:
+      $ref: "../schemas/envelope.schema.json"
