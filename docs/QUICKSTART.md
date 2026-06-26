@@ -14,13 +14,37 @@ any-sensor/any-shooter flow through the C2 REST API.
 ## Option A — Docker Compose (recommended)
 
 ```bash
-make up        # starts NATS (JetStream), c2-core (:8000), sensor-sim
-make demo      # scripted walkthrough of the full flow
+make up        # starts NATS (JetStream), c2-core (:8000), sensor-sim scenario
+make demo      # scripted (CLI) walkthrough of the full flow
 make logs      # tail all services
 make down      # stop and clean up
 ```
 
-Then open the API docs at **http://localhost:8000/docs** (FastAPI/OpenAPI UI).
+Then open:
+- **http://localhost:8000/** — the **web COP** (the leadership demo: live tactical
+  map, click-to-task, click-to-engage, with authority gates and the audit log).
+- **http://localhost:8000/docs** — the API docs (FastAPI/OpenAPI UI).
+
+## The web COP (leadership demo)
+
+The browser UI is the front end to everything below. Served by c2-core, it runs in
+**LIVE** mode (driven by the real bus and engagement gates). The *same* page,
+opened standalone, runs an embedded **SIM** (the shareable, zero-install build).
+
+What to show, in order:
+1. **Fused picture.** Hostiles (red) and a friendly (blue) are tracked from several
+   sensors at once — one coherent picture, not per-vendor screens.
+2. **Track quality gates fires.** Click an inbound hostile; try **Engage** — it's
+   denied while track quality is low.
+3. **Remote tasking raises quality.** Click **Task sensor · DWELL**; watch TQ climb
+   past the threshold. (Imperative 4.)
+4. **Any-sensor / any-shooter.** Click **Engage** — the C2 node *pairs the best
+   in-range effector at decision time* (no fixed sensor-shooter wiring) and the
+   engagement runs to COMPLETE. (Imperative 5.)
+5. **Positive control.** Try to engage the **friendly**, switch the operator role to
+   **OBS**, or set **WEAPONS HOLD** — each is denied with a reason. (docs/05.)
+6. **Resilience.** Hit **Simulate node loss** — a second C2 node continues the fight
+   off the same shared COP. **Launch swarm** shows scale.
 
 ## Option B — No Docker (local Python)
 

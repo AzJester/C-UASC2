@@ -1,0 +1,1111 @@
+<title>JIATF C-UAS C2 — Common Operating Picture</title>
+<meta name="description" content="Counter-UAS command and control common operating picture — a leadership demo of any-sensor / any-shooter engagement under positive control.">
+<style>
+  :root {
+    --ground: #0a0d12;
+    --panel: #10151d;
+    --raised: #161d28;
+    --hair: #1f2937;
+    --hair-soft: #161e29;
+    --text: #c2cedd;
+    --muted: #76859b;
+    --faint: #4b586b;
+    --accent: #39a0c4;
+    --accent-dim: #1d4554;
+    /* doctrinal identity (data only) */
+    --hostile: #ff4256;
+    --friend: #3da5ff;
+    --suspect: #ffb02e;
+    --unknown: #9aa7b5;
+    --neutral: #46c66e;
+    --classif: #1f9d57;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  #cuas {
+    --pad: 14px;
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-template-rows: 22px 44px 1fr 170px 22px;
+    grid-template-columns: 1fr;
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.45;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* classification banners */
+  .classbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--classif);
+    color: #03130a;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  /* status bar */
+  .statusbar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 var(--pad);
+    background: var(--panel);
+    border-bottom: 1px solid var(--hair);
+  }
+  .brand { display: flex; align-items: baseline; gap: 9px; }
+  .brand b {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #e7eef7;
+  }
+  .brand span {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .stat-group { display: flex; gap: 16px; margin-left: auto; align-items: center; }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.1;
+  }
+  .stat .v {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .k {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--faint);
+  }
+  .stat.hostile .v { color: var(--hostile); }
+  .stat.ready .v { color: var(--neutral); }
+
+  .modechip {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 4px 9px;
+    border-radius: 3px;
+    border: 1px solid var(--hair);
+  }
+  .modechip[data-mode="SIM"] { color: var(--suspect); border-color: #4a3a16; background: #1a1408; }
+  .modechip[data-mode="LIVE"] { color: var(--neutral); border-color: #14401f; background: #08160d; }
+
+  /* main grid: plot + rail */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    min-height: 0;
+  }
+
+  .plotwrap {
+    position: relative;
+    min-width: 0;
+    border-right: 1px solid var(--hair);
+    background:
+      radial-gradient(120% 120% at 50% 45%, #0c1119 0%, #080a0f 70%, #06080c 100%);
+  }
+  #plot { display: block; width: 100%; height: 100%; }
+
+  .nodelost {
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #ffd9a0;
+    background: rgba(60, 30, 0, 0.85);
+    border: 1px solid #6b4310;
+    padding: 5px 12px;
+    border-radius: 3px;
+    display: none;
+    z-index: 5;
+  }
+  .nodelost.on { display: block; }
+
+  .legend {
+    position: absolute;
+    left: 12px; bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    max-width: 60%;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    background: rgba(8, 11, 16, 0.7);
+    border: 1px solid var(--hair-soft);
+    padding: 7px 10px;
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
+  }
+  .legend i {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  .hint {
+    position: absolute;
+    right: 12px; bottom: 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--faint);
+    letter-spacing: 0.06em;
+  }
+
+  /* right rail */
+  .rail {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--panel);
+  }
+  .rail-scroll { overflow-y: auto; padding: var(--pad); display: flex; flex-direction: column; gap: 14px; }
+
+  .card {
+    background: var(--raised);
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .card h3 {
+    margin: 0 0 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card h3::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+
+  .empty { color: var(--faint); font-size: 12px; font-style: italic; }
+
+  /* selected track detail */
+  .trk-id {
+    font-family: var(--mono);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+  .idpill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; margin-top: 10px; }
+  .kv dt { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .kv dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  /* track-quality meter (0..15) */
+  .tq { margin-top: 11px; }
+  .tq-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .tq-top span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .tq-top b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .tq-bar { display: flex; gap: 2px; }
+  .tq-seg { flex: 1; height: 8px; border-radius: 1px; background: #1c2530; }
+  .tq-seg.on { background: var(--accent); }
+  .tq-seg.thr { box-shadow: inset 0 0 0 1px #2b3340; }
+  .tq-note { margin-top: 6px; font-size: 11px; color: var(--faint); }
+
+  /* controls */
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 11px; }
+  .field:last-child { margin-bottom: 0; }
+  .field > label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+  .seg {
+    display: flex;
+    border: 1px solid var(--hair);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .seg button {
+    flex: 1;
+    background: transparent;
+    color: var(--muted);
+    border: 0;
+    border-right: 1px solid var(--hair);
+    padding: 7px 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { background: #1a222e; color: var(--text); }
+  .seg button[aria-pressed="true"] { background: var(--accent-dim); color: #d7f0fb; }
+  .seg.wcs button[aria-pressed="true"][data-v="WEAPONS_HOLD"] { background: #3a1116; color: #ffb9c1; }
+  .seg.wcs button[aria-pressed="true"][data-v="WEAPONS_FREE"] { background: #123a1d; color: #b6f0c8; }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid var(--hair);
+    background: var(--raised);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, transform 0.05s;
+  }
+  .btn:hover { background: #1c2531; border-color: #2a3645; }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn.task { margin-bottom: 8px; }
+  .btn.engage { background: #3a1117; border-color: #6b1e2a; color: #ffc6cd; }
+  .btn.engage:hover:not(:disabled) { background: #4d1620; }
+
+  /* effector list */
+  .efflist { display: flex; flex-direction: column; gap: 7px; }
+  .eff {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 9px;
+    font-size: 12px;
+  }
+  .eff .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .eff .nm { font-family: var(--mono); font-size: 11px; }
+  .eff .nm small { color: var(--faint); display: block; font-size: 9px; letter-spacing: 0.05em; }
+  .eff .mag { font-family: var(--mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+
+  /* scenario + log strip */
+  .tray {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--hair);
+    background: var(--panel);
+    min-height: 0;
+  }
+  .scenario {
+    display: flex;
+    gap: 8px;
+    padding: 9px var(--pad);
+    border-bottom: 1px solid var(--hair-soft);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .scenario .sbtn {
+    background: var(--raised);
+    border: 1px solid var(--hair);
+    color: var(--text);
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .scenario .sbtn:hover { background: #1c2531; border-color: #2a3645; }
+  .scenario .sbtn.danger:hover { border-color: #6b1e2a; }
+  .scenario .grow { flex: 1; }
+  .scenario .lbl { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  .log {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 6px var(--pad) 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .log-row { display: grid; grid-template-columns: 58px 92px 1fr; gap: 10px; align-items: baseline; }
+  .log-row .t { color: var(--faint); font-variant-numeric: tabular-nums; }
+  .log-row .d {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+  .log-row .d.PERMIT, .log-row .d.GRANTED, .log-row .d.COMPLETE { color: var(--neutral); }
+  .log-row .d.DENY { color: var(--hostile); }
+  .log-row .d.INFO { color: var(--accent); }
+  .log-row .d.LEAKER { color: var(--suspect); }
+  .log-row .m { color: var(--muted); }
+
+  /* toast */
+  .toast-wrap {
+    position: fixed;
+    top: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 50;
+    pointer-events: none;
+  }
+  .toast {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 9px 16px;
+    border-radius: 4px;
+    border: 1px solid var(--hair);
+    background: #11161f;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    animation: toastin 0.18s ease-out;
+  }
+  .toast.deny { border-color: #6b1e2a; color: #ffc6cd; background: #1c0f12; }
+  .toast.ok { border-color: #14401f; color: #b6f0c8; background: #0c160f; }
+  @keyframes toastin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .toast { animation: none; }
+    * { scroll-behavior: auto; }
+  }
+
+  @media (max-width: 880px) {
+    #cuas { grid-template-rows: 20px 42px 1fr 20px; }
+    .main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+    .rail { display: none; }
+  }
+</style>
+
+<div id="cuas">
+  <div class="classbar" id="classTop">UNCLASSIFIED // FOR DEMONSTRATION ONLY // NOT A FIELDED SYSTEM</div>
+
+  <div class="statusbar">
+    <div class="brand">
+      <b>JIATF&nbsp;C-UAS&nbsp;C2</b>
+      <span>Common Operating Picture</span>
+    </div>
+    <div class="stat-group">
+      <div class="stat"><div class="v" id="sTracks">0</div><div class="k">Tracks</div></div>
+      <div class="stat hostile"><div class="v" id="sHostile">0</div><div class="k">Hostile</div></div>
+      <div class="stat ready"><div class="v" id="sReady">0</div><div class="k">Effectors</div></div>
+      <div class="stat"><div class="v" id="sEng">0</div><div class="k">Engaged</div></div>
+      <span class="modechip" id="modeChip" data-mode="SIM">SIM</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="plotwrap">
+      <canvas id="plot"></canvas>
+      <div class="nodelost" id="nodeLost"></div>
+      <div class="legend" id="legend"></div>
+      <div class="hint">click a track to select &middot; sensors ▢ &middot; effectors ◆</div>
+    </div>
+
+    <aside class="rail">
+      <div class="rail-scroll">
+        <div class="card" id="trackCard">
+          <h3>Selected Track</h3>
+          <div id="trackBody"><p class="empty">No track selected. Click a contact on the plot.</p></div>
+        </div>
+
+        <div class="card">
+          <h3>Authority</h3>
+          <div class="field">
+            <label>Operator role</label>
+            <div class="seg" id="roleSeg">
+              <button data-v="OBSERVER">OBS</button>
+              <button data-v="SENSOR_MANAGER">SENSOR</button>
+              <button data-v="ENGAGEMENT_OPERATOR">ENGAGE</button>
+              <button data-v="FIRE_CONTROL_AUTHORITY" aria-pressed="true">FCA</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Weapons control status</label>
+            <div class="seg wcs" id="wcsSeg">
+              <button data-v="WEAPONS_HOLD">HOLD</button>
+              <button data-v="WEAPONS_TIGHT" aria-pressed="true">TIGHT</button>
+              <button data-v="WEAPONS_FREE">FREE</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Effectors</h3>
+          <div class="efflist" id="effList"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="tray" id="tray">
+    <div class="scenario">
+      <span class="lbl">Scenario</span>
+      <button class="sbtn" id="btnSwarm">Launch swarm</button>
+      <button class="sbtn" id="btnSingle">Add contact</button>
+      <button class="sbtn danger" id="btnNode">Simulate node loss</button>
+      <button class="sbtn" id="btnReset">Reset</button>
+      <span class="grow"></span>
+      <span class="lbl">Audit log</span>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="classbar">UNCLASSIFIED // FOR DEMONSTRATION ONLY</div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---- doctrinal + policy constants (mirror services/c2-core authority.py) ----
+  const COLORS = {
+    HOSTILE: "#ff4256", FRIEND: "#3da5ff", SUSPECT: "#ffb02e",
+    UNKNOWN: "#9aa7b5", NEUTRAL: "#46c66e", PENDING: "#9aa7b5", ASSUMED_FRIEND: "#3da5ff",
+  };
+  const ACCENT = "#39a0c4";
+  const MIN_TQ = { EW_JAMMER: 8, RF_TAKEOVER: 8, NET_CAPTURE: 9, DIRECTED_ENERGY: 10, KINETIC_GUN: 11, KINETIC_INTERCEPTOR: 12 };
+  const EFFECT_FOR = { EW_JAMMER: "EW_DEFEAT", RF_TAKEOVER: "RF_TAKEOVER", NET_CAPTURE: "NET_CAPTURE", DIRECTED_ENERGY: "DIRECTED_ENERGY", KINETIC_GUN: "KINETIC", KINETIC_INTERCEPTOR: "KINETIC" };
+  const ENGAGEABLE = new Set(["HOSTILE", "SUSPECT"]);
+  const ROLES_RELEASE = new Set(["FIRE_CONTROL_AUTHORITY"]);
+  const ROLES_TASK = new Set(["SENSOR_MANAGER", "ENGAGEMENT_OPERATOR", "FIRE_CONTROL_AUTHORITY"]);
+
+  // ---- area of operations (meters, asset-centric); lat/lon used only in LIVE ----
+  const ASSET = { lat: 34.20, lon: -118.20 };
+  const AO_RADIUS = 6200;            // meters shown to edge
+  const RINGS = [2000, 4000, 6000];
+
+  const SENSORS = [
+    { sensorId: "SEN-RAD-01", sensorType: "RADAR", x: 0,     y: -150,  range: 6000 },
+    { sensorId: "SEN-RF-02",  sensorType: "RF",    x: 1700,  y: 1300,  range: 5200 },
+    { sensorId: "SEN-EO-03",  sensorType: "EO_IR", x: -1800, y: 1000,  range: 3600 },
+  ];
+  const EFFECTORS = [
+    { effectorId: "EFF-EW-01",  effectorType: "EW_JAMMER",       x: 350,  y: 300,  maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
+    { effectorId: "EFF-DE-02",  effectorType: "DIRECTED_ENERGY", x: 650,  y: -650, maxRange: 3000, mag: 100, cap: 100, unit: "%" },
+    { effectorId: "EFF-GUN-03", effectorType: "KINETIC_GUN",     x: -450, y: -350, maxRange: 2400, mag: 240, cap: 240, unit: "rds" },
+  ];
+
+  // ---- state ----
+  const S = {
+    tracks: new Map(),
+    selected: null,
+    role: "FIRE_CONTROL_AUTHORITY",
+    wcs: "WEAPONS_TIGHT",
+    nodeLost: false,
+    node: "C2-NODE-01",
+    seq: 1000,
+    engaged: 0,
+    effectors: JSON.parse(JSON.stringify(EFFECTORS)),
+    live: false,
+    t0: 0,
+  };
+
+  // ---- helpers ----
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+  const nowClock = () => {
+    const d = new Date(S.t0 + perf());
+    return String(d.getUTCHours()).padStart(2, "0") + ":" +
+           String(d.getUTCMinutes()).padStart(2, "0") + ":" +
+           String(d.getUTCSeconds()).padStart(2, "0");
+  };
+  let _perf0 = (typeof performance !== "undefined") ? performance.now() : 0;
+  const perf = () => ((typeof performance !== "undefined") ? performance.now() : Date.now()) - _perf0;
+
+  // ---- track factory (SIM) ----
+  function spawnHostile(opts = {}) {
+    const id = "TRK-" + (++S.seq);
+    const bearing = opts.bearing != null ? opts.bearing : Math.random() * Math.PI * 2;
+    const r = opts.r != null ? opts.r : AO_RADIUS - 1200;
+    const x = Math.cos(bearing) * r, y = Math.sin(bearing) * r;
+    const types = ["MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "FIXED_WING"];
+    const t = {
+      trackId: id,
+      identity: opts.identity || "HOSTILE",
+      classificationType: opts.cls || types[(Math.random() * types.length) | 0],
+      x, y,
+      speed: opts.speed || (26 + Math.random() * 14),     // m/s (fast UAS, demo pace)
+      heading: Math.atan2(-y, -x),                          // toward asset
+      tq: opts.tq != null ? opts.tq : (4 + (Math.random() * 3 | 0)),
+      contributingSensors: [],
+      state: "ACTIVE",
+      fade: 1,
+      jitter: Math.random() * 6.28,
+    };
+    S.tracks.set(id, t);
+    return t;
+  }
+  function spawnFriend() {
+    const id = "TRK-" + (++S.seq);
+    const t = {
+      trackId: id, identity: "FRIEND", classificationType: "ROTARY",
+      x: -2600, y: 1900, speed: 22, heading: 0, tq: 13,
+      contributingSensors: ["SEN-RAD-01"], state: "ACTIVE", fade: 1, orbit: 0, jitter: 0,
+    };
+    S.tracks.set(id, t);
+    return t;
+  }
+
+  // ---- SIM physics + fusion tick ----
+  function simTick(dt) {
+    for (const t of S.tracks.values()) {
+      if (t.state === "NEUTRALIZED") { t.fade = Math.max(0, t.fade - dt * 0.6); continue; }
+      if (t.identity === "FRIEND") {
+        t.orbit = (t.orbit || 0) + dt * 0.25;
+        t.x = -2300 + Math.cos(t.orbit) * 700;
+        t.y = 1700 + Math.sin(t.orbit) * 700;
+      } else {
+        // steer toward asset with a little weave
+        const desired = Math.atan2(-t.y, -t.x);
+        t.heading += clamp(((desired - t.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI, -0.5 * dt, 0.5 * dt);
+        const weave = Math.sin(perf() / 900 + t.jitter) * 0.15;
+        t.x += Math.cos(t.heading + weave) * t.speed * dt;
+        t.y += Math.sin(t.heading + weave) * t.speed * dt;
+      }
+      // fusion: track quality rises with number of covering sensors
+      let covering = 0;
+      const contrib = [];
+      for (const s of SENSORS) {
+        if (dist(t.x, t.y, s.x, s.y) <= s.range) { covering++; contrib.push(s.sensorId); }
+      }
+      t.contributingSensors = contrib;
+      const target = clamp(3 + covering * 3, 0, covering >= 2 ? 11 : 7);
+      if (t.identity !== "FRIEND") {
+        if (t.tq < target) t.tq = Math.min(target, t.tq + dt * 1.2);
+        else if (covering === 0 && t.tq > 2) t.tq -= dt * 0.5;
+      }
+      // leaker check
+      if (t.identity !== "FRIEND" && dist(t.x, t.y, 0, 0) < 250) {
+        logEvent("LEAKER", "LEAKER", `${t.trackId} reached defended asset`);
+        S.tracks.delete(t.trackId);
+        if (S.selected === t.trackId) selectTrack(null);
+      }
+    }
+    // drop fully faded
+    for (const [id, t] of S.tracks) if (t.state === "NEUTRALIZED" && t.fade <= 0) {
+      S.tracks.delete(id);
+      if (S.selected === id) selectTrack(null);
+    }
+  }
+
+  // ---- authority gates (mirror authority.py + pairing.py) ----
+  function feasibleEffectors(t) {
+    return S.effectors.filter((e) => {
+      if (e.mag <= 0) return false;
+      const d = dist(t.x, t.y, e.x, e.y);
+      return d <= e.maxRange;
+    });
+  }
+  function bestEffector(t) {
+    const f = feasibleEffectors(t).filter((e) => t.tq >= MIN_TQ[e.effectorType]);
+    if (!f.length) return null;
+    // prefer the lowest-collateral effect that meets threshold, then most magazine
+    const order = { EW_JAMMER: 0, RF_TAKEOVER: 1, NET_CAPTURE: 2, DIRECTED_ENERGY: 3, KINETIC_GUN: 4, KINETIC_INTERCEPTOR: 5 };
+    f.sort((a, b) => (order[a.effectorType] - order[b.effectorType]) || (b.mag - a.mag));
+    return f[0];
+  }
+
+  function authorize(t) {
+    if (S.wcs === "WEAPONS_HOLD") return { ok: false, code: "WEAPONS_HOLD", detail: "weapons control status is WEAPONS_HOLD" };
+    if (!ROLES_RELEASE.has(S.role)) return { ok: false, code: "NOT_AUTHORIZED", detail: `role ${S.role} may not release fires` };
+    if (!ENGAGEABLE.has(t.identity)) return { ok: false, code: "ROE_PROHIBITED", detail: `identity ${t.identity} is not engageable` };
+    if (S.wcs === "WEAPONS_TIGHT" && t.identity !== "HOSTILE") return { ok: false, code: "ROE_PROHIBITED", detail: "WEAPONS_TIGHT requires positively identified HOSTILE" };
+    const feas = feasibleEffectors(t);
+    if (!feas.length) return { ok: false, code: "OUT_OF_ENVELOPE", detail: "no effector in range" };
+    const eff = bestEffector(t);
+    if (!eff) {
+      const need = Math.min(...feas.map((e) => MIN_TQ[e.effectorType]));
+      return { ok: false, code: "TRACK_QUALITY_INSUFFICIENT", detail: `TQ ${Math.floor(t.tq)} < required ${need} for in-range effector` };
+    }
+    return { ok: true, eff };
+  }
+
+  // ---- actions ----
+  function taskSensor() {
+    const t = S.selected && S.tracks.get(S.selected);
+    if (!t) return;
+    if (!ROLES_TASK.has(S.role)) { toast("deny", `DENIED · role ${S.role} may not task sensors`); logEvent("DENY", "DENY", `TASK denied: role ${S.role}`); return; }
+    if (S.live) { liveTask(t); return; }
+    // cross-cue / dwell: raise TQ
+    const before = Math.floor(t.tq);
+    t.tq = Math.min(15, t.tq + 6);
+    const cued = SENSORS.find((s) => !t.contributingSensors.includes(s.sensorId)) || SENSORS[1];
+    if (!t.contributingSensors.includes(cued.sensorId)) t.contributingSensors.push(cued.sensorId);
+    toast("ok", `DWELL on ${t.trackId} · TQ ${before} → ${Math.floor(t.tq)}`);
+    logEvent("GRANTED", "GRANTED", `TASK DWELL ${t.trackId} via ${cued.sensorId} · TQ ${before}→${Math.floor(t.tq)}`);
+    renderRail();
+  }
+
+  function engage() {
+    const t = S.selected && S.tracks.get(S.selected);
+    if (!t || t.state === "NEUTRALIZED") return;
+    if (S.live) { liveEngage(t); return; }
+    const a = authorize(t);
+    if (!a.ok) {
+      toast("deny", `DENIED · ${a.code}`);
+      logEvent("DENY", "DENY", `ENGAGE ${t.trackId}: ${a.detail}`);
+      return;
+    }
+    const eff = a.eff;
+    eff.mag = Math.max(0, eff.mag - (eff.effectorType === "KINETIC_GUN" ? 20 : 10));
+    const engId = "ENG-" + (++S.seq);
+    t.state = "ENGAGING";
+    t.engEff = eff.effectorId;
+    t.engT = perf();
+    S.engaged++;
+    toast("ok", `${EFFECT_FOR[eff.effectorType]} · ${eff.effectorId} → ${t.trackId}`);
+    logEvent("PERMIT", "PERMIT", `ENGAGE ${t.trackId} · paired ${eff.effectorId} (${EFFECT_FOR[eff.effectorType]}) · auth ${S.node}`);
+    // lifecycle
+    setTimeout(() => { if (t.state === "ENGAGING") { logEvent("INFO", "INFO", `${engId} ACTIVE`); } }, 500);
+    setTimeout(() => {
+      if (S.tracks.get(t.trackId)) {
+        t.state = "NEUTRALIZED";
+        logEvent("COMPLETE", "COMPLETE", `${engId} COMPLETE · ${t.trackId} defeated`);
+        renderRail();
+      }
+    }, 1500);
+    renderRail();
+  }
+
+  // ---- LIVE backend (c2-core REST) ----
+  // c2-core injects window.__CUAS_BACKEND__ = true when it serves this page; a
+  // standalone/Artifact load leaves it undefined and runs the embedded simulation.
+  function detectBackend() {
+    return typeof window !== "undefined" && window.__CUAS_BACKEND__ === true;
+  }
+  async function liveRegisterMateriel() {
+    // ensure the live node knows our sensors/effectors so /cop drawing has context
+    for (const s of SENSORS) {
+      try { await fetch("sensors", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sensorId: s.sensorId, sensorType: s.sensorType === "EO_IR" ? "EO_IR" : s.sensorType, taskable: true }) }); } catch (e) {}
+    }
+    for (const e of S.effectors) {
+      try { await fetch("effectors", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ effectorId: e.effectorId, effectorType: e.effectorType, readiness: "READY",
+          magazine: { remaining: e.mag, capacity: e.cap, unit: e.unit },
+          engagementEnvelope: { location: latlon(e.x, e.y), maxRangeMeters: e.maxRange } }) }); } catch (err) {}
+    }
+  }
+  function latlon(x, y) {
+    const mLat = 111320, mLon = 111320 * Math.cos(ASSET.lat * Math.PI / 180);
+    return { lat: ASSET.lat + y / mLat, lon: ASSET.lon + x / mLon, altMeters: 120 };
+  }
+  function toLocal(lat, lon) {
+    const mLat = 111320, mLon = 111320 * Math.cos(ASSET.lat * Math.PI / 180);
+    return { x: (lon - ASSET.lon) * mLon, y: (lat - ASSET.lat) * mLat };
+  }
+  async function livePoll() {
+    try {
+      const cop = await (await fetch("cop", { cache: "no-store" })).json();
+      const seen = new Set();
+      for (const tk of cop) {
+        const p = tk.kinematics.position;
+        const loc = toLocal(p.lat, p.lon);
+        let t = S.tracks.get(tk.trackId);
+        if (!t) { t = { trackId: tk.trackId, fade: 1, state: "ACTIVE" }; S.tracks.set(tk.trackId, t); }
+        t.x = loc.x; t.y = loc.y;
+        t.identity = tk.identity; t.classificationType = tk.classificationType || "UNKNOWN";
+        t.tq = tk.trackQuality; t.contributingSensors = tk.contributingSensors || [];
+        seen.add(tk.trackId);
+      }
+      for (const id of [...S.tracks.keys()]) if (!seen.has(id)) S.tracks.delete(id);
+    } catch (e) { setMode(false); }
+  }
+  async function liveTask(t) {
+    try {
+      await fetch(`sensors/${t.contributingSensors[0] || SENSORS[0].sensorId}/tasks`, {
+        method: "POST", headers: { "Content-Type": "application/json", "X-Operator-Role": S.role },
+        body: JSON.stringify({ sensorId: SENSORS[0].sensorId, taskType: "DWELL", trackId: t.trackId, priority: 7, requestedBy: S.role }) });
+      logEvent("GRANTED", "GRANTED", `TASK DWELL ${t.trackId} (live)`);
+    } catch (e) { toast("deny", "task failed"); }
+  }
+  async function liveEngage(t) {
+    const eff = bestEffector(t) || S.effectors[0];
+    try {
+      const r = await fetch("engagements", { method: "POST", headers: { "Content-Type": "application/json", "X-Operator-Role": S.role },
+        body: JSON.stringify({ trackId: t.trackId, effectorId: eff.effectorId, engagementType: EFFECT_FOR[eff.effectorType], humanConfirmation: true }) });
+      const j = await r.json();
+      if (r.ok) { toast("ok", `${j.state} · ${eff.effectorId}`); logEvent("PERMIT", "PERMIT", `ENGAGE ${t.trackId} · ${eff.effectorId} · ${j.state}`); }
+      else { toast("deny", `DENIED · ${j.reasonCode}`); logEvent("DENY", "DENY", `ENGAGE ${t.trackId}: ${j.detail || j.reasonCode}`); }
+    } catch (e) { toast("deny", "engage failed"); }
+  }
+
+  // ---- rendering: tactical plot ----
+  const canvas = $("plot");
+  const ctx = canvas.getContext("2d");
+  let VIEW = { w: 0, h: 0, cx: 0, cy: 0, scale: 1, dpr: 1 };
+
+  function resize() {
+    const wrap = canvas.parentElement;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    canvas.style.width = w + "px"; canvas.style.height = h + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    VIEW = { w, h, cx: w / 2, cy: h / 2, scale: (Math.min(w, h) / 2 - 28) / AO_RADIUS, dpr };
+  }
+  const sx = (mx) => VIEW.cx + mx * VIEW.scale;
+  const sy = (my) => VIEW.cy - my * VIEW.scale;
+
+  function draw() {
+    const { w, h, cx, cy, scale } = VIEW;
+    ctx.clearRect(0, 0, w, h);
+
+    // range rings
+    ctx.strokeStyle = "#16202c";
+    ctx.lineWidth = 1;
+    for (const r of RINGS) {
+      ctx.beginPath(); ctx.arc(cx, cy, r * scale, 0, Math.PI * 2); ctx.stroke();
+    }
+    // bearing spokes
+    ctx.strokeStyle = "#121a24";
+    for (let a = 0; a < 360; a += 30) {
+      const rad = a * Math.PI / 180;
+      ctx.beginPath(); ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(rad) * RINGS[RINGS.length - 1] * scale, cy + Math.sin(rad) * RINGS[RINGS.length - 1] * scale);
+      ctx.stroke();
+    }
+    // ring labels
+    ctx.fillStyle = "#3a485a"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
+    for (const r of RINGS) ctx.fillText((r / 1000) + "km", cx + 3, cy - r * scale - 3);
+
+    // sensor coverage
+    for (const s of SENSORS) {
+      ctx.beginPath(); ctx.arc(sx(s.x), sy(s.y), s.range * scale, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(57,160,196,0.04)"; ctx.fill();
+      ctx.strokeStyle = "rgba(57,160,196,0.22)"; ctx.setLineDash([4, 6]); ctx.lineWidth = 1; ctx.stroke();
+      ctx.setLineDash([]);
+      drawSensor(s);
+    }
+    // effector envelopes
+    for (const e of S.effectors) {
+      ctx.beginPath(); ctx.arc(sx(e.x), sy(e.y), e.maxRange * scale, 0, Math.PI * 2);
+      ctx.strokeStyle = e.mag > 0 ? "rgba(70,198,110,0.16)" : "rgba(120,120,120,0.1)"; ctx.setLineDash([2, 7]); ctx.stroke();
+      ctx.setLineDash([]);
+      drawEffector(e);
+    }
+
+    // defended asset
+    drawAsset(cx, cy);
+
+    // tracks (+ engagement beams)
+    for (const t of S.tracks.values()) drawTrack(t);
+
+    requestAnimationFrame(loop);
+  }
+
+  function drawAsset(x, y) {
+    ctx.save();
+    ctx.strokeStyle = "#cdd9e6"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x - 7, y); ctx.lineTo(x, y - 8); ctx.lineTo(x + 7, y); ctx.lineTo(x, y + 8); ctx.closePath(); ctx.stroke();
+    ctx.fillStyle = "rgba(205,217,230,0.18)"; ctx.fill();
+    ctx.fillStyle = "#7c8a9c"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
+    ctx.fillText("DEFENDED ASSET", x, y + 22);
+    ctx.restore();
+  }
+  function drawSensor(s) {
+    const x = sx(s.x), y = sy(s.y);
+    ctx.save();
+    ctx.strokeStyle = ACCENT; ctx.fillStyle = "#0c1620"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.rect(x - 5, y - 5, 10, 10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#6f8294"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
+    ctx.fillText(s.sensorId, x, y - 9);
+    ctx.restore();
+  }
+  function drawEffector(e) {
+    const x = sx(e.x), y = sy(e.y);
+    ctx.save();
+    const c = e.mag > 0 ? "#46c66e" : "#5a6472";
+    ctx.strokeStyle = c; ctx.fillStyle = "#0b1610"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 6, y); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#6f8294"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
+    ctx.fillText(e.effectorId, x, y - 10);
+    ctx.restore();
+  }
+  function drawTrack(t) {
+    const x = sx(t.x), y = sy(t.y);
+    const col = COLORS[t.identity] || COLORS.UNKNOWN;
+    const sel = t.trackId === S.selected;
+    ctx.save();
+    ctx.globalAlpha = t.fade != null ? t.fade : 1;
+
+    // engagement beam
+    if (t.state === "ENGAGING" && t.engEff) {
+      const e = S.effectors.find((ef) => ef.effectorId === t.engEff);
+      if (e) {
+        const pulse = 0.5 + 0.5 * Math.sin(perf() / 80);
+        ctx.strokeStyle = `rgba(255,176,46,${0.35 + pulse * 0.5})`;
+        ctx.lineWidth = 1 + pulse * 1.6;
+        ctx.beginPath(); ctx.moveTo(sx(e.x), sy(e.y)); ctx.lineTo(x, y); ctx.stroke();
+      }
+    }
+
+    // selection ring
+    if (sel) {
+      ctx.strokeStyle = "#e7eef7"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = "rgba(231,238,247,0.3)";
+      ctx.beginPath(); ctx.arc(x, y, 18 + 2 * Math.sin(perf() / 300), 0, Math.PI * 2); ctx.stroke();
+    }
+
+    // glyph: friendly = circle, hostile/suspect = chevron-ish, neutralized = x
+    ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.fillStyle = col;
+    if (t.state === "NEUTRALIZED") {
+      ctx.strokeStyle = "#5a6472";
+      ctx.beginPath(); ctx.moveTo(x - 5, y - 5); ctx.lineTo(x + 5, y + 5); ctx.moveTo(x + 5, y - 5); ctx.lineTo(x - 5, y + 5); ctx.stroke();
+    } else if (t.identity === "FRIEND" || t.identity === "ASSUMED_FRIEND" || t.identity === "NEUTRAL") {
+      ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      // diamond for hostile/suspect/unknown with velocity leader line
+      ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.closePath(); ctx.stroke();
+      if (t.heading != null) {
+        // leader line: meters +y is north, screen y is inverted, so negate sin
+        ctx.beginPath(); ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(t.heading) * 16, y - Math.sin(t.heading) * 16);
+        ctx.stroke();
+      }
+    }
+
+    // TQ tag + id
+    if (t.state !== "NEUTRALIZED") {
+      ctx.fillStyle = "#9fb0c4"; ctx.font = "9px " + MONO; ctx.textAlign = "left";
+      ctx.fillText(`${t.trackId.replace("TRK-", "")} TQ${Math.floor(t.tq)}`, x + 10, y + 3);
+    }
+    ctx.restore();
+  }
+
+  const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+
+  // ---- render right rail ----
+  function renderRail() {
+    $("sTracks").textContent = [...S.tracks.values()].filter((t) => t.state !== "NEUTRALIZED").length;
+    $("sHostile").textContent = [...S.tracks.values()].filter((t) => t.identity === "HOSTILE" && t.state !== "NEUTRALIZED").length;
+    $("sReady").textContent = S.effectors.filter((e) => e.mag > 0).length + "/" + S.effectors.length;
+    $("sEng").textContent = S.engaged;
+
+    // effector list
+    $("effList").innerHTML = S.effectors.map((e) => {
+      const c = e.mag > 0 ? "var(--neutral)" : "var(--faint)";
+      const pct = Math.round((e.mag / e.cap) * 100);
+      return `<div class="eff"><span class="dot" style="background:${c}"></span>
+        <span class="nm">${e.effectorId}<small>${e.effectorType.replace(/_/g, " ")}</small></span>
+        <span class="mag">${pct}%</span></div>`;
+    }).join("");
+
+    const t = S.selected && S.tracks.get(S.selected);
+    const body = $("trackBody");
+    if (!t) { body.innerHTML = '<p class="empty">No track selected. Click a contact on the plot.</p>'; return; }
+    const col = COLORS[t.identity] || COLORS.UNKNOWN;
+    const rng = Math.round(dist(t.x, t.y, 0, 0));
+    const tqi = Math.floor(t.tq);
+    const eff = bestEffector(t);
+    const minNeed = eff ? MIN_TQ[eff.effectorType] : 8;
+    const segs = Array.from({ length: 15 }, (_, i) =>
+      `<div class="tq-seg ${i < tqi ? "on" : ""} ${i + 1 === minNeed ? "thr" : ""}"></div>`).join("");
+
+    const canTask = ROLES_TASK.has(S.role) && t.state === "ACTIVE";
+    const a = t.state === "ACTIVE" ? authorize(t) : { ok: false, code: t.state };
+    const engLabel = a.ok ? `Engage · ${a.eff.effectorId}` : "Engage";
+
+    body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span class="trk-id">${t.trackId}</span>
+        <span class="idpill" style="color:${col};background:${col}22;border:1px solid ${col}55">${t.identity}</span>
+      </div>
+      <dl class="kv">
+        <dt>Type</dt><dd>${(t.classificationType || "UNKNOWN").replace(/_/g, " ")}</dd>
+        <dt>Range to asset</dt><dd>${(rng / 1000).toFixed(1)} km</dd>
+        <dt>Sensors</dt><dd>${t.contributingSensors.length || 0}</dd>
+        <dt>Pairing</dt><dd>${eff ? eff.effectorId : "—"}</dd>
+      </dl>
+      <div class="tq">
+        <div class="tq-top"><span>Track quality</span><b>${tqi} / 15</b></div>
+        <div class="tq-bar">${segs}</div>
+        <div class="tq-note">${tqi >= minNeed ? "meets engagement threshold" : `needs TQ ≥ ${minNeed} for in-range effector`}</div>
+      </div>
+      <div style="margin-top:13px">
+        <button class="btn task" id="btnTask" ${canTask ? "" : "disabled"}>Task sensor · DWELL</button>
+        <button class="btn engage" id="btnEngage" ${t.state === "ACTIVE" ? "" : "disabled"}>${engLabel}</button>
+      </div>`;
+    $("btnTask").onclick = taskSensor;
+    $("btnEngage").onclick = engage;
+  }
+
+  // ---- selection / hit testing ----
+  function selectTrack(id) { S.selected = id; renderRail(); }
+  canvas.addEventListener("click", (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+    let best = null, bd = 22;
+    for (const t of S.tracks.values()) {
+      if (t.state === "NEUTRALIZED") continue;
+      const d = dist(px, py, sx(t.x), sy(t.y));
+      if (d < bd) { bd = d; best = t.trackId; }
+    }
+    selectTrack(best);
+  });
+
+  // ---- log + toast ----
+  function logEvent(decision, cls, msg) {
+    const row = document.createElement("div");
+    row.className = "log-row";
+    row.innerHTML = `<span class="t">${nowClock()}</span><span class="d ${cls}">${decision}</span><span class="m">${msg}</span>`;
+    const log = $("log");
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+    while (log.children.length > 200) log.removeChild(log.firstChild);
+  }
+  function toast(kind, msg) {
+    const el = document.createElement("div");
+    el.className = "toast " + (kind === "deny" ? "deny" : kind === "ok" ? "ok" : "");
+    el.textContent = msg;
+    $("toasts").appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  // ---- controls wiring ----
+  function bindSeg(segId, key, after) {
+    $(segId).querySelectorAll("button").forEach((b) => {
+      b.addEventListener("click", () => {
+        $(segId).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", "false"));
+        b.setAttribute("aria-pressed", "true");
+        S[key] = b.dataset.v;
+        if (after) after();
+        renderRail();
+      });
+    });
+  }
+  bindSeg("roleSeg", "role");
+  bindSeg("wcsSeg", "wcs");
+
+  $("btnSwarm").onclick = () => {
+    if (S.live) { toast("ok", "swarm is driven by the scenario engine in LIVE mode"); return; }
+    const b = Math.random() * Math.PI * 2;
+    for (let i = 0; i < 8; i++) spawnHostile({ bearing: b + (i - 4) * 0.09, r: 4900 + (i % 3) * 160, speed: 26 + Math.random() * 12, cls: "UAS_GROUP_1", tq: 4 });
+    logEvent("INFO", "INFO", "SWARM inbound · 8 contacts");
+    toast("ok", "Swarm launched · 8 inbound");
+  };
+  $("btnSingle").onclick = () => {
+    if (S.live) return;
+    const t = spawnHostile({});
+    logEvent("INFO", "INFO", `New contact ${t.trackId}`);
+  };
+  $("btnNode").onclick = () => {
+    S.nodeLost = !S.nodeLost;
+    const nl = $("nodeLost");
+    if (S.nodeLost) {
+      S.node = "C2-NODE-02";
+      nl.textContent = "⚠ C2-NODE-01 OFFLINE — NODE-02 ASSUMED CONTROL (shared COP intact)";
+      nl.classList.add("on");
+      logEvent("INFO", "INFO", "C2-NODE-01 lost · NODE-02 continues from shared COP");
+      toast("ok", "Node lost — fight continues on NODE-02");
+    } else {
+      S.node = "C2-NODE-01"; nl.classList.remove("on");
+      logEvent("INFO", "INFO", "C2-NODE-01 restored");
+    }
+  };
+  $("btnReset").onclick = () => { resetScenario(); };
+
+  function resetScenario() {
+    S.tracks.clear(); S.selected = null; S.engaged = 0;
+    S.effectors = JSON.parse(JSON.stringify(EFFECTORS));
+    S.nodeLost = false; S.node = "C2-NODE-01"; $("nodeLost").classList.remove("on");
+    if (!S.live) { spawnFriend(); spawnHostile({ bearing: -0.6, r: 4200, tq: 5, cls: "MULTIROTOR" }); }
+    $("log").innerHTML = "";
+    logEvent("INFO", "INFO", "Scenario reset");
+    renderRail();
+  }
+
+  function setMode(live) {
+    S.live = live;
+    const chip = $("modeChip");
+    chip.dataset.mode = live ? "LIVE" : "SIM";
+    chip.textContent = live ? "LIVE" : "SIM";
+  }
+
+  // ---- legend ----
+  $("legend").innerHTML = [
+    ["Hostile", COLORS.HOSTILE], ["Suspect", COLORS.SUSPECT], ["Friend", COLORS.FRIEND],
+    ["Unknown", COLORS.UNKNOWN], ["Neutral", COLORS.NEUTRAL],
+  ].map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join("") +
+    `<span><i style="background:${ACCENT};border-radius:1px"></i>Sensor</span>` +
+    `<span><i style="background:#46c66e;transform:rotate(45deg);border-radius:1px"></i>Effector</span>`;
+
+  // ---- main loops ----
+  let lastT = perf();
+  function loop() {
+    const now = perf();
+    const dt = Math.min(0.05, (now - lastT) / 1000);
+    lastT = now;
+    if (!S.live) simTick(dt);
+    draw();   // draw() schedules the next frame
+  }
+
+  // ---- boot ----
+  async function boot() {
+    S.t0 = Date.UTC(2026, 5, 26, 14, 30, 0);
+    resize();
+    window.addEventListener("resize", resize);
+    const live = detectBackend();
+    setMode(live);
+    if (live) {
+      await liveRegisterMateriel();
+      resetScenario();
+      setInterval(livePoll, 1000);
+      logEvent("INFO", "INFO", "Connected to c2-core · LIVE");
+    } else {
+      resetScenario();
+      logEvent("INFO", "INFO", "Embedded simulation · SIM mode");
+    }
+    setInterval(renderRail, 300);   // keep counts / TQ / magazines live
+    // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
+    if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
+      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize };
+    }
+    requestAnimationFrame(loop);
+  }
+  boot();
+})();
+</script>
