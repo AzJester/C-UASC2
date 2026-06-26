@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuas.mil/schemas/effector.schema.json",
+  "title": "EffectorStatus",
+  "description": "Effector registration/health/readiness. Published to cuas.effector.status.{effectorId}. No pairing to any sensor is recorded; pairing is computed at decision time (Imperative 5).",
+  "type": "object",
+  "required": ["effectorId", "effectorType", "readiness"],
+  "additionalProperties": false,
+  "properties": {
+    "effectorId": { "type": "string" },
+    "effectorType": {
+      "type": "string",
+      "enum": ["EW_JAMMER", "RF_TAKEOVER", "KINETIC_GUN", "KINETIC_INTERCEPTOR", "DIRECTED_ENERGY", "NET_CAPTURE", "OTHER"],
+      "description": "Effect class; informs weapon-target pairing and minimum-TQ policy."
+    },
+    "vendor": { "type": "string" },
+    "readiness": { "type": "string", "enum": ["READY", "DEGRADED", "OFFLINE", "MAINTENANCE", "WEAPONS_HOLD"] },
+    "magazine": {
+      "type": "object",
+      "description": "Remaining capacity (rounds, charge, etc.).",
+      "additionalProperties": false,
+      "properties": {
+        "remaining": { "type": "number", "minimum": 0 },
+        "capacity": { "type": "number", "minimum": 0 },
+        "unit": { "type": "string", "description": "rounds | shots | seconds | percent" }
+      }
+    },
+    "engagementEnvelope": {
+      "type": "object",
+      "description": "Where this effector can engage; used by the feasibility gate.",
+      "additionalProperties": false,
+      "properties": {
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "lat": { "type": "number" },
+            "lon": { "type": "number" }
+          }
+        },
+        "minRangeMeters": { "type": "number", "minimum": 0 },
+        "maxRangeMeters": { "type": "number", "minimum": 0 },
+        "minAltMeters": { "type": "number" },
+        "maxAltMeters": { "type": "number" }
+      }
+    },
+    "humanControl": {
+      "type": "string",
+      "enum": ["IN_THE_LOOP", "ON_THE_LOOP"],
+      "description": "Supported human-control mode; bounded by ROE/weapons control status (see docs/05)."
+    },
+    "softwareVersion": { "type": "string" },
+    "timeReported": { "type": "string", "format": "date-time" }
+  }
+}

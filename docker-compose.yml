@@ -1,0 +1,42 @@
+# Local reference deployment of the C-UAS C2 connective tissue:
+#   nats       - the pub/sub backbone (edge leaf broker stand-in), JetStream on
+#   c2-core    - the reference C2 node (COP, tasking, engagement gates)
+#   sensor-sim - simulated edge materiel (a taskable sensor + an effector)
+#
+# This is a single-tier local demo. The edge<->echelon federation (NATS leaf nodes)
+# and QoS tiering described in docs/03 and docs/06 are configured per deployment.
+
+services:
+  nats:
+    image: nats:2.10
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"   # client
+      - "8222:8222"   # monitoring
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8222/healthz"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  c2-core:
+    build: ./services/c2-core
+    environment:
+      NATS_URL: nats://nats:4222
+      C2_NODE_ID: C2-NODE-01
+    ports:
+      - "8000:8000"
+    depends_on:
+      nats:
+        condition: service_healthy
+
+  sensor-sim:
+    build: ./services/sensor-sim
+    environment:
+      NATS_URL: nats://nats:4222
+      SIM_REGION: region-1
+      SIM_SENSOR_ID: SEN-RAD-01
+      SIM_EFFECTOR_ID: EFF-EW-01
+    depends_on:
+      nats:
+        condition: service_healthy

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuas.mil/schemas/engagement-status.schema.json",
+  "title": "EngagementStatus",
+  "description": "Lifecycle feedback for an engagement (Imperative 5). Published to cuas.engagement.status.{engagementId} on the T0 QoS tier so feedback is never delayed behind COP traffic.",
+  "type": "object",
+  "required": ["engagementId", "effectorId", "state", "timeReported"],
+  "additionalProperties": false,
+  "properties": {
+    "engagementId": { "type": "string" },
+    "effectorId": { "type": "string" },
+    "trackId": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["PROPOSED", "AUTHORIZED", "ACCEPTED", "ACTIVE", "COMPLETE", "ABORTED", "FAILED", "DENIED"],
+      "description": "PROPOSED->AUTHORIZED->ACCEPTED->ACTIVE->COMPLETE on the nominal path; DENIED/ABORTED/FAILED otherwise."
+    },
+    "reasonCode": {
+      "type": "string",
+      "description": "Why a DENIED/ABORTED/FAILED state occurred.",
+      "enum": [
+        "OK",
+        "TRACK_QUALITY_INSUFFICIENT",
+        "EFFECTOR_UNAVAILABLE",
+        "OUT_OF_ENVELOPE",
+        "NOT_AUTHORIZED",
+        "ROE_PROHIBITED",
+        "WEAPONS_HOLD",
+        "INTERLOCK_BLOCKED",
+        "TRACK_STALE",
+        "FRIENDLY_PROXIMITY",
+        "OPERATOR_ABORT",
+        "EFFECTOR_FAULT",
+        "DUPLICATE_ORDER"
+      ]
+    },
+    "detail": { "type": "string", "description": "Human-readable amplification for the COP/audit." },
+    "timeReported": { "type": "string", "format": "date-time" }
+  }
+}

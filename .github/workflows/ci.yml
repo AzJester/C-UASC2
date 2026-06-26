@@ -1,0 +1,38 @@
+name: CI
+
+# Runs the reference scaffold's checks on every push and PR:
+#   - validate the government-owned interface specs (JSON Schema / OpenAPI / AsyncAPI)
+#   - run the unit/integration test suite (no broker required; bus runs degraded)
+# This is a concept-stage reference scaffold; the workflow keeps it honest.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: make venv
+
+      - name: Validate interface specs
+        run: make validate-specs
+
+      - name: Run tests
+        run: make test

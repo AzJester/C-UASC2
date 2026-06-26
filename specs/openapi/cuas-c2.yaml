@@ -1,0 +1,271 @@
+openapi: 3.1.0
+info:
+  title: C-UAS C2 REST API (Government-Owned Interface)
+  version: 1.0.0
+  description: >
+    Request/response contract for deliberate, audited, transactional actions against
+    a C-UAS C2 node: register materiel, read the COP, task sensors, and request
+    engagements. High-rate many-to-many data (tracks, status, orders) flows over the
+    pub/sub bus (see specs/asyncapi/cuas-pubsub.yaml), not this API.
+
+    This is a government-owned interface (Imperative 2). Any conformant C2 node,
+    integration tool, or test harness uses it; vendors are interchangeable behind it.
+  contact:
+    name: C-UAS C2 Interface Design Authority (illustrative)
+  license:
+    name: Government Purpose Rights (illustrative)
+servers:
+  - url: http://localhost:8000
+    description: Local reference scaffold
+tags:
+  - name: health
+  - name: cop
+  - name: materiel
+  - name: tasking
+  - name: engagement
+  - name: audit
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Liveness and bus connectivity
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service health
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [ok, degraded] }
+                  busConnected: { type: boolean }
+                  nodeId: { type: string }
+                  schemaVersion: { type: string }
+  /cop:
+    get:
+      tags: [cop]
+      summary: Current fused common operating picture
+      description: Returns live tracks above their TTL, built from the bus track stream.
+      operationId: getCop
+      parameters:
+        - name: minTrackQuality
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 15 }
+          description: Filter to tracks at or above this TQ.
+        - name: identity
+          in: query
+          schema: { type: string }
+          description: Filter by combat identity (e.g., HOSTILE).
+      responses:
+        "200":
+          description: List of current tracks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Track" }
+  /sensors:
+    get:
+      tags: [materiel]
+      summary: List registered sensors
+      operationId: listSensors
+      responses:
+        "200":
+          description: Sensors
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SensorStatus" }
+    post:
+      tags: [materiel]
+      summary: Register a sensor (no pairing to any effector)
+      operationId: registerSensor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SensorStatus" }
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SensorStatus" }
+  /effectors:
+    get:
+      tags: [materiel]
+      summary: List registered effectors
+      operationId: listEffectors
+      responses:
+        "200":
+          description: Effectors
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/EffectorStatus" }
+    post:
+      tags: [materiel]
+      summary: Register an effector (no pairing to any sensor)
+      operationId: registerEffector
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EffectorStatus" }
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EffectorStatus" }
+  /sensors/{sensorId}/tasks:
+    post:
+      tags: [tasking]
+      summary: Remotely task a sensor (Imperative 4)
+      description: >
+        Submit a tasking request. The node runs the authority check and arbitration,
+        then publishes the SensorTask to the bus. Returns the granted/denied result.
+      operationId: taskSensor
+      parameters:
+        - name: sensorId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SensorTask" }
+      responses:
+        "202":
+          description: Task accepted/published
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taskId: { type: string }
+                  granted: { type: boolean }
+                  reason: { type: string }
+        "403": { $ref: "#/components/responses/Denied" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /engagements:
+    get:
+      tags: [engagement]
+      summary: List engagements and their lifecycle states
+      operationId: listEngagements
+      responses:
+        "200":
+          description: Engagements
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/EngagementStatus" }
+    post:
+      tags: [engagement]
+      summary: Request an engagement (any-sensor / any-shooter, Imperative 5)
+      description: >
+        The node evaluates the four gates in order — track quality, effector
+        feasibility, authority/ROE — and, on PERMIT, publishes a signed
+        EngagementOrder to the effector. The effector applies the final hardware
+        interlock. A denial returns a reason code and never reaches an effector.
+      operationId: requestEngagement
+      parameters:
+        - name: X-Operator-Role
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [OBSERVER, SENSOR_MANAGER, ENGAGEMENT_OPERATOR, FIRE_CONTROL_AUTHORITY]
+          description: Requesting operator role (illustrative stand-in for the Zero Trust identity/PDP).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EngagementRequest" }
+      responses:
+        "202":
+          description: Authorized and ordered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EngagementStatus" }
+        "403":
+          description: Denied by a gate (track quality / feasibility / authority / ROE)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EngagementStatus" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /audit:
+    get:
+      tags: [audit]
+      summary: Non-repudiation record (tasks, authority decisions, orders, outcomes)
+      operationId: getAudit
+      responses:
+        "200":
+          description: Audit records, newest last
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AuditRecord" }
+components:
+  responses:
+    Denied:
+      description: Authorization denied
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              reasonCode: { type: string }
+              detail: { type: string }
+    NotFound:
+      description: Referenced track/sensor/effector not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail: { type: string }
+  schemas:
+    # These mirror specs/schemas/*.json. The JSON Schema files are the source of
+    # truth for the canonical data model; these are the OpenAPI-embedded copies.
+    Track:
+      $ref: "../schemas/track.schema.json"
+    SensorStatus:
+      $ref: "../schemas/sensor.schema.json"
+    EffectorStatus:
+      $ref: "../schemas/effector.schema.json"
+    SensorTask:
+      $ref: "../schemas/sensor-task.schema.json"
+    EngagementStatus:
+      $ref: "../schemas/engagement-status.schema.json"
+    EngagementRequest:
+      type: object
+      description: Operator-facing engagement request; the node mints the EngagementOrder after the gates pass.
+      required: [trackId, effectorId, engagementType]
+      properties:
+        trackId: { type: string }
+        effectorId: { type: string }
+        engagementType:
+          type: string
+          enum: [EW_DEFEAT, RF_TAKEOVER, KINETIC, DIRECTED_ENERGY, NET_CAPTURE]
+        humanConfirmation:
+          type: boolean
+          default: false
+          description: Operator confirmation for human-in-the-loop ROE states.
+    AuditRecord:
+      type: object
+      properties:
+        recordId: { type: string }
+        timeRecorded: { type: string, format: date-time }
+        principal: { type: string }
+        action: { type: string }
+        trackId: { type: string }
+        decision: { type: string, enum: [PERMIT, DENY, GRANTED, INFO] }
+        reasonCode: { type: string }
+        detail: { type: string }

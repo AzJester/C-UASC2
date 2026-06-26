@@ -1,1 +1,73 @@
-# C-UASC2
+# C-UAS C2 Reference Architecture (JIATF 401)
+
+A government-owned, layered reference architecture and runnable scaffold for a
+**common Counter-Unmanned Aircraft Systems (C-UAS) Command and Control (C2)**
+capability, scoped to the Department of Defense's counter-small-UAS (C-sUAS)
+enterprise under **Joint Interagency Task Force 401 (JIATF 401)**.
+
+It exists to turn five strategic imperatives into something buildable:
+
+1. **One common C-UAS C2 for all services** — web-based, cloud-enabled, intuitive across MOSs, over-the-air updatable.
+2. **Government-owned, open APIs** — the department defines and owns the interfaces connecting every sensor, effector, and C2 node.
+3. **A pub/sub backbone at the edge and at echelon** — real-time data sharing and track fusion across heterogeneous sensors/effectors.
+4. **Remote sensor tasking** — sensors and effectors controlled across the network, not just locally.
+5. **Remote fire control and engagement** — any authorized C2 node may engage any effector using any track of sufficient quality (any-sensor / any-shooter), replacing hub-and-spoke pairings.
+
+> This repository is a **reference design and interface contract**, not a fielded
+> weapons system. The scaffold demonstrates the interfaces and data flows so the
+> government can own and competition-test them. See
+> [`docs/05-security-authority-safety.md`](docs/05-security-authority-safety.md)
+> for the positive-control and safety boundaries any production build must enforce.
+
+## How to read this
+
+The documentation is **layered** — start at the top for the "what and why,"
+descend for the engineering reference.
+
+| Layer | Document | Audience |
+|---|---|---|
+| Decision brief | [`docs/00-executive-summary.md`](docs/00-executive-summary.md) | Leadership, acquisition, JIATF 401 staff |
+| Reference architecture | [`docs/01-reference-architecture.md`](docs/01-reference-architecture.md) | Architects, integrators |
+| API governance | [`docs/02-api-governance.md`](docs/02-api-governance.md) | Program / interface-control owners |
+| Pub/sub & data model | [`docs/03-pubsub-and-data-model.md`](docs/03-pubsub-and-data-model.md) | Data / messaging engineers |
+| Sensor tasking & fire control | [`docs/04-sensor-tasking-and-fire-control.md`](docs/04-sensor-tasking-and-fire-control.md) | Fires / fire-control engineers |
+| Security, authority & safety | [`docs/05-security-authority-safety.md`](docs/05-security-authority-safety.md) | Security, safety, ATO authorities |
+| Edge topology, DevSecOps & OTA | [`docs/06-edge-topology-devsecops-ota.md`](docs/06-edge-topology-devsecops-ota.md) | Platform / DevSecOps engineers |
+| Roadmap | [`docs/07-roadmap.md`](docs/07-roadmap.md) | Program managers |
+| Standards crosswalk | [`docs/08-standards-crosswalk.md`](docs/08-standards-crosswalk.md) | Standards / interoperability leads |
+| Decisions (ADRs) | [`docs/decisions/`](docs/decisions/) | All |
+
+## The runnable scaffold
+
+The interfaces are not just described, they are **specified and demonstrated** so
+they can be competed and conformance-tested:
+
+```
+specs/
+  schemas/      canonical JSON Schema data model (track, sensor, effector, tasks, engagements)
+  openapi/      OpenAPI 3.1 contract for the C2 REST API
+  asyncapi/     AsyncAPI 3.0 contract for the pub/sub topic taxonomy
+services/
+  c2-core/      FastAPI C2 node: builds the COP from the track stream, tasks sensors, orders engagements (with authority checks)
+  sensor-sim/   publishes simulated detections/tracks to the bus
+```
+
+Stand the whole thing up locally (broker + C2 node + a simulated sensor) with one command:
+
+```bash
+make up        # docker compose: NATS (JetStream) + c2-core + sensor-sim
+make demo      # walk the any-sensor/any-shooter flow end to end
+make test      # run the data-model and engagement-authority tests
+make down
+```
+
+See [`docs/QUICKSTART.md`](docs/QUICKSTART.md) for the guided walkthrough.
+
+## Provenance of the institutional context
+
+- Army designated DoD Executive Agent for C-sUAS (2019); Joint C-sUAS Office (JCO) established under DoDD 3800.01E.
+- **JIATF 401** established Aug 2025 (SecDef memo), realigning JCO authorities/resources.
+- **FAAD C2** (Northrop Grumman) is the interim C-sUAS C2 of record; this design describes the open, government-owned target state it should evolve toward.
+- Interface direction follows the DoD **API Technical Guidance** (MVCR1, Jul 2024) and **MOSA Implementation Guidebook** (Feb 2025), both from the Office of the CTO/DoD.
+
+Full citations in [`docs/00-executive-summary.md`](docs/00-executive-summary.md#references).

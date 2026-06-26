@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuas.mil/schemas/engagement-order.schema.json",
+  "title": "EngagementOrder",
+  "description": "A fire order from an authorized C2 node to an effector (Imperative 5). Published to cuas.engagement.order.{effectorId} on the T0 (safety/fires) QoS tier. The effector trusts the authorityToken (issued by the PDP), not the requesting node's say-so, and applies a final hardware interlock.",
+  "type": "object",
+  "required": ["engagementId", "trackId", "effectorId", "orderedBy", "authorityToken", "engagementType", "timeOrdered"],
+  "additionalProperties": false,
+  "properties": {
+    "engagementId": { "type": "string", "description": "Correlates the order with its status lifecycle." },
+    "trackId": { "type": "string", "description": "Target track (any sufficient-quality track, from any sensor)." },
+    "effectorId": { "type": "string", "description": "Engaging effector (any available effector; no prior pairing)." },
+    "orderedBy": { "type": "string", "description": "Issuing principal (C2 node/operator identity)." },
+    "authorityToken": {
+      "type": "string",
+      "description": "Short-lived signed token from the Policy Decision Point authorizing THIS track+effector+window. Verified by the effector."
+    },
+    "engagementType": {
+      "type": "string",
+      "enum": ["EW_DEFEAT", "RF_TAKEOVER", "KINETIC", "DIRECTED_ENERGY", "NET_CAPTURE"],
+      "description": "Requested effect; must be compatible with the effector."
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "abortIfFriendlyWithinMeters": { "type": "number", "minimum": 0 },
+        "maxEngagementSeconds": { "type": "number", "minimum": 0 },
+        "requireHumanConfirmation": { "type": "boolean", "default": true }
+      }
+    },
+    "trackSnapshotTimeObserved": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Observation time of the track at order; effector rejects if the live track is older than tolerance (anti-stale)."
+    },
+    "timeOrdered": { "type": "string", "format": "date-time" }
+  }
+}
