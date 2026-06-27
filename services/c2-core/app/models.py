@@ -133,6 +133,8 @@ class Track(BaseModel):
     trackQuality: int = Field(ge=0, le=15)
     identity: Identity
     classificationType: ClassificationType = ClassificationType.UNKNOWN
+    platform: Optional[str] = None
+    service: Optional[str] = None
     contributingSensors: list[str] = Field(default_factory=list)
     timeObserved: datetime = Field(default_factory=_now)
     timeToLiveSeconds: float = 30.0

@@ -61,6 +61,15 @@
       "default": "UNKNOWN",
       "description": "Platform/type classification (informs weapon-target pairing)."
     },
+    "platform": {
+      "type": "string",
+      "description": "Specific platform designation when known (e.g., MH-60R, F/A-18E, MV-22B). Optional."
+    },
+    "service": {
+      "type": "string",
+      "enum": ["USA", "USN", "USMC", "USAF", "USSF", "JOINT", "COALITION", "UNKNOWN"],
+      "description": "Owning service/component for a friendly (Blue) track. Optional."
+    },
     "contributingSensors": {
       "type": "array",
       "items": { "type": "string" },

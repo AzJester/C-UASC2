@@ -24,20 +24,22 @@
   }
 
   * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
 
   #cuas {
     --pad: 14px;
-    position: fixed;
-    inset: 0;
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
     display: grid;
-    grid-template-rows: 22px 44px 1fr 170px 22px;
+    grid-template-rows: 22px 44px minmax(360px, 1fr) 170px 22px;
     grid-template-columns: 1fr;
     background: var(--ground);
     color: var(--text);
     font-family: var(--sans);
     font-size: 14px;
     line-height: 1.45;
-    overflow: hidden;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -520,8 +522,8 @@
   }
 
   @media (max-width: 880px) {
-    #cuas { grid-template-rows: 20px 42px 1fr 20px; }
-    .main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+    #cuas { grid-template-rows: 20px 42px minmax(300px, 1fr) 150px 20px; }
+    .main { grid-template-columns: 1fr; }
     .rail { display: none; }
   }
 </style>
@@ -573,6 +575,15 @@
               <button data-v="HUB">HUB &amp; SPOKE</button>
             </div>
           </div>
+          <div class="field" style="margin-top:10px;margin-bottom:0">
+            <label>Data transport</label>
+            <div class="seg" id="transSeg">
+              <button data-v="BOTH" aria-pressed="true">BOTH</button>
+              <button data-v="MANET">MANET</button>
+              <button data-v="5G">5G</button>
+              <button data-v="OFF">OFF</button>
+            </div>
+          </div>
         </div>
 
         <div class="card" id="trackCard">
@@ -611,6 +622,11 @@
 
   <div class="tray" id="tray">
     <div class="scenario">
+      <span class="lbl">AO</span>
+      <div class="seg" id="scnSeg" style="flex:0 0 auto;width:216px">
+        <button data-v="sandiego" aria-pressed="true">San Diego</button>
+        <button data-v="elpaso">El Paso</button>
+      </div>
       <span class="lbl">Scenario</span>
       <button class="sbtn primary" id="btnAuto">&#9654; Auto-play brief</button>
       <button class="sbtn" id="btnSwarm">Launch swarm</button>
@@ -652,32 +668,96 @@
   const ROLES_TASK = new Set(["SENSOR_MANAGER", "ENGAGEMENT_OPERATOR", "FIRE_CONTROL_AUTHORITY"]);
 
   // ---- area of operations (meters, asset-centric); lat/lon used only in LIVE ----
-  const ASSET = { lat: 34.20, lon: -118.20 };
   const AO_RADIUS = 6200;            // meters shown to edge
   const RINGS = [2000, 4000, 6000];
 
-  // Vendor labels make the cross-vendor / anti-lock-in argument visible. They are
-  // illustrative; the point is that any conformant vendor is interchangeable.
-  const SENSORS = [
-    { sensorId: "SEN-RAD-01", sensorType: "RADAR", vendor: "Vendor A", x: 0,     y: -150,  range: 6000 },
-    { sensorId: "SEN-RF-02",  sensorType: "RF",    vendor: "Vendor B", x: 1700,  y: 1300,  range: 5200 },
-    { sensorId: "SEN-EO-03",  sensorType: "EO_IR", vendor: "Vendor C", x: -1800, y: 1000,  range: 3600 },
-  ];
-  // A layered, distributed effector mix spread to the edge of the AO: soft-kill
-  // (EW / RF takeover) reaches farthest, directed energy and interceptors in the
-  // middle, gun and net capture for the inner keep. Distinct vendors make the
-  // cross-vendor pairing story richer. The canonical model competes the box behind
-  // each interface (docs/04 section 3.2).
-  const EFFECTORS = [
-    { effectorId: "EFF-EW-01",  effectorType: "EW_JAMMER",           vendor: "Vendor D", x: 350,   y: 300,   maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
-    { effectorId: "EFF-RF-02",  effectorType: "RF_TAKEOVER",         vendor: "Vendor F", x: -1500, y: -1200, maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
-    { effectorId: "EFF-INT-03", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor H", x: 1200,  y: 1700,  maxRange: 4600, mag: 8,   cap: 8,   unit: "rounds" },
-    { effectorId: "EFF-HPM-04", effectorType: "DIRECTED_ENERGY",     vendor: "Vendor G", x: 1850,  y: -800,  maxRange: 2800, mag: 100, cap: 100, unit: "%" },
-    { effectorId: "EFF-LAS-05", effectorType: "DIRECTED_ENERGY",     vendor: "Vendor B", x: -1900, y: 650,   maxRange: 3200, mag: 100, cap: 100, unit: "%" },
-    { effectorId: "EFF-GUN-06", effectorType: "KINETIC_GUN",         vendor: "Vendor E", x: -450,  y: -350,  maxRange: 2400, mag: 240, cap: 240, unit: "rds" },
-    { effectorId: "EFF-NET-07", effectorType: "NET_CAPTURE",         vendor: "Vendor I", x: -300,  y: 900,   maxRange: 1800, mag: 6,   cap: 6,   unit: "nets" },
-  ];
+  // Two selectable scenarios. Each is a self-contained joint laydown (Army/Navy/
+  // Marine/Air Force) with its own geography. Positions and vendors are notional.
+  const SCENARIOS = {
+    sandiego: {
+      id: "sandiego", label: "San Diego Coast",
+      asset: { name: "NAS NORTH ISLAND", sub: "DEFENDED ASSET \u00B7 NB SAN DIEGO", lat: 32.699, lon: -117.215 },
+      grid: "GRID 11S MS \u00B7 WGS84 \u00B7 1 km",
+      terrain: "coast",
+      threat: { angle: Math.PI, spread: 1.2 },          // inbound from the sea (west)
+      sensors: [
+        { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 200,   y: -150,  range: 6000 },
+        { sensorId: "SEN-EO-03",   sensorType: "EO_IR", vendor: "Vendor C", service: "USA",  x: 1600,  y: 1000,  range: 3600 },
+        { sensorId: "SEN-MADIS-05",sensorType: "RF",    vendor: "Vendor K", service: "USMC", x: 600,   y: -2200, range: 4500 },
+        { sensorId: "SEN-SHIP-04", sensorType: "RADAR", vendor: "Vendor J", service: "USN",  x: -4600, y: -700,  range: 6500 },
+      ],
+      effectors: [
+        { effectorId: "EFF-EW-01",     effectorType: "EW_JAMMER",           vendor: "Vendor D", service: "USA",  x: 350,   y: 300,   maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
+        { effectorId: "EFF-RF-02",     effectorType: "RF_TAKEOVER",         vendor: "Vendor F", service: "USA",  x: 1500,  y: -1200, maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
+        { effectorId: "EFF-INT-03",    effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor H", service: "USA",  x: 1200,  y: 1700,  maxRange: 4600, mag: 8,   cap: 8,   unit: "rounds" },
+        { effectorId: "EFF-HPM-04",    effectorType: "DIRECTED_ENERGY",     vendor: "Vendor G", service: "USA",  x: 1850,  y: -800,  maxRange: 2800, mag: 100, cap: 100, unit: "%" },
+        { effectorId: "EFF-LAS-05",    effectorType: "DIRECTED_ENERGY",     vendor: "Vendor B", service: "USA",  x: 900,   y: 650,   maxRange: 3200, mag: 100, cap: 100, unit: "%" },
+        { effectorId: "EFF-GUN-06",    effectorType: "KINETIC_GUN",         vendor: "Vendor E", service: "USA",  x: 450,   y: -350,  maxRange: 2400, mag: 240, cap: 240, unit: "rds" },
+        { effectorId: "EFF-NET-07",    effectorType: "NET_CAPTURE",         vendor: "Vendor I", service: "USA",  x: 300,   y: 900,   maxRange: 1800, mag: 6,   cap: 6,   unit: "nets" },
+        { effectorId: "EFF-SEARAM-08", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor J", service: "USN",  x: -4600, y: -700,  maxRange: 4200, mag: 11,  cap: 11,  unit: "rounds" },
+        { effectorId: "EFF-LMADIS-09", effectorType: "EW_JAMMER",           vendor: "Vendor K", service: "USMC", x: 600,   y: -2200, maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
+      ],
+      hubPair: { "SEN-RAD-01": "EFF-GUN-06", "SEN-EO-03": "EFF-LAS-05", "SEN-MADIS-05": "EFF-LMADIS-09" },
+      blue: [
+        { identity: "FRIEND", platform: "MH-60R", service: "USN", cls: "ROTARY", alt: 300, ox: -3300, oy: -600, orad: 600, ospeed: 0.28, speed: 70 },
+        { identity: "FRIEND", platform: "F/A-18E", service: "USN", cls: "FIXED_WING", alt: 6000, ox: -2400, oy: 1800, orad: 1500, ospeed: 0.20, speed: 180 },
+        { identity: "FRIEND", platform: "MV-22B", service: "USMC", cls: "ROTARY", alt: 900, ox: -1200, oy: -1800, orad: 700, ospeed: 0.22, speed: 120 },
+        { identity: "FRIEND", platform: "AH-1Z", service: "USMC", cls: "ROTARY", alt: 150, ox: 1400, oy: 1500, orad: 500, ospeed: 0.30, speed: 80 },
+        { identity: "ASSUMED_FRIEND", platform: "RQ-21A", service: "USMC", cls: "UAS_GROUP_3", alt: 1500, ox: 2200, oy: 2000, orad: 900, ospeed: 0.18, speed: 40 },
+        { identity: "FRIEND", platform: "RQ-7B", service: "USA", cls: "UAS_GROUP_3", alt: 2400, ox: 1600, oy: -1600, orad: 600, ospeed: 0.30, speed: 45 },
+        { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: 2600, oy: -2300, orad: 1300, ospeed: 0.14, speed: 90 },
+      ],
+    },
+    elpaso: {
+      id: "elpaso", label: "El Paso Border",
+      asset: { name: "FORT BLISS", sub: "DEFENDED ASSET \u00B7 EL PASO SECTOR", lat: 31.813, lon: -106.421 },
+      grid: "GRID 13R FU \u00B7 WGS84 \u00B7 1 km",
+      terrain: "border",
+      threat: { angle: -Math.PI / 2, spread: 1.1 },     // inbound from the south (border)
+      sensors: [
+        { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 0,     y: -150,  range: 6000 },
+        { sensorId: "SEN-RF-02",   sensorType: "RF",    vendor: "Vendor B", service: "USA",  x: -1500, y: 600,   range: 5200 },
+        { sensorId: "SEN-EO-03",   sensorType: "EO_IR", vendor: "Vendor C", service: "USA",  x: 1600,  y: 700,   range: 3600 },
+        { sensorId: "SEN-TARS-04", sensorType: "RADAR", vendor: "Vendor L", service: "USA",  x: 0,     y: 2400,  range: 7000 },
+        { sensorId: "SEN-MADIS-05",sensorType: "RF",    vendor: "Vendor K", service: "USMC", x: -300,  y: -1600, range: 4500 },
+      ],
+      effectors: [
+        { effectorId: "EFF-EW-01",     effectorType: "EW_JAMMER",           vendor: "Vendor D", service: "USA",  x: 350,   y: 200,   maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
+        { effectorId: "EFF-RF-02",     effectorType: "RF_TAKEOVER",         vendor: "Vendor F", service: "USA",  x: -1200, y: -500,  maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
+        { effectorId: "EFF-INT-03",    effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor H", service: "USA",  x: 900,   y: 1300,  maxRange: 4600, mag: 8,   cap: 8,   unit: "rounds" },
+        { effectorId: "EFF-HPM-04",    effectorType: "DIRECTED_ENERGY",     vendor: "Vendor G", service: "USA",  x: 1500,  y: -600,  maxRange: 2800, mag: 100, cap: 100, unit: "%" },
+        { effectorId: "EFF-LAS-05",    effectorType: "DIRECTED_ENERGY",     vendor: "Vendor B", service: "USA",  x: -1500, y: 500,   maxRange: 3200, mag: 100, cap: 100, unit: "%" },
+        { effectorId: "EFF-GUN-06",    effectorType: "KINETIC_GUN",         vendor: "Vendor E", service: "USA",  x: -450,  y: -350,  maxRange: 2400, mag: 240, cap: 240, unit: "rds" },
+        { effectorId: "EFF-NET-07",    effectorType: "NET_CAPTURE",         vendor: "Vendor I", service: "USA",  x: -300,  y: -900,  maxRange: 1800, mag: 6,   cap: 6,   unit: "nets" },
+        { effectorId: "EFF-LMADIS-09", effectorType: "EW_JAMMER",           vendor: "Vendor K", service: "USMC", x: -300,  y: -1600, maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
+      ],
+      hubPair: { "SEN-RAD-01": "EFF-GUN-06", "SEN-EO-03": "EFF-LAS-05", "SEN-MADIS-05": "EFF-LMADIS-09" },
+      blue: [
+        { identity: "FRIEND", platform: "UH-60M", service: "USA", cls: "ROTARY", alt: 250, ox: -2300, oy: 300, orad: 550, ospeed: 0.26, speed: 75 },
+        { identity: "FRIEND", platform: "MV-22B", service: "USMC", cls: "ROTARY", alt: 900, ox: -1200, oy: 1600, orad: 700, ospeed: 0.22, speed: 120 },
+        { identity: "FRIEND", platform: "AH-1Z", service: "USMC", cls: "ROTARY", alt: 150, ox: 1400, oy: 900, orad: 500, ospeed: 0.30, speed: 80 },
+        { identity: "ASSUMED_FRIEND", platform: "RQ-21A", service: "USMC", cls: "UAS_GROUP_3", alt: 1500, ox: -2200, oy: 1500, orad: 900, ospeed: 0.18, speed: 40 },
+        { identity: "FRIEND", platform: "RQ-7B", service: "USA", cls: "UAS_GROUP_3", alt: 2400, ox: 1800, oy: 1500, orad: 600, ospeed: 0.30, speed: 45 },
+        { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: 2400, oy: 600, orad: 1300, ospeed: 0.14, speed: 90 },
+      ],
+    },
+  };
+
+  let SCN = SCENARIOS.sandiego;
+  let ASSET = SCN.asset, SENSORS = SCN.sensors, EFFECTORS = SCN.effectors, HUB_PAIR = SCN.hubPair;
+  let HUB_EFFECTORS = new Set(Object.values(HUB_PAIR));
   const sensorVendor = (id) => (SENSORS.find((s) => s.sensorId === id) || {}).vendor;
+  const sensorService = (id) => (SENSORS.find((s) => s.sensorId === id) || {}).service;
+  const threatBearing = () => SCN.threat.angle + (Math.random() - 0.5) * SCN.threat.spread;
+  function applyScenario(id) {
+    if (!SCENARIOS[id]) return;
+    SCN = SCENARIOS[id]; S.scenario = id;
+    ASSET = SCN.asset; SENSORS = SCN.sensors; EFFECTORS = SCN.effectors;
+    HUB_PAIR = SCN.hubPair; HUB_EFFECTORS = new Set(Object.values(HUB_PAIR));
+    document.querySelectorAll("#scnSeg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === id ? "true" : "false"));
+    resetScenario();
+    logEvent("INFO", "INFO", "Scenario: " + SCN.label + " \u00B7 " + ASSET.name);
+  }
 
   // Browser scalability: cap total tracks so the sim never runs away, and switch
   // to level-of-detail rendering (no per-track labels/leaders) above a threshold so
@@ -685,11 +765,10 @@
   const MAX_TRACKS = 1200;
   const LOD_THRESHOLD = 60;
 
-  // Hub-and-spoke (legacy) fixed sensor->shooter pairs. Effectors not listed here
-  // are "dedicated to no sensor" and sit idle in HUB mode -- the wasted-capacity and
-  // coverage-gap problem the networked any-shooter model removes.
-  const HUB_PAIR = { "SEN-RAD-01": "EFF-GUN-06", "SEN-RF-02": "EFF-NET-07", "SEN-EO-03": "EFF-LAS-05" };
-  const HUB_EFFECTORS = new Set(Object.values(HUB_PAIR));
+  // Hub-and-spoke (legacy) fixed sensor->shooter pairs are defined per scenario
+  // (HUB_PAIR / HUB_EFFECTORS, set by applyScenario above). Effectors not paired to a
+  // sensor sit idle in HUB mode -- the wasted-capacity / coverage-gap problem the
+  // networked any-shooter model removes.
 
   // ---- state ----
   const S = {
@@ -709,14 +788,20 @@
     pendingEng: new Map(),                 // LIVE: engagementId -> {trackId, t0, firstSeen}
     autoplay: { running: false, timer: null },
     view: "ALL",                            // ALL | RED | BLUE COP filter
+    scenario: "sandiego",                    // sandiego | elpaso
     echelon: { bn: false, rgt: false },     // up-echelon federation state
     arch: "NETWORKED",                       // NETWORKED | HUB (any-shooter vs legacy)
     coverage: null,                          // cached {netPct, hubPct, gap:[{x,y}]}
+    transport: "BOTH",                       // BOTH | MANET | 5G | OFF (data transport overlay)
   };
 
   function isCrossVendor(track, eff) {
     const vendors = (track.contributingSensors || []).map(sensorVendor).filter(Boolean);
     return vendors.some((v) => v !== eff.vendor);
+  }
+  function isCrossService(track, eff) {
+    const svcs = (track.contributingSensors || []).map(sensorService).filter(Boolean);
+    return svcs.some((v) => v && v !== eff.service);
   }
   function recordEngage(track, eff) {
     S.stats.engagements++;
@@ -744,7 +829,7 @@
   function spawnHostile(opts = {}) {
     if (S.tracks.size >= MAX_TRACKS) return null;   // hard cap (browser scalability)
     const id = "TRK-" + (++S.seq);
-    const bearing = opts.bearing != null ? opts.bearing : Math.random() * Math.PI * 2;
+    const bearing = opts.bearing != null ? opts.bearing : threatBearing();
     const r = opts.r != null ? opts.r : AO_RADIUS - 1200;
     const x = Math.cos(bearing) * r, y = Math.sin(bearing) * r;
     const types = ["MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "FIXED_WING"];
@@ -756,6 +841,7 @@
       speed: opts.speed || (26 + Math.random() * 14),     // m/s (fast UAS, demo pace)
       heading: Math.atan2(-y, -x),                          // toward asset
       tq: opts.tq != null ? opts.tq : (4 + (Math.random() * 3 | 0)),
+      altMeters: opts.alt != null ? opts.alt : (60 + (Math.random() * 340 | 0)),
       contributingSensors: [],
       state: "ACTIVE",
       fade: 1,
@@ -774,6 +860,9 @@
       trackId: id,
       identity: opts.identity || "FRIEND",
       classificationType: opts.cls || "ROTARY",
+      platform: opts.platform || null,
+      service: opts.service || "USA",
+      altMeters: opts.alt != null ? opts.alt : 300,
       ox, oy, orad, orbit, ospeed: opts.ospeed || 0.25,
       x: ox + Math.cos(orbit) * orad, y: oy + Math.sin(orbit) * orad,
       speed: opts.speed || 22, heading: 0, tq: opts.tq || 13,
@@ -900,14 +989,14 @@
     const MAG_COST = { KINETIC_GUN: 20, KINETIC_INTERCEPTOR: 1, NET_CAPTURE: 1, EW_JAMMER: 8, RF_TAKEOVER: 8, DIRECTED_ENERGY: 5 };
     eff.mag = Math.max(0, eff.mag - (MAG_COST[eff.effectorType] || 10));
     const engId = "ENG-" + (++S.seq);
-    const xv = isCrossVendor(t, eff);
+    const xv = isCrossVendor(t, eff), xs = isCrossService(t, eff);
     t.state = "ENGAGING";
     t.engEff = eff.effectorId;
     t.engT = perf();
     S.engaged++;
     recordEngage(t, eff);
     toast("ok", `${EFFECT_FOR[eff.effectorType]} \u00B7 ${eff.effectorId} \u2192 ${t.trackId}`);
-    logEvent("PERMIT", "PERMIT", `ENGAGE ${t.trackId} \u00B7 paired ${eff.effectorId} (${eff.vendor})${xv ? " \u00B7 CROSS-VENDOR" : ""} \u00B7 auth ${S.node}`);
+    logEvent("PERMIT", "PERMIT", `ENGAGE ${t.trackId} \u00B7 paired ${eff.effectorId} (${eff.vendor}/${eff.service})${xv ? " \u00B7 CROSS-VENDOR" : ""}${xs ? " \u00B7 CROSS-SERVICE" : ""} \u00B7 auth ${S.node}`);
     // lifecycle
     setTimeout(() => { if (t.state === "ENGAGING") { logEvent("INFO", "INFO", `${engId} ACTIVE`); } }, 500);
     setTimeout(() => {
@@ -960,6 +1049,8 @@
         t.x = loc.x; t.y = loc.y;
         t.identity = tk.identity; t.classificationType = tk.classificationType || "UNKNOWN";
         t.tq = tk.trackQuality; t.contributingSensors = tk.contributingSensors || [];
+        t.platform = tk.platform || null; t.service = tk.service || null;
+        t.altMeters = (tk.kinematics && tk.kinematics.position && tk.kinematics.position.altMeters) || 0;
         (t.trail || (t.trail = [])).push({ x: t.x, y: t.y }); if (t.trail.length > 18) t.trail.shift();
         seen.add(tk.trackId);
       }
@@ -981,11 +1072,11 @@
         body: JSON.stringify({ trackId: t.trackId, effectorId: eff.effectorId, engagementType: EFFECT_FOR[eff.effectorType], humanConfirmation: true }) });
       const j = await r.json();
       if (r.ok) {
-        const xv = isCrossVendor(t, eff);
+        const xv = isCrossVendor(t, eff), xs = isCrossService(t, eff);
         recordEngage(t, eff);
         S.pendingEng.set(j.engagementId, { trackId: t.trackId, t0: perf(), firstSeen: t.firstSeen });
         toast("ok", `${j.state} \u00B7 ${eff.effectorId}`);
-        logEvent("PERMIT", "PERMIT", `ENGAGE ${t.trackId} \u00B7 ${eff.effectorId} (${eff.vendor})${xv ? " \u00B7 CROSS-VENDOR" : ""} \u00B7 ${j.state}`);
+        logEvent("PERMIT", "PERMIT", `ENGAGE ${t.trackId} \u00B7 ${eff.effectorId} (${eff.vendor}/${eff.service})${xv ? " \u00B7 CROSS-VENDOR" : ""}${xs ? " \u00B7 CROSS-SERVICE" : ""} \u00B7 ${j.state}`);
       } else { toast("deny", `DENIED \u00B7 ${j.reasonCode}`); logEvent("DENY", "DENY", `ENGAGE ${t.trackId}: ${j.detail || j.reasonCode}`); }
     } catch (e) { toast("deny", "engage failed"); }
   }
@@ -1037,6 +1128,9 @@
     // hub coverage-gap overlay (legacy architecture)
     if (S.arch === "HUB" && S.coverage) drawCoverageOverlay();
 
+    // data transport layer (MANET mesh / 5G), under the node markers
+    drawTransports();
+
     // sensor coverage + sensors (with modality effects)
     for (const s of SENSORS) {
       ctx.beginPath(); ctx.arc(sx(s.x), sy(s.y), s.range * scale, 0, Math.PI * 2);
@@ -1078,9 +1172,9 @@
     ctx.strokeStyle = "#cdd9e6"; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = "#aeb9c7"; ctx.font = "10px " + MONO; ctx.textAlign = "center";
-    ctx.fillText("FOB EAGLE", x, y + 25);
+    ctx.fillText(ASSET.name, x, y + 25);
     ctx.fillStyle = "#5f7286"; ctx.font = "8px " + MONO;
-    ctx.fillText("DEFENDED ASSET \u00B7 HPA", x, y + 36);
+    ctx.fillText(ASSET.sub, x, y + 36);
     ctx.restore();
   }
   function drawSensor(s) {
@@ -1128,9 +1222,17 @@
       ctx.beginPath(); ctx.arc(x, y, 12 + p * 5, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.strokeStyle = ACCENT; ctx.fillStyle = "#0c1620"; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.rect(x - 5, y - 5, 10, 10); ctx.fill(); ctx.stroke();
+    if (s.sensorId === "SEN-SHIP-04") {
+      // Navy ship hull glyph (sensor + SeaRAM co-located offshore)
+      ctx.beginPath();
+      ctx.moveTo(x - 9, y - 1); ctx.lineTo(x + 9, y - 1); ctx.lineTo(x + 6, y + 5); ctx.lineTo(x - 6, y + 5); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - 1, y - 1); ctx.lineTo(x - 1, y - 8); ctx.lineTo(x + 4, y - 5); ctx.lineTo(x - 1, y - 5); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.rect(x - 5, y - 5, 10, 10); ctx.fill(); ctx.stroke();
+    }
     ctx.fillStyle = "#6f8294"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
-    ctx.fillText(s.sensorId, x, y - 9);
+    ctx.fillText(s.sensorId + (s.service && s.service !== "USA" ? " " + s.service : ""), x, y - 9);
     ctx.restore();
   }
   function drawEffector(e, idle) {
@@ -1142,33 +1244,52 @@
     ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 6, y); ctx.closePath();
     ctx.fill(); ctx.stroke();
     ctx.fillStyle = idle ? "#566273" : "#6f8294"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
-    ctx.fillText(e.effectorId, x, y - 10);
+    ctx.fillText(e.effectorId + (e.service && e.service !== "USA" ? " " + e.service : ""), x, y - 10);
     if (idle) { ctx.fillStyle = "#7a8190"; ctx.font = "7px " + MONO; ctx.fillText("IDLE \u00B7 no paired sensor", x, y + 16); }
     ctx.restore();
   }
   // ---- basemap, grid, overlays ----
-  function drawTerrain() {
-    const { w, h } = VIEW;
-    // land base
-    ctx.fillStyle = "#0b1210"; ctx.fillRect(0, 0, w, h);
-    // water region (right side) behind a wavy coastline
-    const steps = 26, coast = [];
-    for (let i = 0; i <= steps; i++) {
-      const tt = i / steps;
-      coast.push([w * (0.60 + 0.18 * tt) + Math.sin(tt * 7 + 0.6) * Math.min(20, w * 0.02), h * tt]);
-    }
-    ctx.beginPath(); ctx.moveTo(coast[0][0], coast[0][1]);
-    for (const [px, py] of coast) ctx.lineTo(px, py);
-    ctx.lineTo(w, h); ctx.lineTo(w, 0); ctx.closePath();
-    ctx.fillStyle = "#091622"; ctx.fill();
-    ctx.strokeStyle = "rgba(86,140,170,0.28)"; ctx.lineWidth = 1.2;
-    ctx.beginPath(); coast.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.stroke();
-    // faint elevation contours on land
+  function drawContours() {
     ctx.strokeStyle = "rgba(96,124,96,0.07)"; ctx.lineWidth = 1;
-    const contours = [[0.18, 0.30, 70, 46, 0.4], [0.30, 0.62, 110, 64, -0.3], [0.12, 0.74, 60, 40, 0.2], [0.42, 0.20, 80, 50, 0.1]];
+    const { w, h } = VIEW;
+    const contours = [[0.72, 0.30, 70, 46, 0.4], [0.62, 0.66, 110, 64, -0.3], [0.84, 0.74, 60, 40, 0.2], [0.55, 0.22, 80, 50, 0.1]];
     for (const [fx, fy, rx, ry, rot] of contours) {
       ctx.beginPath(); ctx.ellipse(fx * w, fy * h, rx, ry, rot, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.ellipse(fx * w, fy * h, rx * 0.6, ry * 0.6, rot, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  function drawTerrain() {
+    const { w, h } = VIEW;
+    if (SCN.terrain === "border") {
+      // desert land; US-Mexico border runs E-W south of the asset; Mexico to the south
+      ctx.fillStyle = "#100f0a"; ctx.fillRect(0, 0, w, h);
+      const by = h * 0.66;
+      ctx.fillStyle = "#0d0b07"; ctx.fillRect(0, by, w, h - by);
+      ctx.strokeStyle = "rgba(210,170,90,0.5)"; ctx.lineWidth = 1.4; ctx.setLineDash([10, 4]);
+      ctx.beginPath();
+      for (let i = 0; i <= 44; i++) { const xx = (w * i) / 44, yy = by + Math.sin(i * 0.5) * 6; i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); }
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(210,170,90,0.45)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
+      ctx.fillText("UNITED STATES", 14, by - 8);
+      ctx.fillText("MEXICO \u00B7 INTERNATIONAL BORDER", 14, by + 16);
+      drawContours();
+    } else {
+      // coast: Pacific Ocean to the WEST (left) behind a wavy coastline
+      ctx.fillStyle = "#0b1210"; ctx.fillRect(0, 0, w, h);
+      const steps = 26, coast = [];
+      for (let i = 0; i <= steps; i++) {
+        const tt = i / steps;
+        coast.push([w * (0.40 - 0.18 * tt) + Math.sin(tt * 7 + 0.6) * Math.min(20, w * 0.02), h * tt]);
+      }
+      ctx.beginPath(); ctx.moveTo(coast[0][0], coast[0][1]);
+      for (const [px, py] of coast) ctx.lineTo(px, py);
+      ctx.lineTo(0, h); ctx.lineTo(0, 0); ctx.closePath();
+      ctx.fillStyle = "#091622"; ctx.fill();
+      ctx.strokeStyle = "rgba(86,140,170,0.28)"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); coast.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.stroke();
+      ctx.fillStyle = "rgba(86,140,170,0.35)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
+      ctx.fillText("PACIFIC OCEAN", 14, h * 0.5);
+      drawContours();
     }
   }
 
@@ -1191,7 +1312,7 @@
       if (y > 150) { ctx.textAlign = "left"; ctx.fillText(String((((50 - j) % 100) + 100) % 100).padStart(2, "0"), 3, y - 2); }
     }
     ctx.fillStyle = "rgba(120,150,180,0.4)"; ctx.font = "10px " + MONO; ctx.textAlign = "center";
-    ctx.fillText("GRID 11S MV \u00B7 WGS84 \u00B7 1 km", cx, h - 8);
+    ctx.fillText(SCN.grid, cx, h - 8);
   }
 
   function drawCoverageOverlay() {
@@ -1208,6 +1329,53 @@
       if (e) { ctx.beginPath(); ctx.moveTo(sx(s.x), sy(s.y)); ctx.lineTo(sx(e.x), sy(e.y)); ctx.stroke(); }
     }
     ctx.setLineDash([]); ctx.restore();
+  }
+
+  // Data transport layer: MANET mesh among tactical nodes + a 5G gNB with backhaul.
+  function drawTransports() {
+    if (S.transport === "OFF") return;
+    const nodes = [{ x: 0, y: 0 }].concat(SENSORS.map((s) => ({ x: s.x, y: s.y }))).concat(S.effectors.map((e) => ({ x: e.x, y: e.y })));
+    if (S.transport === "BOTH" || S.transport === "MANET") {
+      ctx.save();
+      ctx.strokeStyle = "rgba(120,200,255,0.16)"; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+      const pulse = (perf() / 1400) % 1;
+      for (let i = 0; i < nodes.length; i++) {
+        const near = nodes.map((n, j) => ({ j, d: i === j ? 1e12 : dist(nodes[i].x, nodes[i].y, n.x, n.y) }))
+          .sort((a, b) => a.d - b.d).slice(0, 2);
+        for (const { j } of near) {
+          const ax = sx(nodes[i].x), ay = sy(nodes[i].y), bx = sx(nodes[j].x), by = sy(nodes[j].y);
+          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+          if (i < j) {  // one data pulse per edge
+            ctx.setLineDash([]);
+            ctx.fillStyle = "rgba(150,215,255,0.7)";
+            ctx.beginPath(); ctx.arc(ax + (bx - ax) * pulse, ay + (by - ay) * pulse, 1.6, 0, Math.PI * 2); ctx.fill();
+            ctx.setLineDash([3, 4]);
+          }
+        }
+      }
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(120,200,255,0.55)"; ctx.font = "8px " + MONO; ctx.textAlign = "left";
+      ctx.fillText("MANET MESH", sx(nodes[1].x) + 8, sy(nodes[1].y) + 14);
+      ctx.restore();
+    }
+    if (S.transport === "BOTH" || S.transport === "5G") {
+      ctx.save();
+      const gnb = { x: 900, y: -900 };
+      const gx = sx(gnb.x), gy = sy(gnb.y);
+      ctx.strokeStyle = "rgba(170,120,255,0.22)"; ctx.setLineDash([2, 5]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(gx, gy, 2600 * VIEW.scale, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = "#b08cff"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(gx - 4, gy + 5); ctx.lineTo(gx, gy - 7); ctx.lineTo(gx + 4, gy + 5); ctx.stroke();
+      ctx.beginPath(); ctx.arc(gx, gy - 8, 2, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "#b08cff"; ctx.font = "8px " + MONO; ctx.textAlign = "center";
+      ctx.fillText("5G gNB", gx, gy + 16);
+      // backhaul to echelon (off the top edge)
+      ctx.strokeStyle = "rgba(170,120,255,0.5)"; ctx.lineWidth = 1.4; ctx.setLineDash([6, 3]);
+      ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, 30); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = "#b08cff"; ctx.textAlign = "left";
+      ctx.fillText("5G BACKHAUL \u2192 BN/RGT", gx + 6, 34);
+      ctx.restore();
+    }
   }
 
   function drawTrail(t) {
@@ -1308,10 +1476,13 @@
       }
     }
 
-    // TQ tag + id (skipped in LOD)
+    // label: blue tracks show platform + altitude; threats show id + track quality
     if (t.state !== "NEUTRALIZED") {
-      ctx.fillStyle = "#9fb0c4"; ctx.font = "9px " + MONO; ctx.textAlign = "left";
-      ctx.fillText(`${t.trackId.replace("TRK-", "")} TQ${Math.floor(t.tq)}`, x + 10, y + 3);
+      ctx.fillStyle = isBlue(t) ? "#86b9e8" : "#9fb0c4"; ctx.font = "9px " + MONO; ctx.textAlign = "left";
+      const label = isBlue(t) && t.platform
+        ? `${t.platform} ${Math.round(t.altMeters || 0)}m`
+        : `${t.trackId.replace("TRK-", "")} TQ${Math.floor(t.tq)}`;
+      ctx.fillText(label, x + 10, y + 3);
     }
     ctx.restore();
   }
@@ -1333,7 +1504,7 @@
       const c = e.mag > 0 ? "var(--neutral)" : "var(--faint)";
       const pct = Math.round((e.mag / e.cap) * 100);
       return `<div class="eff"><span class="dot" style="background:${c}"></span>
-        <span class="nm">${e.effectorId}<small>${e.effectorType.replace(/_/g, " ")} &middot; ${e.vendor}</small></span>
+        <span class="nm">${e.effectorId}<small>${e.effectorType.replace(/_/g, " ")} &middot; ${e.vendor} &middot; ${e.service || "USA"}</small></span>
         <span class="mag">${pct}%</span></div>`;
     }).join("");
 
@@ -1358,10 +1529,12 @@
         <span class="idpill" style="color:${col};background:${col}22;border:1px solid ${col}55">${t.identity}</span>
       </div>
       <dl class="kv">
-        <dt>Type</dt><dd>${(t.classificationType || "UNKNOWN").replace(/_/g, " ")}</dd>
+        <dt>Platform</dt><dd>${t.platform || (t.classificationType || "UNKNOWN").replace(/_/g, " ")}</dd>
+        <dt>Service</dt><dd>${t.service || "\u2014"}</dd>
+        <dt>Altitude</dt><dd>${Math.round(t.altMeters || 0)} m MSL</dd>
         <dt>Range to asset</dt><dd>${(rng / 1000).toFixed(1)} km</dd>
         <dt>Sensors</dt><dd>${t.contributingSensors.length || 0}</dd>
-        <dt>Pairing</dt><dd>${eff ? eff.effectorId + " \u00B7 " + eff.vendor : "\u2014"}</dd>
+        <dt>Pairing</dt><dd>${isBlue(t) ? "n/a (friendly)" : (eff ? eff.effectorId + " \u00B7 " + eff.vendor : "\u2014")}</dd>
       </dl>
       <div class="tq">
         <div class="tq-top"><span>Track quality</span><b>${tqi} / 15</b></div>
@@ -1425,6 +1598,7 @@
   bindSeg("wcsSeg", "wcs");
   bindSeg("viewSeg", "view");
   bindSeg("archSeg", "arch", onArchChange);
+  bindSeg("transSeg", "transport");
 
   function onArchChange() {
     computeCoverage();
@@ -1440,17 +1614,17 @@
 
   $("btnSwarm").onclick = () => {
     if (S.live) { toast("ok", "swarm is driven by the scenario engine in LIVE mode"); return; }
-    const b = Math.random() * Math.PI * 2;
+    const b = SCN.threat.angle;
     for (let i = 0; i < 8; i++) spawnHostile({ bearing: b + (i - 4) * 0.09, r: 4900 + (i % 3) * 160, speed: 26 + Math.random() * 12, cls: "UAS_GROUP_1", tq: 4 });
     logEvent("INFO", "INFO", "SWARM inbound \u00B7 8 contacts");
     toast("ok", "Swarm launched \u00B7 8 inbound");
   };
   $("btnRaid").onclick = () => {
     if (S.live) { toast("ok", "scale is driven by the scenario engine in LIVE mode"); return; }
-    const N = 120, c = Math.random() * Math.PI * 2;
+    const N = 120, c = SCN.threat.angle;
     let n = 0;
     for (let i = 0; i < N; i++) {
-      const b = c + (Math.random() - 0.5) * 2.1;
+      const b = c + (Math.random() - 0.5) * (SCN.threat.spread * 1.6);
       const r = 4200 + Math.random() * 2200;
       if (spawnHostile({ bearing: b, r, speed: 22 + Math.random() * 18, cls: Math.random() < 0.5 ? "UAS_GROUP_1" : "MULTIROTOR", tq: 4 })) n++;
     }
@@ -1460,6 +1634,10 @@
   $("btnAuto").onclick = autoplay;
   $("btnSwap").onclick = swapVendor;
   $("btnEchelon").onclick = integrateEchelon;
+  document.querySelectorAll("#scnSeg button").forEach((b) => b.addEventListener("click", () => {
+    if (S.autoplay.running) stopAutoplay();
+    applyScenario(b.dataset.v);
+  }));
   $("btnNode").onclick = () => toggleNode();
   $("btnReset").onclick = () => { if (S.autoplay.running) stopAutoplay(); resetScenario(); };
 
@@ -1502,6 +1680,7 @@
       '<h4>Engagement Outcomes</h4>' +
       `<div class="sb-row defeated"><span class="l">Threats defeated</span><span class="n">${S.stats.defeated}</span></div>` +
       `<div class="sb-row leak"><span class="l">Leakers (through)</span><span class="n">${S.live ? "\u2014" : S.stats.leakers}</span></div>` +
+      `<div class="sb-row defeated"><span class="l">Kill ratio</span><span class="n">${S.live ? "\u2014" : (S.stats.leakers === 0 ? (S.stats.defeated > 0 ? S.stats.defeated + ":0" : "\u2014") : (S.stats.defeated / S.stats.leakers).toFixed(1) + ":1")}</span></div>` +
       `<div class="sb-row"><span class="l">In-flight</span><span class="n">${inflight}</span></div>` +
       `<div class="sb-row"><span class="l">Avg time-to-defeat</span><span class="n">${avg ? avg.toFixed(0) + "s" : "\u2014"}</span></div>` +
       `<div class="sb-row"><span class="l">Engagements</span><span class="n">${eng}</span></div>` +
@@ -1560,19 +1739,36 @@
   }
   const needsTask = (t) => !bestEffector(t);
   function pickInRangeHostile() {
-    return activeHostiles().find((t) => feasibleEffectors(t).length > 0) || activeHostiles()[0] || null;
+    // most urgent first: closest feasible threat to the defended asset
+    const cand = activeHostiles().filter((t) => feasibleEffectors(t).length > 0);
+    if (cand.length) return cand.sort((a, b) => dist(a.x, a.y, 0, 0) - dist(b.x, b.y, 0, 0))[0];
+    return activeHostiles()[0] || null;
   }
-  async function engageMany(n, captionStep) {
+  async function engageMany(n, captionStep, cadence) {
+    cadence = cadence || 1300;
     for (let k = 0; k < n; k++) {
       autoGuard();
       const u = pickInRangeHostile();
       if (!u) break;
       selectTrack(u.trackId);
-      if (needsTask(u)) { taskSensor(); await sleep(1400); autoGuard(); selectTrack(u.trackId); }
+      if (needsTask(u)) { taskSensor(); await sleep(700); autoGuard(); selectTrack(u.trackId); }
       const eff = bestEffector(u);
       setNarrator(captionStep, `Engaging ${u.trackId} \u2192 ${eff ? eff.effectorId + " (" + eff.vendor + ")" : "best in-range effector"}`);
       engage();
-      await sleep(2500);
+      await sleep(cadence);
+    }
+  }
+  // Saturate the raid for a high kill ratio: engage closest threats rapidly until clear.
+  async function clearRaid(captionStep, maxShots) {
+    for (let k = 0; k < (maxShots || 16); k++) {
+      autoGuard();
+      const u = pickInRangeHostile();
+      if (!u) break;
+      selectTrack(u.trackId);
+      if (needsTask(u)) { taskSensor(); await sleep(350); autoGuard(); selectTrack(u.trackId); }
+      setNarrator(captionStep, `Clearing the raid \u00b7 any-shooter saturation \u00b7 ${S.stats.defeated} defeated`);
+      engage();
+      await sleep(700);
     }
   }
   async function autoplay() {
@@ -1585,10 +1781,10 @@
       if (!S.live) resetScenario();
       logEvent("INFO", "INFO", "AUTO-PLAY brief started");
 
-      setNarrator("01 \u00B7 Threat", "Inbound UAS detected at the perimeter");
+      setNarrator("01 \u00B7 Threat", "Mass UAS raid inbound at the perimeter");
       if (!S.live) {
-        const b0 = -0.6;
-        for (let i = 0; i < 8; i++) spawnHostile({ bearing: b0 + (i - 4) * 0.09, r: 4900 + (i % 3) * 160, speed: 28 + Math.random() * 10, cls: "UAS_GROUP_1", tq: 4 });
+        const b0 = SCN.threat.angle;
+        for (let i = 0; i < 16; i++) spawnHostile({ bearing: b0 + (i - 8) * 0.06, r: 4800 + (i % 4) * 170, speed: 26 + Math.random() * 10, cls: "UAS_GROUP_1", tq: 4 });
       }
       await sleep(3500); autoGuard();
 
@@ -1609,23 +1805,33 @@
         await sleep(3400); autoGuard();
       }
 
-      await engageMany(3, "06 \u00B7 Distributed pairing");
+      await engageMany(5, "06 \u00B7 Distributed pairing", 1100);
       autoGuard();
 
       setNarrator("07 \u00B7 Echelon", "Rapidly integrating with Battalion and Regiment \u2014 same interface, no bespoke work");
       await integrateEchelon();
-      await sleep(1800); autoGuard();
+      await sleep(1500); autoGuard();
 
       setNarrator("08 \u00B7 Resilience", "Simulating C2 node loss\u2026");
       if (!S.nodeLost) toggleNode(true);
-      await sleep(3000); autoGuard();
-      setNarrator("08 \u00B7 Resilience", "NODE-02 + BN-7 hold the shared COP \u2014 the fight continues");
-      await sleep(2500); autoGuard();
-      await engageMany(3, "08 \u00B7 Resilience");
+      await sleep(2400); autoGuard();
+      setNarrator("08 \u00B7 Resilience", "NODE-02 + BN-7 hold the shared COP \u2014 second wave inbound");
+      if (!S.live) {
+        const b0 = SCN.threat.angle;
+        for (let i = 0; i < 10; i++) spawnHostile({ bearing: b0 + (i - 5) * 0.06, r: 5200 + (i % 3) * 150, speed: 26 + Math.random() * 10, cls: "UAS_GROUP_1", tq: 4 });
+      }
+      await sleep(1800); autoGuard();
+      await engageMany(4, "08 \u00B7 Resilience", 1000);
       autoGuard();
 
+      // saturate to a high kill ratio
+      await clearRaid("09 \u00B7 Clear", 36);
+      autoGuard();
+
+      const defeated = S.stats.defeated, leak = S.stats.leakers;
+      const ratio = leak === 0 ? (defeated > 0 ? defeated + ":0" : "\u2014") : (defeated / leak).toFixed(1) + ":1";
       const pct = S.stats.engagements ? Math.round((100 * S.stats.crossVendor) / S.stats.engagements) : 0;
-      setNarrator("09 \u00B7 Outcomes", `${S.stats.defeated} defeated \u00B7 ${pct}% cross-vendor pairings \u00B7 federated to BN/RGT \u00B7 any sensor, any shooter`);
+      setNarrator("10 \u00B7 Outcomes", `${defeated} defeated / ${leak} leakers \u00B7 kill ratio ${ratio} \u00B7 ${pct}% cross-vendor \u00B7 federated BN/RGT`);
       await sleep(6500); autoGuard();
       setNarrator(null, null);
       logEvent("INFO", "INFO", "AUTO-PLAY brief complete");
@@ -1646,10 +1852,8 @@
     S.view = "ALL"; applySeg("viewSeg", "view", "ALL");
     S.nodeLost = false; S.node = "C2-NODE-01"; $("nodeLost").classList.remove("on");
     if (!S.live) {
-      spawnBlue({ identity: "FRIEND", cls: "ROTARY", ox: -2300, oy: 1700, orad: 700, ospeed: 0.25 });
-      spawnBlue({ identity: "ASSUMED_FRIEND", cls: "FIXED_WING", ox: 2400, oy: 1500, orad: 1100, ospeed: 0.18, speed: 60 });
-      spawnBlue({ identity: "FRIEND", cls: "UAS_GROUP_2", ox: 200, oy: 2700, orad: 600, ospeed: 0.3 });
-      spawnHostile({ bearing: -0.6, r: 4200, tq: 5, cls: "MULTIROTOR" });
+      for (const b of SCN.blue) spawnBlue(b);   // joint Blue force air (platform/service/altitude)
+      spawnHostile({ bearing: SCN.threat.angle, r: 4200, tq: 5, cls: "MULTIROTOR" });
     }
     $("log").innerHTML = "";
     logEvent("INFO", "INFO", "Scenario reset");
@@ -1669,7 +1873,10 @@
     ["Unknown", COLORS.UNKNOWN], ["Neutral", COLORS.NEUTRAL],
   ].map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join("") +
     `<span><i style="background:${ACCENT};border-radius:1px"></i>Sensor</span>` +
-    `<span><i style="background:#46c66e;transform:rotate(45deg);border-radius:1px"></i>Effector</span>`;
+    `<span><i style="background:#46c66e;transform:rotate(45deg);border-radius:1px"></i>Effector</span>` +
+    `<span><i style="background:#78c8ff;border-radius:1px"></i>MANET</span>` +
+    `<span><i style="background:#b08cff;border-radius:1px"></i>5G</span>` +
+    `<span style="opacity:.85">Joint: USA \u00B7 USN \u00B7 USMC \u00B7 USAF</span>`;
 
   // ---- main loops ----
   let lastT = perf();

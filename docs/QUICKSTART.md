@@ -51,6 +51,23 @@ The **echelon federation HUD** (top-left) shows this Site C2 node and its links 
 engagements are shared upward with no bespoke integration. If the site node is then
 lost, Battalion still holds the shared picture.
 
+**Scenarios** (bottom-left **AO** selector): **San Diego Coast** (Pacific to the
+west, a Navy ship offshore, threats from the sea) and **El Paso Border** (US-Mexico
+border, a TARS aerostat, threats from the south). Each switches the geography, the
+named defended asset, the MGRS grid, and the joint laydown.
+
+**Joint force**: the Blue picture is identifiable aircraft by **platform, service,
+and altitude** (e.g., F/A-18E USN 6000 m, MV-22B USMC 900 m, MQ-9 USAF 7600 m), and
+the effectors span **USA / USN / USMC** (Navy SeaRAM offshore, USMC LMADIS). Click a
+track for its platform/service/altitude; engagement logs flag **cross-service** and
+**cross-vendor** pairings.
+
+**Data transport** (rail control): overlay the **MANET** mesh among tactical nodes
+and the **5G** gNB with backhaul to echelon — the pub/sub bus riding real transports.
+
+The auto-play now defeats a **mass raid** and reports a **kill ratio** (defeated vs.
+leakers) in the scoreboard.
+
 The **Architecture toggle** (NETWORKED / HUB & SPOKE) is the thesis in one click.
 Flip to **HUB & SPOKE** and the legacy model appears: sensors hard-wired to single
 shooters (dedicated links), the long-range interceptors/EW sitting **idle** with no

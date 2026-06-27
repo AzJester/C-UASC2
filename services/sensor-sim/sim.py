@@ -44,11 +44,13 @@ ASSET = {"lat": 34.20, "lon": -118.20}
 M_PER_DEG_LAT = 111320.0
 M_PER_DEG_LON = 111320.0 * math.cos(math.radians(ASSET["lat"]))
 
-# Sensor coverage (local meters), mirrors the web COP layout.
+# Sensor coverage (local meters), mirrors the web COP layout (joint laydown).
 SENSORS = [
     {"id": "SEN-RAD-01", "x": 0, "y": -150, "range": 6000},
     {"id": "SEN-RF-02", "x": 1700, "y": 1300, "range": 5200},
     {"id": "SEN-EO-03", "x": -1800, "y": 1000, "range": 3600},
+    {"id": "SEN-SHIP-04", "x": 4800, "y": -1200, "range": 6500},
+    {"id": "SEN-MADIS-05", "x": -200, "y": -2600, "range": 4500},
 ]
 
 TYPES = ["MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "FIXED_WING"]
@@ -59,11 +61,11 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _latlon(x: float, y: float) -> dict:
+def _latlon(x: float, y: float, alt: float = 120.0) -> dict:
     return {
         "lat": ASSET["lat"] + y / M_PER_DEG_LAT,
         "lon": ASSET["lon"] + x / M_PER_DEG_LON,
-        "altMeters": 120.0,
+        "altMeters": alt,
         "frame": "WGS84",
     }
 
@@ -86,11 +88,15 @@ class Track:
     _seq = 1000
 
     def __init__(self, identity: str, x: float, y: float, speed: float, tq: float, cls: str,
-                 ox: float = 0.0, oy: float = 0.0, orad: float = 700.0, ospeed: float = 0.25):
+                 ox: float = 0.0, oy: float = 0.0, orad: float = 700.0, ospeed: float = 0.25,
+                 platform: str = None, service: str = None, alt: float = 120.0):
         Track._seq += 1
         self.id = f"TRK-{Track._seq}"
         self.identity = identity
         self.cls = cls
+        self.platform = platform
+        self.service = service
+        self.altMeters = alt
         self.x, self.y = x, y
         self.speed = speed
         self.heading = math.atan2(-y, -x)  # toward asset
@@ -129,10 +135,10 @@ class Track:
         return math.hypot(self.x, self.y)
 
     def payload(self) -> dict:
-        return {
+        p = {
             "trackId": self.id,
             "kinematics": {
-                "position": _latlon(self.x, self.y),
+                "position": _latlon(self.x, self.y, self.altMeters),
                 "velocity": {
                     "speedMps": round(self.speed, 1),
                     "courseDeg": round((math.degrees(self.heading) + 360) % 360, 1),
@@ -147,22 +153,37 @@ class Track:
             "timeObserved": _now(),
             "timeToLiveSeconds": TTL,
         }
+        if self.platform:
+            p["platform"] = self.platform
+        if self.service:
+            p["service"] = self.service
+        return p
 
 
 class Scenario:
+    BLUE_ROSTER = [
+        # identity, ox, oy, orad, ospeed, cls, speed, platform, service, alt
+        ("FRIEND", 3300, -900, 600, 0.28, "ROTARY", 70, "MH-60R", "USN", 300),
+        ("FRIEND", 1900, 2500, 1500, 0.20, "FIXED_WING", 180, "F/A-18E", "USN", 6000),
+        ("FRIEND", -2600, -1500, 700, 0.22, "ROTARY", 120, "MV-22B", "USMC", 900),
+        ("FRIEND", -1200, 1500, 500, 0.30, "ROTARY", 80, "AH-1Z", "USMC", 150),
+        ("ASSUMED_FRIEND", -2700, 2000, 900, 0.18, "UAS_GROUP_3", 40, "RQ-21A", "USMC", 1500),
+        ("FRIEND", 300, 2800, 600, 0.30, "UAS_GROUP_3", 45, "RQ-7B", "USA", 2400),
+        ("FRIEND", -2300, 300, 550, 0.26, "ROTARY", 75, "UH-60M", "USA", 250),
+        ("FRIEND", 2700, -2500, 1300, 0.14, "FIXED_WING", 90, "MQ-9", "USAF", 7600),
+    ]
+
     def __init__(self):
         self.tracks: dict[str, Track] = {}
-        # Blue force air (friendly) picture
-        self._spawn_blue("FRIEND", -2300, 1700, 700, 0.25, "ROTARY", 22)
-        self._spawn_blue("ASSUMED_FRIEND", 2400, 1500, 1100, 0.18, "FIXED_WING", 60)
-        self._spawn_blue("FRIEND", 200, 2700, 600, 0.30, "UAS_GROUP_2", 20)
-        # Red (threat) picture
+        for r in self.BLUE_ROSTER:
+            self._spawn_blue(*r)
         self._spawn_hostile(bearing=-0.6, r=4200, tq=5, cls="MULTIROTOR")
         self._spawn_wave(6)
         self._wave_timer = 0.0
 
-    def _spawn_blue(self, identity, ox, oy, orad, ospeed, cls, speed):
-        t = Track(identity, ox + orad, oy, speed, 13, cls, ox=ox, oy=oy, orad=orad, ospeed=ospeed)
+    def _spawn_blue(self, identity, ox, oy, orad, ospeed, cls, speed, platform=None, service="USA", alt=300):
+        t = Track(identity, ox + orad, oy, speed, 13, cls, ox=ox, oy=oy, orad=orad, ospeed=ospeed,
+                  platform=platform, service=service, alt=alt)
         self.tracks[t.id] = t
 
     def _spawn_hostile(self, bearing=None, r=None, tq=4, cls=None, speed=None):
@@ -175,6 +196,7 @@ class Scenario:
             speed if speed is not None else random.uniform(26, 38),
             tq,
             cls or random.choice(TYPES),
+            alt=random.uniform(60, 400),
         )
         self.tracks[t.id] = t
         return t
