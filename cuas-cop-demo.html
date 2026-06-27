@@ -821,8 +821,8 @@
     <div class="reg-alert" id="regAlert"></div>
     <div class="reg-head">
       <div>
-        <div class="reg-kicker">OPERATIONAL / THEATER COP &middot; NOTIONAL</div>
-        <div class="reg-title" id="regTitle">EUCOM &middot; Stuttgart &mdash; regional air-defense picture</div>
+        <div class="reg-kicker">OPERATIONAL / HOMELAND-DEFENSE COP &middot; NOTIONAL</div>
+        <div class="reg-title" id="regTitle">USNORTHCOM &middot; Peterson SFB &mdash; homeland air-defense picture</div>
         <div class="reg-sub" id="regSub"></div>
       </div>
       <button class="reg-x" id="regClose" aria-label="Close">&times;</button>
@@ -890,6 +890,8 @@
         { sensorId: "SEN-EO-03",   sensorType: "EO_IR", vendor: "Vendor C", service: "USA",  x: 1600,  y: 1000,  range: 3600 },
         { sensorId: "SEN-MADIS-05",sensorType: "RF",    vendor: "Vendor K", service: "USMC", x: 600,   y: -2200, range: 4500 },
         { sensorId: "SEN-SHIP-04", sensorType: "RADAR", vendor: "Vendor J", service: "USN",  x: -4600, y: -700,  range: 6500 },
+        { sensorId: "SEN-SHIP-10", sensorType: "RADAR", vendor: "Vendor M", service: "USN",  x: -3800, y: 900,   range: 6500 },
+        { sensorId: "SEN-SHIP-11", sensorType: "RADAR", vendor: "Vendor N", service: "USN",  x: -3000, y: -1500, range: 6000 },
       ],
       effectors: [
         { effectorId: "EFF-EW-01",     effectorType: "EW_JAMMER",           vendor: "Vendor D", service: "USA",  x: 350,   y: 300,   maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
@@ -899,8 +901,10 @@
         { effectorId: "EFF-LAS-05",    effectorType: "DIRECTED_ENERGY",     vendor: "Vendor B", service: "USA",  x: 900,   y: 650,   maxRange: 3200, mag: 100, cap: 100, unit: "%" },
         { effectorId: "EFF-GUN-06",    effectorType: "KINETIC_GUN",         vendor: "Vendor E", service: "USA",  x: 450,   y: -350,  maxRange: 2400, mag: 240, cap: 240, unit: "rds" },
         { effectorId: "EFF-NET-07",    effectorType: "NET_CAPTURE",         vendor: "Vendor I", service: "USA",  x: 300,   y: 900,   maxRange: 1800, mag: 6,   cap: 6,   unit: "nets" },
-        { effectorId: "EFF-SEARAM-08", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor J", service: "USN",  x: -4600, y: -700,  maxRange: 4200, mag: 11,  cap: 11,  unit: "rounds" },
+        { effectorId: "EFF-SEARAM-08", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor J", service: "USN",  x: -4600, y: -700,  maxRange: 4200, mag: 11,  cap: 11,  unit: "rounds", auto: true, weapon: "SeaRAM" },
         { effectorId: "EFF-LMADIS-09", effectorType: "EW_JAMMER",           vendor: "Vendor K", service: "USMC", x: 600,   y: -2200, maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
+        { effectorId: "EFF-DELE-10",   effectorType: "DIRECTED_ENERGY",     vendor: "Vendor M", service: "USN",  x: -3800, y: 900,   maxRange: 3400, mag: 100, cap: 100, unit: "%",   auto: true, weapon: "HELIOS DE" },
+        { effectorId: "EFF-CRAM-11",   effectorType: "KINETIC_GUN",         vendor: "Vendor N", service: "USN",  x: -3000, y: -1500, maxRange: 2600, mag: 300, cap: 300, unit: "rds", auto: true, weapon: "C-RAM Phalanx" },
       ],
       hubPair: { "SEN-RAD-01": "EFF-GUN-06", "SEN-EO-03": "EFF-LAS-05", "SEN-MADIS-05": "EFF-LMADIS-09" },
       blue: [
@@ -1132,6 +1136,7 @@
       }
     }
     airDefense(dt);
+    navalDefense(dt);
     // drop fully faded
     for (const [id, t] of S.tracks) if (t.state === "NEUTRALIZED" && t.fade <= 0) {
       S.tracks.delete(id);
@@ -1164,6 +1169,43 @@
         const x = S.tracks.get(tid);
         if (x && x.state === "ENGAGING" && x.engAir) { x.state = "NEUTRALIZED"; recordDefeat(fs); S.stats.airKills++; }
       }, 850);
+    }
+  }
+
+  // US Navy surface combatants: autonomous close-in defense (CIWS). Designated
+  // auto effectors (SeaRAM, HELIOS directed energy, C-RAM Phalanx) engage the
+  // nearest hostile inside their envelope, gated by weapons-control status and,
+  // in HUB mode, by whether they have a paired sensor. Shows the sea screen
+  // taking out targets, not just land effectors.
+  function navalDefense(dt) {
+    if (S.wcs === "WEAPONS_HOLD") return;
+    const hostiles = [...S.tracks.values()].filter((t) => t.identity === "HOSTILE" && t.state === "ACTIVE");
+    if (!hostiles.length) return;
+    for (const e of S.effectors) {
+      if (!e.auto || e.mag <= 0) continue;
+      if (S.arch === "HUB" && !HUB_EFFECTORS.has(e.effectorId)) continue;   // idle, no paired sensor
+      e.cool = (e.cool || 0) - dt;
+      if (e.cool > 0) continue;
+      let best = null, bd = e.maxRange;
+      for (const h of hostiles) {
+        if (h.state !== "ACTIVE") continue;
+        const d = dist(e.x, e.y, h.x, h.y);
+        if (d < bd) { bd = d; best = h; }
+      }
+      if (!best) continue;
+      const isDE = e.effectorType === "DIRECTED_ENERGY";
+      best.state = "ENGAGING"; best.engEff = e.effectorId; best.engAir = false; best.engNaval = true; best.engDE = isDE; best.engT = perf();
+      e.cool = isDE ? 0.9 : 1.5;                                            // laser cycles faster
+      if (e.unit === "rounds" || e.unit === "rds") e.mag = Math.max(0, e.mag - 1);
+      S.stats.engagements++;
+      if (isCrossVendor(best, e)) S.stats.crossVendor++;
+      if (isCrossService(best, e)) S.stats.crossService++;
+      logEvent("PERMIT", "PERMIT", `${isDE ? "DE LASE" : "CIWS"} ${best.trackId} <- ${e.effectorId} (${e.vendor}/${e.service}) ${e.weapon || ""}`);
+      const tid = best.trackId, fs = best.firstSeen;
+      setTimeout(() => {
+        const x = S.tracks.get(tid);
+        if (x && x.state === "ENGAGING" && x.engNaval) { x.state = "NEUTRALIZED"; recordDefeat(fs); }
+      }, isDE ? 450 : 650);
     }
   }
 
@@ -1502,8 +1544,8 @@
       ctx.beginPath(); ctx.arc(x, y, 12 + p * 5, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.strokeStyle = ACCENT; ctx.fillStyle = "#0c1620"; ctx.lineWidth = 1.5;
-    if (s.sensorId === "SEN-SHIP-04") {
-      // Navy ship hull glyph (sensor + SeaRAM co-located offshore)
+    if (s.sensorId.indexOf("SEN-SHIP") === 0) {
+      // Navy ship hull glyph (radar + CIWS effector co-located offshore)
       ctx.beginPath();
       ctx.moveTo(x - 9, y - 1); ctx.lineTo(x + 9, y - 1); ctx.lineTo(x + 6, y + 5); ctx.lineTo(x - 6, y + 5); ctx.closePath();
       ctx.fill(); ctx.stroke();
@@ -1726,8 +1768,15 @@
       if (ok) {
         const pulse = 0.5 + 0.5 * Math.sin(perf() / 80);
         ctx.save();
-        ctx.strokeStyle = t.engAir ? `rgba(120,200,255,${0.4 + pulse * 0.5})` : `rgba(255,176,46,${0.35 + pulse * 0.5})`;
-        ctx.lineWidth = 1 + pulse * 1.6;
+        if (t.engDE) {
+          // directed-energy: a solid, bright, thin lance
+          ctx.strokeStyle = `rgba(190,130,255,${0.7 + pulse * 0.3})`;
+          ctx.lineWidth = 2.2;
+          ctx.shadowColor = "rgba(190,130,255,0.8)"; ctx.shadowBlur = 6;
+        } else {
+          ctx.strokeStyle = t.engAir ? `rgba(120,200,255,${0.4 + pulse * 0.5})` : `rgba(255,176,46,${0.35 + pulse * 0.5})`;
+          ctx.lineWidth = 1 + pulse * 1.6;
+        }
         ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(x, y); ctx.stroke();
         ctx.restore();
       }
@@ -2003,15 +2052,18 @@
   function showAAR() { buildAAR(); $("aarBack").hidden = false; }
   function hideAAR() { $("aarBack").hidden = true; }
 
-  // ---- Regional / operational (theater) view ---------------------------------
-  // Rolls the tactical fight up an echelon: an operational HQ (notional EUCOM /
-  // Stuttgart) sees subordinate installations, the one under attack blinking with
-  // live weapons + sustainment status, and autonomous launchers auto-tasked to the
-  // threat point-of-origin for optimal emplacement.
+  // ---- Regional / operational (homeland-defense) view ------------------------
+  // Rolls the tactical fight up an echelon: the operational HQ for the western US
+  // (USNORTHCOM, Peterson SFB; air-defense sector WADS, with USINDOPACOM fronting
+  // the Pacific approaches) sees subordinate installations, the one under attack
+  // blinking with live weapons + sustainment status, and autonomous launchers
+  // auto-tasked to the threat point-of-origin for optimal emplacement.
+  // Western-US installations in the USNORTHCOM homeland-defense AOR (peers to the
+  // active site; the active scenario base is shown live alongside these).
   const THEATER_PEERS = [
-    { id: "RAM", name: "Ramstein AB",     svc: "USAF", wReady: 6, wTot: 6, sustain: 0.93 },
-    { id: "AVB", name: "Aviano AB",       svc: "USAF", wReady: 4, wTot: 5, sustain: 0.79 },
-    { id: "GRF", name: "Grafenwoehr",     svc: "USA",  wReady: 5, wTot: 5, sustain: 0.88 },
+    { id: "MIR", name: "MCAS Miramar",        svc: "USMC", wReady: 5, wTot: 6, sustain: 0.90 },
+    { id: "NEL", name: "Nellis AFB",          svc: "USAF", wReady: 4, wTot: 5, sustain: 0.82 },
+    { id: "JBLM", name: "JBLM \u00b7 WADS",   svc: "USAF", wReady: 6, wTot: 6, sustain: 0.94 },
   ];
   let _regTimer = null;
 
@@ -2056,10 +2108,14 @@
       alert.textContent = `ALL CLEAR \u2014 ${a.name} nominal \u2014 no active tracks. Theater posture green.`;
     }
 
-    $("regSub").textContent = `Operational rollup of the site fight \u00b7 ${a.name} (${a.svc}) \u00b7 ${nowClock()} Z`;
+    // USNORTHCOM owns homeland defense of the western US; the coast scenario also
+    // fronts the USINDOPACOM Pacific approaches. WADS is the air-defense sector.
+    const pacific = SCN.id === "sandiego";
+    $("regTitle").textContent = "USNORTHCOM \u00b7 Peterson SFB \u2014 homeland air-defense picture";
+    $("regSub").textContent = `Operational rollup of the site fight \u00b7 ${a.name} (${a.svc}) \u00b7 sector: WADS${pacific ? " \u00b7 Pacific approaches w/ USINDOPACOM" : ""} \u00b7 ${nowClock()} Z`;
 
     $("regHq").innerHTML =
-      `<span class="badge">EUCOM</span><span class="name">Operational HQ \u00b7 Stuttgart</span>` +
+      `<span class="badge">NORTHCOM</span><span class="name">Operational HQ \u00b7 Peterson SFB, CO</span>` +
       `<span class="roll">${underAttack ? '<span style="color:#ff8a98;font-weight:700">1 BASE UNDER ATTACK</span>' : '<span style="color:#6fe39a">all installations nominal</span>'}</span>`;
 
     const baseCard = (b, attack) => {
