@@ -557,6 +557,13 @@
             <button data-v="RED">RED</button>
             <button data-v="BLUE">BLUE</button>
           </div>
+          <div class="field" style="margin-top:10px;margin-bottom:0">
+            <label>Architecture</label>
+            <div class="seg" id="archSeg">
+              <button data-v="NETWORKED" aria-pressed="true">NETWORKED</button>
+              <button data-v="HUB">HUB &amp; SPOKE</button>
+            </div>
+          </div>
         </div>
 
         <div class="card" id="trackCard">
@@ -669,6 +676,12 @@
   const MAX_TRACKS = 1200;
   const LOD_THRESHOLD = 60;
 
+  // Hub-and-spoke (legacy) fixed sensor->shooter pairs. Effectors not listed here
+  // are "dedicated to no sensor" and sit idle in HUB mode -- the wasted-capacity and
+  // coverage-gap problem the networked any-shooter model removes.
+  const HUB_PAIR = { "SEN-RAD-01": "EFF-GUN-06", "SEN-RF-02": "EFF-NET-07", "SEN-EO-03": "EFF-LAS-05" };
+  const HUB_EFFECTORS = new Set(Object.values(HUB_PAIR));
+
   // ---- state ----
   const S = {
     tracks: new Map(),
@@ -688,6 +701,8 @@
     autoplay: { running: false, timer: null },
     view: "ALL",                            // ALL | RED | BLUE COP filter
     echelon: { bn: false, rgt: false },     // up-echelon federation state
+    arch: "NETWORKED",                       // NETWORKED | HUB (any-shooter vs legacy)
+    coverage: null,                          // cached {netPct, hubPct, gap:[{x,y}]}
   };
 
   function isCrossVendor(track, eff) {
@@ -775,6 +790,9 @@
         t.x += Math.cos(t.heading + weave) * t.speed * dt;
         t.y += Math.sin(t.heading + weave) * t.speed * dt;
       }
+      // track trail history (throttled)
+      t._tt = (t._tt || 0) + dt;
+      if (t._tt > 0.15) { t._tt = 0; (t.trail || (t.trail = [])).push({ x: t.x, y: t.y }); if (t.trail.length > 18) t.trail.shift(); }
       // fusion: track quality rises with number of covering sensors
       let covering = 0;
       const contrib = [];
@@ -804,11 +822,16 @@
 
   // ---- authority gates (mirror authority.py + pairing.py) ----
   function feasibleEffectors(t) {
-    return S.effectors.filter((e) => {
-      if (e.mag <= 0) return false;
-      const d = dist(t.x, t.y, e.x, e.y);
-      return d <= e.maxRange;
-    });
+    let effs = S.effectors.filter((e) => e.mag > 0 && dist(t.x, t.y, e.x, e.y) <= e.maxRange);
+    if (S.arch === "HUB") {
+      // legacy: a track is only engageable by the effector hard-wired to a sensor
+      // that currently detects it -- everything else is a coverage gap.
+      effs = effs.filter((e) => {
+        const s = SENSORS.find((sn) => HUB_PAIR[sn.sensorId] === e.effectorId);
+        return s && dist(t.x, t.y, s.x, s.y) <= s.range;
+      });
+    }
+    return effs;
   }
   function bestEffector(t) {
     const f = feasibleEffectors(t).filter((e) => t.tq >= MIN_TQ[e.effectorType]);
@@ -829,7 +852,7 @@
     if (!ENGAGEABLE.has(t.identity)) return { ok: false, code: "ROE_PROHIBITED", detail: `identity ${t.identity} is not engageable` };
     if (S.wcs === "WEAPONS_TIGHT" && t.identity !== "HOSTILE") return { ok: false, code: "ROE_PROHIBITED", detail: "WEAPONS_TIGHT requires positively identified HOSTILE" };
     const feas = feasibleEffectors(t);
-    if (!feas.length) return { ok: false, code: "OUT_OF_ENVELOPE", detail: "no effector in range" };
+    if (!feas.length) return { ok: false, code: "OUT_OF_ENVELOPE", detail: S.arch === "HUB" ? "no dedicated sensor-shooter pair covers this track (coverage gap)" : "no effector in range" };
     const eff = bestEffector(t);
     if (!eff) {
       const need = Math.min(...feas.map((e) => MIN_TQ[e.effectorType]));
@@ -928,6 +951,7 @@
         t.x = loc.x; t.y = loc.y;
         t.identity = tk.identity; t.classificationType = tk.classificationType || "UNKNOWN";
         t.tq = tk.trackQuality; t.contributingSensors = tk.contributingSensors || [];
+        (t.trail || (t.trail = [])).push({ x: t.x, y: t.y }); if (t.trail.length > 18) t.trail.shift();
         seen.add(tk.trackId);
       }
       for (const id of [...S.tracks.keys()]) if (!seen.has(id)) S.tracks.delete(id);
@@ -992,65 +1016,100 @@
     ctx.clearRect(0, 0, w, h);
     S._lod = S.tracks.size > LOD_THRESHOLD;   // simplify track glyphs at scale
 
-    // range rings
-    ctx.strokeStyle = "#16202c";
-    ctx.lineWidth = 1;
-    for (const r of RINGS) {
-      ctx.beginPath(); ctx.arc(cx, cy, r * scale, 0, Math.PI * 2); ctx.stroke();
-    }
-    // bearing spokes
-    ctx.strokeStyle = "#121a24";
-    for (let a = 0; a < 360; a += 30) {
-      const rad = a * Math.PI / 180;
-      ctx.beginPath(); ctx.moveTo(cx, cy);
-      ctx.lineTo(cx + Math.cos(rad) * RINGS[RINGS.length - 1] * scale, cy + Math.sin(rad) * RINGS[RINGS.length - 1] * scale);
-      ctx.stroke();
-    }
-    // ring labels
-    ctx.fillStyle = "#3a485a"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
+    drawTerrain();
+    drawGrid();
+
+    // range rings (subtle, over the basemap)
+    ctx.strokeStyle = "rgba(120,150,180,0.10)"; ctx.lineWidth = 1;
+    for (const r of RINGS) { ctx.beginPath(); ctx.arc(cx, cy, r * scale, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.fillStyle = "#46566a"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
     for (const r of RINGS) ctx.fillText((r / 1000) + "km", cx + 3, cy - r * scale - 3);
 
-    // sensor coverage
+    // hub coverage-gap overlay (legacy architecture)
+    if (S.arch === "HUB" && S.coverage) drawCoverageOverlay();
+
+    // sensor coverage + sensors (with modality effects)
     for (const s of SENSORS) {
       ctx.beginPath(); ctx.arc(sx(s.x), sy(s.y), s.range * scale, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(57,160,196,0.04)"; ctx.fill();
-      ctx.strokeStyle = "rgba(57,160,196,0.22)"; ctx.setLineDash([4, 6]); ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = "rgba(57,160,196,0.035)"; ctx.fill();
+      ctx.strokeStyle = "rgba(57,160,196,0.20)"; ctx.setLineDash([4, 6]); ctx.lineWidth = 1; ctx.stroke();
       ctx.setLineDash([]);
       drawSensor(s);
     }
-    // effector envelopes
+    // effector envelopes + effectors (idle ones greyed in HUB)
     for (const e of S.effectors) {
+      const idle = S.arch === "HUB" && !HUB_EFFECTORS.has(e.effectorId);
       ctx.beginPath(); ctx.arc(sx(e.x), sy(e.y), e.maxRange * scale, 0, Math.PI * 2);
-      ctx.strokeStyle = e.mag > 0 ? "rgba(70,198,110,0.16)" : "rgba(120,120,120,0.1)"; ctx.setLineDash([2, 7]); ctx.stroke();
-      ctx.setLineDash([]);
-      drawEffector(e);
+      ctx.strokeStyle = idle ? "rgba(120,120,120,0.05)" : (e.mag > 0 ? "rgba(70,198,110,0.16)" : "rgba(120,120,120,0.1)");
+      ctx.setLineDash([2, 7]); ctx.stroke(); ctx.setLineDash([]);
+      drawEffector(e, idle);
     }
+    if (S.arch === "HUB") drawHubLinks();   // dedicated sensor-shooter wiring
 
-    // defended asset
     drawAsset(cx, cy);
 
-    // tracks (+ engagement beams), filtered by the Red/Blue COP view
-    for (const t of S.tracks.values()) {
-      if (S.view === "RED" && !isRed(t)) continue;
-      if (S.view === "BLUE" && !isBlue(t)) continue;
-      drawTrack(t);
-    }
+    // tracks: trails first (under glyphs), then glyphs; filtered by COP view
+    const visible = (t) => !(S.view === "RED" && !isRed(t)) && !(S.view === "BLUE" && !isBlue(t));
+    for (const t of S.tracks.values()) if (visible(t)) drawTrail(t);
+    for (const t of S.tracks.values()) if (visible(t)) drawTrack(t);
 
     requestAnimationFrame(loop);
   }
 
   function drawAsset(x, y) {
     ctx.save();
+    // runway glyph (rotated) to read as an installation/airfield
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(-0.5);
+    ctx.strokeStyle = "rgba(205,217,230,0.55)"; ctx.lineWidth = 1;
+    ctx.strokeRect(-11, -3, 22, 6);
+    ctx.setLineDash([3, 2]); ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+    // defended-asset ring
     ctx.strokeStyle = "#cdd9e6"; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(x - 7, y); ctx.lineTo(x, y - 8); ctx.lineTo(x + 7, y); ctx.lineTo(x, y + 8); ctx.closePath(); ctx.stroke();
-    ctx.fillStyle = "rgba(205,217,230,0.18)"; ctx.fill();
-    ctx.fillStyle = "#7c8a9c"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
-    ctx.fillText("DEFENDED ASSET", x, y + 22);
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "#aeb9c7"; ctx.font = "10px " + MONO; ctx.textAlign = "center";
+    ctx.fillText("FOB EAGLE", x, y + 25);
+    ctx.fillStyle = "#5f7286"; ctx.font = "8px " + MONO;
+    ctx.fillText("DEFENDED ASSET \u00B7 HPA", x, y + 36);
     ctx.restore();
   }
   function drawSensor(s) {
-    const x = sx(s.x), y = sy(s.y);
+    const x = sx(s.x), y = sy(s.y), rad = s.range * VIEW.scale;
     ctx.save();
+
+    // modality effects
+    if (s.sensorType === "RADAR") {
+      const ang = (perf() / 1100) % (Math.PI * 2);   // rotating sweep
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, rad, -ang - 0.22, -ang); ctx.closePath();
+      ctx.fillStyle = "rgba(57,160,196,0.06)"; ctx.fill();
+      ctx.strokeStyle = "rgba(57,160,196,0.30)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(-ang) * rad, y + Math.sin(-ang) * rad); ctx.stroke();
+    } else if (s.sensorType === "RF" && !S._lod) {
+      // lines of bearing to a few in-range hostiles
+      ctx.strokeStyle = "rgba(255,176,46,0.22)"; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+      let n = 0;
+      for (const t of S.tracks.values()) {
+        if (n >= 4) break;
+        if (!isRed(t) || t.state === "NEUTRALIZED") continue;
+        if (dist(t.x, t.y, s.x, s.y) <= s.range) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(sx(t.x), sy(t.y)); ctx.stroke(); n++; }
+      }
+      ctx.setLineDash([]);
+    } else if (s.sensorType === "EO_IR" && !S._lod) {
+      // slew cone toward nearest in-range hostile
+      let tgt = null, best = 1e12;
+      for (const t of S.tracks.values()) {
+        if (!isRed(t) || t.state === "NEUTRALIZED") continue;
+        const d = dist(t.x, t.y, s.x, s.y);
+        if (d <= s.range && d < best) { best = d; tgt = t; }
+      }
+      if (tgt) {
+        const a = Math.atan2(sy(tgt.y) - y, sx(tgt.x) - x);
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, rad, a - 0.11, a + 0.11); ctx.closePath();
+        ctx.fillStyle = "rgba(120,200,255,0.07)"; ctx.fill();
+      }
+    }
+
     // vendor-swap flash: pulse the radar marker briefly without dropping its tracks
     const flash = perf() - S.swapFlash;
     if (s.sensorId === "SEN-RAD-01" && flash < 1800) {
@@ -1065,17 +1124,118 @@
     ctx.fillText(s.sensorId, x, y - 9);
     ctx.restore();
   }
-  function drawEffector(e) {
+  function drawEffector(e, idle) {
     const x = sx(e.x), y = sy(e.y);
     ctx.save();
-    const c = e.mag > 0 ? "#46c66e" : "#5a6472";
+    const c = idle ? "#3c4654" : (e.mag > 0 ? "#46c66e" : "#5a6472");
+    ctx.globalAlpha = idle ? 0.55 : 1;
     ctx.strokeStyle = c; ctx.fillStyle = "#0b1610"; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 6, y); ctx.closePath();
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#6f8294"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
+    ctx.fillStyle = idle ? "#566273" : "#6f8294"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
     ctx.fillText(e.effectorId, x, y - 10);
+    if (idle) { ctx.fillStyle = "#7a8190"; ctx.font = "7px " + MONO; ctx.fillText("IDLE \u00B7 no paired sensor", x, y + 16); }
     ctx.restore();
   }
+  // ---- basemap, grid, overlays ----
+  function drawTerrain() {
+    const { w, h } = VIEW;
+    // land base
+    ctx.fillStyle = "#0b1210"; ctx.fillRect(0, 0, w, h);
+    // water region (right side) behind a wavy coastline
+    const steps = 26, coast = [];
+    for (let i = 0; i <= steps; i++) {
+      const tt = i / steps;
+      coast.push([w * (0.60 + 0.18 * tt) + Math.sin(tt * 7 + 0.6) * Math.min(20, w * 0.02), h * tt]);
+    }
+    ctx.beginPath(); ctx.moveTo(coast[0][0], coast[0][1]);
+    for (const [px, py] of coast) ctx.lineTo(px, py);
+    ctx.lineTo(w, h); ctx.lineTo(w, 0); ctx.closePath();
+    ctx.fillStyle = "#091622"; ctx.fill();
+    ctx.strokeStyle = "rgba(86,140,170,0.28)"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); coast.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.stroke();
+    // faint elevation contours on land
+    ctx.strokeStyle = "rgba(96,124,96,0.07)"; ctx.lineWidth = 1;
+    const contours = [[0.18, 0.30, 70, 46, 0.4], [0.30, 0.62, 110, 64, -0.3], [0.12, 0.74, 60, 40, 0.2], [0.42, 0.20, 80, 50, 0.1]];
+    for (const [fx, fy, rx, ry, rot] of contours) {
+      ctx.beginPath(); ctx.ellipse(fx * w, fy * h, rx, ry, rot, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(fx * w, fy * h, rx * 0.6, ry * 0.6, rot, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  function drawGrid() {
+    const { w, h, cx, cy, scale } = VIEW;
+    const stepPx = 1000 * scale;   // 1 km grid
+    if (stepPx < 24) return;
+    ctx.strokeStyle = "rgba(120,150,180,0.06)"; ctx.lineWidth = 1;
+    ctx.fillStyle = "#3a4a5c"; ctx.font = "9px " + MONO;
+    const nx = Math.ceil(w / 2 / stepPx) + 1;
+    for (let i = -nx; i <= nx; i++) {
+      const x = cx + i * stepPx; if (x < 0 || x > w) continue;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      if (x > 236) { ctx.textAlign = "center"; ctx.fillText(String((((80 + i) % 100) + 100) % 100).padStart(2, "0"), x, 11); }
+    }
+    const ny = Math.ceil(h / 2 / stepPx) + 1;
+    for (let j = -ny; j <= ny; j++) {
+      const y = cy + j * stepPx; if (y < 0 || y > h) continue;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      if (y > 150) { ctx.textAlign = "left"; ctx.fillText(String((((50 - j) % 100) + 100) % 100).padStart(2, "0"), 3, y - 2); }
+    }
+    ctx.fillStyle = "rgba(120,150,180,0.4)"; ctx.font = "10px " + MONO; ctx.textAlign = "center";
+    ctx.fillText("GRID 11S MV \u00B7 WGS84 \u00B7 1 km", cx, h - 8);
+  }
+
+  function drawCoverageOverlay() {
+    const cm = S.coverage.cellM, px = cm * VIEW.scale;
+    ctx.fillStyle = "rgba(255,66,86,0.11)";
+    for (const g of S.coverage.gap) ctx.fillRect(sx(g.x) - px / 2, sy(g.y) - px / 2, px, px);
+  }
+
+  function drawHubLinks() {
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,176,46,0.5)"; ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
+    for (const s of SENSORS) {
+      const e = S.effectors.find((ef) => ef.effectorId === HUB_PAIR[s.sensorId]);
+      if (e) { ctx.beginPath(); ctx.moveTo(sx(s.x), sy(s.y)); ctx.lineTo(sx(e.x), sy(e.y)); ctx.stroke(); }
+    }
+    ctx.setLineDash([]); ctx.restore();
+  }
+
+  function drawTrail(t) {
+    if (!t.trail || t.trail.length < 2) return;
+    if (S._lod && t.trackId !== S.selected) return;
+    const col = COLORS[t.identity] || COLORS.UNKNOWN;
+    ctx.save(); ctx.fillStyle = col;
+    for (let i = 0; i < t.trail.length; i++) {
+      ctx.globalAlpha = (i / t.trail.length) * 0.4 * (t.fade != null ? t.fade : 1);
+      ctx.beginPath(); ctx.arc(sx(t.trail[i].x), sy(t.trail[i].y), 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Coverage comparison: sample the AO and compare networked vs hub engageability.
+  function computeCoverage() {
+    const cellM = 500, R = AO_RADIUS;
+    let net = 0, hub = 0, total = 0; const gap = [];
+    for (let x = -R; x <= R; x += cellM) {
+      for (let y = -R; y <= R; y += cellM) {
+        if (Math.hypot(x, y) > R) continue;
+        total++;
+        const detected = SENSORS.some((s) => Math.hypot(x - s.x, y - s.y) <= s.range);
+        const anyEff = S.effectors.some((e) => Math.hypot(x - e.x, y - e.y) <= e.maxRange);
+        const netC = detected && anyEff;
+        const hubC = SENSORS.some((s) => {
+          const e = S.effectors.find((ef) => ef.effectorId === HUB_PAIR[s.sensorId]);
+          return e && Math.hypot(x - s.x, y - s.y) <= s.range && Math.hypot(x - e.x, y - e.y) <= e.maxRange;
+        });
+        if (netC) net++;
+        if (hubC) hub++;
+        if (netC && !hubC) gap.push({ x, y });
+      }
+    }
+    S.coverage = { cellM, gap, netPct: Math.round((100 * net) / total), hubPct: Math.round((100 * hub) / total) };
+  }
+
   function drawTrack(t) {
     const x = sx(t.x), y = sy(t.y);
     const col = COLORS[t.identity] || COLORS.UNKNOWN;
@@ -1255,6 +1415,19 @@
   bindSeg("roleSeg", "role");
   bindSeg("wcsSeg", "wcs");
   bindSeg("viewSeg", "view");
+  bindSeg("archSeg", "arch", onArchChange);
+
+  function onArchChange() {
+    computeCoverage();
+    if (S.arch === "HUB") {
+      const idle = S.effectors.length - HUB_EFFECTORS.size;
+      logEvent("INFO", "INFO", `Architecture: HUB-AND-SPOKE \u00B7 fixed pairs, ${idle} effectors idle, gaps exposed (engageable area ${S.coverage.hubPct}%)`);
+      toast("deny", `HUB-AND-SPOKE \u00B7 ${idle} effectors idle \u00B7 engageable area drops to ${S.coverage.hubPct}%`);
+    } else {
+      logEvent("INFO", "INFO", `Architecture: NETWORKED \u00B7 any sensor cues any shooter, gaps closed (engageable area ${S.coverage.netPct}%)`);
+      toast("ok", `NETWORKED \u00B7 any-sensor/any-shooter \u00B7 engageable area ${S.coverage.netPct}%`);
+    }
+  }
 
   $("btnSwarm").onclick = () => {
     if (S.live) { toast("ok", "swarm is driven by the scenario engine in LIVE mode"); return; }
@@ -1323,6 +1496,8 @@
       `<div class="sb-row"><span class="l">In-flight</span><span class="n">${inflight}</span></div>` +
       `<div class="sb-row"><span class="l">Avg time-to-defeat</span><span class="n">${avg ? avg.toFixed(0) + "s" : "\u2014"}</span></div>` +
       `<div class="sb-row"><span class="l">Engagements</span><span class="n">${eng}</span></div>` +
+      `<div class="sb-row"><span class="l">Engageable area (net/hub)</span><span class="n"><span style="color:var(--neutral)">${(S.coverage || {}).netPct ?? 0}%</span> / <span style="color:var(--hostile)">${(S.coverage || {}).hubPct ?? 0}%</span></span></div>` +
+      `<div class="sb-row"><span class="l">Effectors usable (net/hub)</span><span class="n"><span style="color:var(--neutral)">${S.effectors.length}</span> / <span style="color:var(--hostile)">${HUB_EFFECTORS.size}</span></span></div>` +
       '<div class="sb-xv"><div class="l">Cross-vendor pairings</div>' +
       `<div class="big">${pct}%</div>` +
       `<div class="sub">${xv} of ${eng} shots crossed a vendor boundary</div></div>`;
@@ -1455,6 +1630,7 @@
   function resetScenario() {
     S.tracks.clear(); S.selected = null; S.engaged = 0;
     S.effectors = JSON.parse(JSON.stringify(EFFECTORS));
+    computeCoverage();
     S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, defeatTimes: [] };
     S.pendingEng.clear();
     S.echelon = { bn: false, rgt: false };

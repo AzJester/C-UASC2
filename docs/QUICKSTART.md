@@ -51,6 +51,16 @@ The **echelon federation HUD** (top-left) shows this Site C2 node and its links 
 engagements are shared upward with no bespoke integration. If the site node is then
 lost, Battalion still holds the shared picture.
 
+The **Architecture toggle** (NETWORKED / HUB & SPOKE) is the thesis in one click.
+Flip to **HUB & SPOKE** and the legacy model appears: sensors hard-wired to single
+shooters (dedicated links), the long-range interceptors/EW sitting **idle** with no
+paired sensor, and a red **coverage-gap** overlay. The scoreboard quantifies it:
+engageable area and effectors-usable drop sharply (e.g. ~81%→~30% area, 7→3
+effectors). Flip back to **NETWORKED** and any sensor cues any shooter — the gaps
+close and every effector is back in play. The plot itself is now a tactical map:
+terrain and coastline, an MGRS grid, the named **FOB EAGLE** defended asset, a radar
+sweep, RF lines-of-bearing, EO/IR slew cone, and track trails.
+
 To drive it manually, in order:
 1. **Fused picture.** Hostiles (red) and a friendly (blue) are tracked from several
    sensors at once — one coherent picture, not per-vendor screens.
