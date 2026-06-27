@@ -578,7 +578,79 @@
   .aar-foot .sbtn.primary { background: var(--accent-dim); border-color: #2c6075; color: #dcf2fb; }
   @media (max-width: 720px) { .aar-grid { grid-template-columns: repeat(2, 1fr); } .aar-cols { grid-template-columns: 1fr; } }
 
+  /* Regional / operational (theater) view overlay */
+  .reg-back {
+    position: fixed; inset: 0; z-index: 85;
+    background: rgba(4,7,11,0.78);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; animation: fadein 0.2s ease-out;
+  }
+  .reg-back[hidden] { display: none; }
+  .reg {
+    width: min(1040px, 97vw); max-height: 94vh; overflow-y: auto;
+    background: linear-gradient(180deg, #0f1622, var(--panel));
+    border: 1px solid #2a3645; border-radius: 8px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.7); padding: 0 0 14px;
+  }
+  .reg-alert {
+    background: #4a121b; color: #ffd7dc; border-bottom: 1px solid #6b1e2a;
+    font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+    padding: 10px 20px; text-align: center; animation: regblink 1s steps(1) infinite;
+  }
+  .reg-alert.clear { background: #0d1a12; color: #b6f0c8; border-color: #1d5036; animation: none; }
+  @keyframes regblink { 50% { background: #7a1d2a; color: #fff; } }
+  .reg-head { display: flex; align-items: flex-start; gap: 16px; padding: 16px 20px 12px; border-bottom: 1px solid var(--hair); }
+  .reg-kicker { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--accent); }
+  .reg-title { font-size: 19px; font-weight: 700; color: #e7eef7; margin-top: 3px; text-wrap: balance; }
+  .reg-sub { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .reg-x { margin-left: auto; background: none; border: none; color: var(--muted); font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px; }
+  .reg-x:hover { color: #e7eef7; }
+  .reg-body { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; padding: 16px 20px; }
+  .reg-h { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 9px; }
+  .reg-hq {
+    border: 1px solid #2c6075; background: #0e1c25; border-radius: 6px;
+    padding: 10px 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;
+  }
+  .reg-hq .badge { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; color: #0a0d12; background: var(--accent); padding: 2px 6px; border-radius: 3px; font-weight: 700; }
+  .reg-hq .name { font-weight: 700; color: #dcf2fb; }
+  .reg-hq .roll { margin-left: auto; font-family: var(--mono); font-size: 11px; }
+  .reg-stem { height: 12px; border-left: 1px dashed var(--faint); margin-left: 26px; }
+  .reg-bases { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .reg-base {
+    border: 1px solid var(--hair); background: var(--raised); border-radius: 6px; padding: 10px 12px;
+  }
+  .reg-base.attack { border-color: #6b1e2a; background: #1a0f12; animation: regblink 1s steps(1) infinite; }
+  .reg-base .top { display: flex; align-items: center; gap: 8px; }
+  .reg-base .nm { font-weight: 700; color: #dbe6f2; font-size: 13px; }
+  .reg-base .svc { font-family: var(--mono); font-size: 9px; color: var(--faint); }
+  .reg-pill { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.05em; padding: 2px 6px; border-radius: 3px; margin-left: auto; }
+  .reg-pill.ok { background: #0d1a12; color: #6fe39a; border: 1px solid #1d5036; }
+  .reg-pill.atk { background: #2a0f14; color: #ff8a98; border: 1px solid #6b1e2a; }
+  .reg-base .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+  .reg-base .metrics .m { }
+  .reg-base .metrics .mk { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--faint); }
+  .reg-base .metrics .mv { font-size: 14px; font-weight: 700; color: #cdd9e6; font-variant-numeric: tabular-nums; }
+  .reg-base .metrics .mv.warn { color: #ffb02e; }
+  .reg-base .metrics .mv.bad { color: var(--hostile); }
+  .reg-bar { height: 4px; background: #20303f; border-radius: 2px; margin-top: 7px; overflow: hidden; }
+  .reg-bar > span { display: block; height: 100%; background: var(--neutral); }
+  .reg-bar > span.low { background: var(--hostile); }
+  .reg-bar > span.mid { background: var(--suspect); }
+  .reg-poo, .reg-launchers { border: 1px solid var(--hair); background: var(--raised); border-radius: 6px; padding: 12px 14px; font-size: 12.5px; color: var(--text); line-height: 1.5; }
+  .reg-poo .big { font-size: 22px; font-weight: 700; color: #dbe6f2; font-variant-numeric: tabular-nums; }
+  .reg-poo .lab { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+  .reg-launchers .lr { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--hair-soft); font-family: var(--mono); font-size: 11.5px; }
+  .reg-launchers .lr:last-child { border-bottom: none; }
+  .reg-launchers .st { color: var(--accent); }
+  .reg-launchers .st.set { color: var(--neutral); }
+  .reg-foot { display: flex; align-items: center; gap: 10px; margin: 6px 20px 0; border-top: 1px solid var(--hair); padding-top: 12px; }
+  .reg-foot .grow { flex: 1; }
+  .reg-note { font-size: 11px; color: var(--faint); }
+  .reg-foot .sbtn { background: var(--accent-dim); border: 1px solid #2c6075; color: #dcf2fb; border-radius: 4px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  @media (max-width: 760px) { .reg-body { grid-template-columns: 1fr; } .reg-bases { grid-template-columns: 1fr; } }
+
   @media (prefers-reduced-motion: reduce) {
+    .reg-alert, .reg-base.attack { animation: none; }
     .toast { animation: none; }
     .aar-back { animation: none; }
     * { scroll-behavior: auto; }
@@ -696,6 +768,7 @@
       <button class="sbtn" id="btnRaid">Mass raid</button>
       <button class="sbtn" id="btnSwap">Swap radar vendor</button>
       <button class="sbtn" id="btnEchelon">Integrate up-echelon</button>
+      <button class="sbtn" id="btnRegional">Regional view</button>
       <button class="sbtn danger" id="btnNode">Simulate node loss</button>
       <button class="sbtn" id="btnAAR">After action review</button>
       <button class="sbtn" id="btnReset">Reset</button>
@@ -737,6 +810,38 @@
       <span class="grow"></span>
       <button class="sbtn" id="aarCopy">Copy AAR text</button>
       <button class="sbtn primary" id="aarDone">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="reg-back" id="regBack" hidden>
+  <div class="reg" role="dialog" aria-modal="true" aria-labelledby="regTitle">
+    <div class="reg-alert" id="regAlert"></div>
+    <div class="reg-head">
+      <div>
+        <div class="reg-kicker">OPERATIONAL / THEATER COP &middot; NOTIONAL</div>
+        <div class="reg-title" id="regTitle">EUCOM &middot; Stuttgart &mdash; regional air-defense picture</div>
+        <div class="reg-sub" id="regSub"></div>
+      </div>
+      <button class="reg-x" id="regClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="reg-body">
+      <div class="reg-left">
+        <div class="reg-h">Theater laydown &mdash; subordinate installations</div>
+        <div class="reg-hq" id="regHq"></div>
+        <div class="reg-bases" id="regBases"></div>
+      </div>
+      <div class="reg-right">
+        <div class="reg-h">Point-of-origin engagement</div>
+        <div class="reg-poo" id="regPoo"></div>
+        <div class="reg-h" style="margin-top:14px">Autonomous launcher tasking</div>
+        <div class="reg-launchers" id="regLaunchers"></div>
+      </div>
+    </div>
+    <div class="reg-foot">
+      <span class="reg-note">For demonstration only &middot; not a fielded system &middot; geography and figures are illustrative.</span>
+      <span class="grow"></span>
+      <button class="sbtn primary" id="regDone">Close</button>
     </div>
   </div>
 </div>
@@ -1896,6 +2001,123 @@
   function showAAR() { buildAAR(); $("aarBack").hidden = false; }
   function hideAAR() { $("aarBack").hidden = true; }
 
+  // ---- Regional / operational (theater) view ---------------------------------
+  // Rolls the tactical fight up an echelon: an operational HQ (notional EUCOM /
+  // Stuttgart) sees subordinate installations, the one under attack blinking with
+  // live weapons + sustainment status, and autonomous launchers auto-tasked to the
+  // threat point-of-origin for optimal emplacement.
+  const THEATER_PEERS = [
+    { id: "RAM", name: "Ramstein AB",     svc: "USAF", wReady: 6, wTot: 6, sustain: 0.93 },
+    { id: "AVB", name: "Aviano AB",       svc: "USAF", wReady: 4, wTot: 5, sustain: 0.79 },
+    { id: "GRF", name: "Grafenwoehr",     svc: "USA",  wReady: 5, wTot: 5, sustain: 0.88 },
+  ];
+  let _regTimer = null;
+
+  function activeBaseStatus() {
+    const reds = [...S.tracks.values()].filter(isRed);
+    const inbound = reds.length;
+    const usable = S.effectors.filter((e) => !(S.arch === "HUB" && !HUB_EFFECTORS.has(e.effectorId)) && e.mag > 0);
+    const wReady = usable.length, wTot = S.effectors.length;
+    let cap = 0, rem = 0;
+    for (const e of S.effectors) { cap += e.cap || 0; rem += Math.min(e.mag || 0, e.cap || 0); }
+    const sustain = cap > 0 ? rem / cap : 1;
+    // point of origin: average bearing of inbound tracks (compass deg, 0=N,90=E)
+    let poo = null;
+    if (inbound) {
+      let sx2 = 0, sy2 = 0;
+      for (const t of reds) { const m = Math.hypot(t.x, t.y) || 1; sx2 += t.x / m; sy2 += t.y / m; }
+      poo = (Math.atan2(sx2, sy2) * 180 / Math.PI + 360) % 360;
+    } else {
+      poo = (Math.atan2(Math.cos(SCN.threat.angle), Math.sin(SCN.threat.angle)) * 180 / Math.PI + 360) % 360;
+    }
+    const svc = SCN.id === "sandiego" ? "USN" : "USA";
+    return { name: ASSET.name, svc, inbound, wReady, wTot, sustain, poo,
+             defeated: S.stats.defeated, leakers: S.stats.leakers,
+             status: inbound > 0 ? "UNDER ATTACK" : "NOMINAL" };
+  }
+
+  function compass(deg) {
+    const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+    return dirs[Math.round(((deg % 360) / 22.5)) % 16];
+  }
+
+  function buildRegional() {
+    const a = activeBaseStatus();
+    const underAttack = a.inbound > 0;
+
+    const alert = $("regAlert");
+    if (underAttack) {
+      alert.className = "reg-alert";
+      alert.textContent = `\u26a0 THEATER ALERT \u2014 ${a.name} UNDER ATTACK \u2014 ${a.inbound} ${a.inbound === 1 ? "TRACK" : "TRACKS"} INBOUND FROM ${compass(a.poo)} (${Math.round(a.poo)}\u00b0)`;
+    } else {
+      alert.className = "reg-alert clear";
+      alert.textContent = `ALL CLEAR \u2014 ${a.name} nominal \u2014 no active tracks. Theater posture green.`;
+    }
+
+    $("regSub").textContent = `Operational rollup of the site fight \u00b7 ${a.name} (${a.svc}) \u00b7 ${nowClock()} Z`;
+
+    $("regHq").innerHTML =
+      `<span class="badge">EUCOM</span><span class="name">Operational HQ \u00b7 Stuttgart</span>` +
+      `<span class="roll">${underAttack ? '<span style="color:#ff8a98;font-weight:700">1 BASE UNDER ATTACK</span>' : '<span style="color:#6fe39a">all installations nominal</span>'}</span>`;
+
+    const baseCard = (b, attack) => {
+      const pct = Math.round(b.sustain * 100);
+      const bar = pct < 35 ? "low" : pct < 70 ? "mid" : "";
+      const wcls = b.wReady < b.wTot * 0.5 ? "bad" : b.wReady < b.wTot ? "warn" : "";
+      return `<div class="reg-base${attack ? " attack" : ""}">
+        <div class="top"><span class="nm">${esc(b.name)}</span><span class="svc">${esc(b.svc)}</span>
+          <span class="reg-pill ${attack ? "atk" : "ok"}">${attack ? "UNDER ATTACK" : "NOMINAL"}</span></div>
+        <div class="metrics">
+          <div class="m"><div class="mk">Inbound</div><div class="mv ${b.inbound ? "bad" : ""}">${b.inbound}</div></div>
+          <div class="m"><div class="mk">Weapons</div><div class="mv ${wcls}">${b.wReady}<span style="font-size:11px;color:#76859b">/${b.wTot}</span></div></div>
+          <div class="m"><div class="mk">Sustain</div><div class="mv">${pct}%</div></div>
+        </div>
+        <div class="reg-bar"><span class="${bar}" style="width:${pct}%"></span></div>
+      </div>`;
+    };
+
+    const cards = [baseCard({ name: a.name, svc: a.svc, inbound: a.inbound, wReady: a.wReady, wTot: a.wTot, sustain: a.sustain }, underAttack)]
+      .concat(THEATER_PEERS.map((p) => baseCard({ name: p.name, svc: p.svc, inbound: 0, wReady: p.wReady, wTot: p.wTot, sustain: p.sustain }, false)));
+    $("regBases").innerHTML = cards.join("");
+
+    $("regPoo").innerHTML = underAttack
+      ? `<div class="lab">Estimated point of origin (from inbound vectors)</div>
+         <div class="big">${compass(a.poo)} \u00b7 ${Math.round(a.poo)}\u00b0</div>
+         <div style="margin-top:6px;color:#9fb0c4">Operational C2 cues subordinate fires and repositions autonomous launchers to engage at the point of origin, not just at the perimeter.</div>`
+      : `<div class="lab">Point of origin</div><div class="big">\u2014</div>
+         <div style="margin-top:6px;color:#76859b">No active threat axis. Launchers hold optimized coverage geometry.</div>`;
+
+    // autonomous launchers auto-task to the POO; ETA counts down to "emplaced"
+    if (!S.reg) S.reg = { launchers: [
+      { id: "ROGUE-1", type: "Autonomous SHORAD", eta: 42 },
+      { id: "ROGUE-2", type: "Loitering interceptor", eta: 18 },
+    ] };
+    $("regLaunchers").innerHTML = S.reg.launchers.map((l) => {
+      const set = !underAttack || l.eta <= 0;
+      const stTxt = !underAttack ? "HOLD \u00b7 coverage geometry"
+        : (l.eta <= 0 ? `EMPLACED \u00b7 oriented on POO ${compass(a.poo)}` : `REPOSITIONING \u2192 POO ${compass(a.poo)} \u00b7 ETA ${l.eta}s`);
+      return `<div class="lr"><span>${esc(l.id)} \u00b7 ${esc(l.type)}</span><span class="st ${set ? "set" : ""}">${stTxt}</span></div>`;
+    }).join("") +
+    `<div style="margin-top:8px;color:#76859b;font-size:11px">Auto-notified by the operational node over the same government-owned bus \u2014 no human relay, no bespoke link.</div>`;
+  }
+
+  function regTick() {
+    const reds = [...S.tracks.values()].filter(isRed).length;
+    if (S.reg && reds > 0) for (const l of S.reg.launchers) if (l.eta > 0) l.eta = Math.max(0, l.eta - 1);
+    buildRegional();
+  }
+  function showRegional() {
+    S.reg = null;   // reseed launcher ETAs each time the view opens
+    buildRegional();
+    $("regBack").hidden = false;
+    if (_regTimer) clearInterval(_regTimer);
+    _regTimer = setInterval(regTick, 1000);
+  }
+  function hideRegional() {
+    $("regBack").hidden = true;
+    if (_regTimer) { clearInterval(_regTimer); _regTimer = null; }
+  }
+
   // ---- controls wiring ----
   function bindSeg(segId, key, after) {
     $(segId).querySelectorAll("button").forEach((b) => {
@@ -1953,11 +2175,19 @@
   }));
   $("btnNode").onclick = () => toggleNode();
   $("btnAAR").onclick = showAAR;
+  $("btnRegional").onclick = showRegional;
   $("btnReset").onclick = () => { if (S.autoplay.running) stopAutoplay(); resetScenario(); };
   $("aarClose").onclick = hideAAR;
   $("aarDone").onclick = hideAAR;
   $("aarBack").addEventListener("click", (e) => { if (e.target === $("aarBack")) hideAAR(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("aarBack").hidden) hideAAR(); });
+  $("regClose").onclick = hideRegional;
+  $("regDone").onclick = hideRegional;
+  $("regBack").addEventListener("click", (e) => { if (e.target === $("regBack")) hideRegional(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!$("aarBack").hidden) hideAAR();
+    else if (!$("regBack").hidden) hideRegional();
+  });
   $("aarCopy").onclick = async () => {
     try { await navigator.clipboard.writeText(aarPlainText()); toast("ok", "AAR copied to clipboard"); }
     catch (e) { toast("deny", "Copy unavailable in this browser"); }
@@ -2238,7 +2468,7 @@
     setInterval(renderRail, 300);   // keep counts / TQ / magazines live
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
     if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
-      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize, showAAR, buildAAR, aarData, applyScenario, resetScenario };
+      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario };
     }
     requestAnimationFrame(loop);
   }
