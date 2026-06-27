@@ -517,8 +517,64 @@
   .toast.ok { border-color: #14401f; color: #b6f0c8; background: #0c160f; }
   @keyframes toastin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
+  /* After Action Review (AAR) overlay */
+  .aar-back {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(4,7,11,0.72);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    animation: fadein 0.2s ease-out;
+  }
+  .aar-back[hidden] { display: none; }
+  .aar {
+    width: min(880px, 96vw); max-height: 92vh; overflow-y: auto;
+    background: linear-gradient(180deg, #121925, var(--panel));
+    border: 1px solid #2a3645; border-radius: 8px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.65);
+    padding: 20px 22px 16px;
+  }
+  .aar-head { display: flex; align-items: flex-start; gap: 16px; border-bottom: 1px solid var(--hair); padding-bottom: 12px; }
+  .aar-kicker { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--accent); }
+  .aar-title { font-size: 20px; font-weight: 700; color: #e7eef7; margin-top: 3px; text-wrap: balance; }
+  .aar-sub { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .aar-x { margin-left: auto; background: none; border: none; color: var(--muted); font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px; }
+  .aar-x:hover { color: #e7eef7; }
+  .aar-verdict {
+    margin: 14px 0; padding: 11px 14px; border-radius: 5px;
+    font-size: 14px; font-weight: 600; letter-spacing: 0.01em;
+    border: 1px solid #1d5036; background: #0d1a12; color: #b6f0c8;
+  }
+  .aar-verdict.warn { border-color: #6b4a18; background: #1a140a; color: #f3d59a; }
+  .aar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+  .aar-cell { background: var(--raised); border: 1px solid var(--hair); border-radius: 5px; padding: 9px 11px; }
+  .aar-cell .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+  .aar-cell .v { font-size: 19px; font-weight: 700; color: #dbe6f2; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .aar-cell .v.good { color: var(--neutral); }
+  .aar-cell .v.bad { color: var(--hostile); }
+  .aar-cell .v small { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .aar-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .aar-h { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .aar-timeline { font-family: var(--mono); font-size: 11.5px; line-height: 1.65; max-height: 230px; overflow-y: auto; }
+  .aar-tl-row { display: grid; grid-template-columns: 60px 1fr; gap: 8px; }
+  .aar-tl-row .tt { color: var(--faint); font-variant-numeric: tabular-nums; }
+  .aar-tl-row .mm { color: var(--text); }
+  .aar-assess { font-size: 12.5px; line-height: 1.55; color: var(--text); }
+  .aar-assess li { margin-bottom: 8px; list-style: none; padding-left: 16px; position: relative; }
+  .aar-assess li::before { content: "\25B8"; position: absolute; left: 0; color: var(--accent); }
+  .aar-foot { display: flex; align-items: center; gap: 10px; margin-top: 16px; border-top: 1px solid var(--hair); padding-top: 12px; }
+  .aar-foot .grow { flex: 1; }
+  .aar-note { font-size: 11px; color: var(--faint); }
+  .aar-foot .sbtn {
+    background: var(--raised); border: 1px solid var(--hair); color: var(--text);
+    border-radius: 4px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .aar-foot .sbtn:hover { background: #1c2531; border-color: #2a3645; }
+  .aar-foot .sbtn.primary { background: var(--accent-dim); border-color: #2c6075; color: #dcf2fb; }
+  @media (max-width: 720px) { .aar-grid { grid-template-columns: repeat(2, 1fr); } .aar-cols { grid-template-columns: 1fr; } }
+
   @media (prefers-reduced-motion: reduce) {
     .toast { animation: none; }
+    .aar-back { animation: none; }
     * { scroll-behavior: auto; }
   }
 
@@ -635,6 +691,7 @@
       <button class="sbtn" id="btnSwap">Swap radar vendor</button>
       <button class="sbtn" id="btnEchelon">Integrate up-echelon</button>
       <button class="sbtn danger" id="btnNode">Simulate node loss</button>
+      <button class="sbtn" id="btnAAR">After action review</button>
       <button class="sbtn" id="btnReset">Reset</button>
       <span class="grow"></span>
       <span class="lbl">Audit log</span>
@@ -646,6 +703,37 @@
 </div>
 
 <div class="toast-wrap" id="toasts"></div>
+
+<div class="aar-back" id="aarBack" hidden>
+  <div class="aar" role="dialog" aria-modal="true" aria-labelledby="aarTitle">
+    <div class="aar-head">
+      <div>
+        <div class="aar-kicker">AFTER ACTION REVIEW &middot; NOTIONAL</div>
+        <div class="aar-title" id="aarTitle">Engagement summary</div>
+        <div class="aar-sub" id="aarSub"></div>
+      </div>
+      <button class="aar-x" id="aarClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="aar-verdict" id="aarVerdict"></div>
+    <div class="aar-grid" id="aarGrid"></div>
+    <div class="aar-cols">
+      <div class="aar-col">
+        <div class="aar-h">Timeline</div>
+        <div class="aar-timeline" id="aarTimeline"></div>
+      </div>
+      <div class="aar-col">
+        <div class="aar-h">Assessment</div>
+        <div class="aar-assess" id="aarAssess"></div>
+      </div>
+    </div>
+    <div class="aar-foot">
+      <span class="aar-note">For demonstration only &middot; not a fielded system &middot; figures are simulated.</span>
+      <span class="grow"></span>
+      <button class="sbtn" id="aarCopy">Copy AAR text</button>
+      <button class="sbtn primary" id="aarDone">Close</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -787,7 +875,9 @@
     live: false,
     t0: 0,
     swapFlash: -1e9,
-    stats: { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, airKills: 0, defeatTimes: [] },
+    stats: { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, defeatTimes: [] },
+    events: [],                              // structured timeline for the After Action Review
+    runStart: null,                          // perf() at the start of the current engagement run
     pendingEng: new Map(),                 // LIVE: engagementId -> {trackId, t0, firstSeen}
     autoplay: { running: false, timer: null },
     view: "ALL",                            // ALL | RED | BLUE COP filter
@@ -809,6 +899,7 @@
   function recordEngage(track, eff) {
     S.stats.engagements++;
     if (isCrossVendor(track, eff)) S.stats.crossVendor++;
+    if (isCrossService(track, eff)) S.stats.crossService++;
   }
   function recordDefeat(firstSeen) {
     S.stats.defeated++;
@@ -1148,9 +1239,42 @@
   const sx = (mx) => VIEW.cx + mx * VIEW.scale;
   const sy = (my) => VIEW.cy - my * VIEW.scale;
 
+  // ---- label de-confliction --------------------------------------------------
+  // Many sensors/effectors/aircraft cluster near the defended asset; without this
+  // their text labels stack on top of each other. Each label reserves a screen
+  // rectangle; a colliding one is nudged out (down, then up, expanding) until it
+  // finds clear space, so every label stays readable. Reset once per frame.
+  let _labelRects = [];
+  function placeLabel(text, ax, ay, color, font, align) {
+    align = align || "center";
+    ctx.font = font;
+    const wpx = ctx.measureText(text).width;
+    const lh = 11;
+    const left = align === "center" ? -wpx / 2 : (align === "left" ? 0 : -wpx);
+    let oy = 0;
+    for (let i = 0; i < 28; i++) {
+      const y = ay + oy;
+      const box = { x0: ax + left - 1.5, x1: ax + left + wpx + 1.5, y0: y - lh + 2, y1: y + 3 };
+      let hit = false;
+      for (const r of _labelRects) {
+        if (box.x0 < r.x1 && box.x1 > r.x0 && box.y0 < r.y1 && box.y1 > r.y0) { hit = true; break; }
+      }
+      if (!hit) {
+        _labelRects.push(box);
+        ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align;
+        ctx.fillText(text, ax, y);
+        return;
+      }
+      oy = oy <= 0 ? -oy + lh : -oy;   // 0, +lh, -lh, +2lh, -2lh, ... expand outward
+    }
+    ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align;
+    ctx.fillText(text, ax, ay + oy);
+  }
+
   function draw() {
     const { w, h, cx, cy, scale } = VIEW;
     ctx.clearRect(0, 0, w, h);
+    _labelRects = [];                         // fresh label-collision map each frame
     S._lod = S.tracks.size > LOD_THRESHOLD;   // simplify track glyphs at scale
 
     drawTerrain();
@@ -1208,10 +1332,8 @@
     // defended-asset ring
     ctx.strokeStyle = "#cdd9e6"; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = "#aeb9c7"; ctx.font = "10px " + MONO; ctx.textAlign = "center";
-    ctx.fillText(ASSET.name, x, y + 25);
-    ctx.fillStyle = "#5f7286"; ctx.font = "8px " + MONO;
-    ctx.fillText(ASSET.sub, x, y + 36);
+    placeLabel(ASSET.name, x, y + 25, "#aeb9c7", "10px " + MONO, "center");
+    placeLabel(ASSET.sub, x, y + 36, "#5f7286", "8px " + MONO, "center");
     ctx.restore();
   }
   function drawSensor(s) {
@@ -1268,8 +1390,8 @@
     } else {
       ctx.beginPath(); ctx.rect(x - 5, y - 5, 10, 10); ctx.fill(); ctx.stroke();
     }
-    ctx.fillStyle = "#6f8294"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
-    ctx.fillText(s.sensorId + (s.service && s.service !== "USA" ? " " + s.service : ""), x, y - 9);
+    placeLabel(s.sensorId + (s.service && s.service !== "USA" ? " " + s.service : ""),
+              x, y - 9, "#6f8294", "9px " + MONO, "center");
     ctx.restore();
   }
   function drawEffector(e, idle) {
@@ -1280,11 +1402,11 @@
     ctx.strokeStyle = c; ctx.fillStyle = "#0b1610"; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 6, y); ctx.closePath();
     ctx.fill(); ctx.stroke();
-    // effector labels below the glyph; sensor labels above -- so co-located
-    // sensor+effector (ship, LMADIS) never overlap.
-    ctx.fillStyle = idle ? "#566273" : "#6f8294"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
-    ctx.fillText(e.effectorId + (e.service && e.service !== "USA" ? " " + e.service : ""), x, y + 16);
-    if (idle) { ctx.fillStyle = "#7a8190"; ctx.font = "7px " + MONO; ctx.fillText("IDLE \u00B7 no paired sensor", x, y + 26); }
+    // effector labels go below the glyph; the de-confliction pass nudges any that
+    // would collide (co-located ship/LMADIS, the cluster around the asset).
+    placeLabel(e.effectorId + (e.service && e.service !== "USA" ? " " + e.service : ""),
+              x, y + 16, idle ? "#566273" : "#6f8294", "9px " + MONO, "center");
+    if (idle) placeLabel("IDLE \u00B7 no paired sensor", x, y + 26, "#7a8190", "7px " + MONO, "center");
     ctx.restore();
   }
   // ---- basemap, grid, overlays ----
@@ -1314,19 +1436,36 @@
       drawContours();
     } else {
       // coast: Pacific Ocean to the WEST, coastline anchored in the meters frame so
-      // the Navy ship offshore stays in the water at any window size/aspect.
-      ctx.fillStyle = "#0b1210"; ctx.fillRect(0, 0, w, h);
+      // the Navy ship offshore stays in the water at any window size/aspect. The
+      // ocean is filled a distinctly bluer tone than the tan/green land so naval
+      // assets read unambiguously as being in the water.
+      ctx.fillStyle = "#0d1410"; ctx.fillRect(0, 0, w, h);   // land (greenish dark)
       const steps = 28, wob = Math.min(20, w * 0.02);
       const cpx = (tt) => sx(SCN.coastX) + Math.sin(tt * 7 + 0.6) * wob;
+      // water polygon (everything west of the coastline), filled with a sea-blue
+      // gradient so it is obviously ocean, not land.
+      const cmid = sx(SCN.coastX);
+      const grad = ctx.createLinearGradient(0, 0, Math.max(cmid, 2), 0);
+      grad.addColorStop(0, "#0a2740");
+      grad.addColorStop(1, "#0c3354");
       ctx.beginPath(); ctx.moveTo(0, 0);
       for (let i = 0; i <= steps; i++) { const tt = i / steps; ctx.lineTo(cpx(tt), h * tt); }
       ctx.lineTo(0, h); ctx.closePath();
-      ctx.fillStyle = "#091622"; ctx.fill();
-      ctx.strokeStyle = "rgba(86,140,170,0.28)"; ctx.lineWidth = 1.2;
+      ctx.fillStyle = grad; ctx.fill();
+      // faint swell lines in the water for texture
+      ctx.strokeStyle = "rgba(120,180,215,0.10)"; ctx.lineWidth = 1;
+      for (let k = 1; k <= 4; k++) {
+        const fx = (cmid * k) / 5;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) { const tt = i / steps; const xx = fx + Math.sin(tt * 6 + k) * 5; i ? ctx.lineTo(xx, h * tt) : ctx.moveTo(xx, h * tt); }
+        ctx.stroke();
+      }
+      // bright coastline
+      ctx.strokeStyle = "rgba(130,195,225,0.55)"; ctx.lineWidth = 1.6;
       ctx.beginPath();
       for (let i = 0; i <= steps; i++) { const tt = i / steps; i ? ctx.lineTo(cpx(tt), h * tt) : ctx.moveTo(cpx(tt), h * tt); }
       ctx.stroke();
-      ctx.fillStyle = "rgba(86,140,170,0.35)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
+      ctx.fillStyle = "rgba(150,205,235,0.6)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
       ctx.fillText("PACIFIC OCEAN", 14, h * 0.5);
       drawContours();
     }
@@ -1519,11 +1658,10 @@
 
     // label: blue tracks show platform + altitude; threats show id + track quality
     if (t.state !== "NEUTRALIZED") {
-      ctx.fillStyle = isBlue(t) ? "#86b9e8" : "#9fb0c4"; ctx.font = "9px " + MONO; ctx.textAlign = "left";
       const label = isBlue(t) && t.platform
         ? `${t.platform} ${Math.round(t.altMeters || 0)}m`
         : `${t.trackId.replace("TRK-", "")} TQ${Math.floor(t.tq)}`;
-      ctx.fillText(label, x + 10, y + 3);
+      placeLabel(label, x + 10, y + 3, isBlue(t) ? "#86b9e8" : "#9fb0c4", "9px " + MONO, "left");
     }
     ctx.restore();
   }
@@ -1607,13 +1745,19 @@
 
   // ---- log + toast ----
   function logEvent(decision, cls, msg) {
+    const clock = nowClock();
     const row = document.createElement("div");
     row.className = "log-row";
-    row.innerHTML = `<span class="t">${nowClock()}</span><span class="d ${cls}">${decision}</span><span class="m">${msg}</span>`;
+    row.innerHTML = `<span class="t">${clock}</span><span class="d ${cls}">${decision}</span><span class="m">${msg}</span>`;
     const log = $("log");
     log.appendChild(row);
     log.scrollTop = log.scrollHeight;
     while (log.children.length > 200) log.removeChild(log.firstChild);
+    // mirror into the structured timeline that feeds the After Action Review
+    if (S.events) {
+      S.events.push({ clock, t: perf(), decision, cls, msg });
+      while (S.events.length > 400) S.events.shift();
+    }
   }
   function toast(kind, msg) {
     const el = document.createElement("div");
@@ -1622,6 +1766,117 @@
     $("toasts").appendChild(el);
     setTimeout(() => el.remove(), 2600);
   }
+
+  // ---- After Action Review ---------------------------------------------------
+  function esc(s) { return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+  function aarData() {
+    const st = S.stats;
+    const times = st.defeatTimes.slice().sort((a, b) => a - b);
+    const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : null;
+    const ratio = st.leakers === 0 ? (st.defeated > 0 ? st.defeated + ":0" : "\u2014")
+                                   : (st.defeated / st.leakers).toFixed(1) + ":1";
+    const xvPct = st.engagements ? Math.round((100 * st.crossVendor) / st.engagements) : 0;
+    const xsPct = st.engagements ? Math.round((100 * st.crossService) / st.engagements) : 0;
+    // effectors employed: unique effector IDs that appear in engagement events
+    const used = new Set();
+    for (const e of S.events) {
+      const m = e.msg.match(/EFF-[A-Z]+-\d+/g);
+      if (m && (e.decision === "PERMIT" || e.decision === "COMPLETE")) m.forEach((x) => used.add(x));
+    }
+    const totalThreats = st.defeated + st.leakers + [...S.tracks.values()].filter(isRed).length;
+    return {
+      scenario: SCN.label, asset: ASSET.name, arch: S.arch,
+      defeated: st.defeated, leakers: st.leakers, ratio,
+      engagements: st.engagements, airKills: st.airKills || 0,
+      xvPct, xsPct, crossVendor: st.crossVendor, crossService: st.crossService,
+      avg, fastest: times[0] != null ? times[0] : null, slowest: times.length ? times[times.length - 1] : null,
+      effUsed: used.size, effTotal: S.effectors.length,
+      federated: !!(S.echelon.bn || S.echelon.rgt),
+      nodeLost: !!S.nodeLost, totalThreats,
+    };
+  }
+
+  function buildAAR() {
+    const d = aarData();
+    const success = d.leakers === 0 && d.defeated > 0;
+    const v = $("aarVerdict");
+    v.className = "aar-verdict" + (success ? "" : (d.leakers > 0 ? " warn" : ""));
+    v.textContent = d.defeated === 0
+      ? "NO ENGAGEMENTS RECORDED \u2014 run the auto-play brief or engage a threat, then reopen the AAR."
+      : (success
+        ? `MISSION SUCCESS \u2014 ${d.defeated} threats defeated, 0 leakers. Defended asset ${d.asset} secure.`
+        : `PARTIAL \u2014 ${d.defeated} defeated, ${d.leakers} leaker(s) past the defense. Review coverage and pairing.`);
+
+    $("aarSub").textContent = `${d.scenario} \u00b7 ${d.asset} \u00b7 ${d.arch === "HUB" ? "Hub-and-spoke" : "Networked any-sensor/any-shooter"} \u00b7 ${nowClock()} Z`;
+
+    const fmt = (s) => s == null ? "\u2014" : s.toFixed(1) + "s";
+    const cells = [
+      ["Threats defeated", d.defeated, d.defeated > 0 ? "good" : ""],
+      ["Leakers", d.leakers, d.leakers > 0 ? "bad" : "good"],
+      ["Kill ratio", d.ratio, d.leakers === 0 && d.defeated > 0 ? "good" : ""],
+      ["Air intercepts", d.airKills, ""],
+      ["Engagements", d.engagements, ""],
+      ["Avg time-to-defeat", fmt(d.avg), ""],
+      ["Fastest / slowest", `${fmt(d.fastest)} <small>/ ${fmt(d.slowest)}</small>`, ""],
+      ["Effectors employed", `${d.effUsed} <small>/ ${d.effTotal}</small>`, ""],
+      ["Cross-vendor pairings", d.xvPct + "%", d.xvPct > 0 ? "good" : ""],
+      ["Cross-service pairings", d.xsPct + "%", d.xsPct > 0 ? "good" : ""],
+      ["Echelon federation", d.federated ? "BN + RGT" : "Site only", d.federated ? "good" : ""],
+      ["C2 resilience", d.nodeLost ? "Node loss survived" : "Nominal", ""],
+    ];
+    $("aarGrid").innerHTML = cells.map(([k, val, cls]) =>
+      `<div class="aar-cell"><div class="k">${esc(k)}</div><div class="v ${cls}">${val}</div></div>`).join("");
+
+    // timeline: milestone events only, relative to run start
+    const t0 = S.runStart != null ? S.runStart : (S.events[0] ? S.events[0].t : 0);
+    const milestones = S.events.filter((e) =>
+      e.decision === "PERMIT" || e.decision === "GRANTED" || e.decision === "LEAKER" ||
+      /raid|swarm|node|vendor|federat|architecture|brief|second wave/i.test(e.msg));
+    const tl = milestones.slice(-40).map((e) => {
+      const rel = Math.max(0, (e.t - t0) / 1000);
+      const mm = String(Math.floor(rel / 60)).padStart(2, "0") + ":" + String(Math.floor(rel % 60)).padStart(2, "0");
+      return `<div class="aar-tl-row"><span class="tt">T+${mm}</span><span class="mm">${esc(e.msg)}</span></div>`;
+    }).join("");
+    $("aarTimeline").innerHTML = tl || '<div class="aar-tl-row"><span class="tt">\u2014</span><span class="mm">No milestone events yet.</span></div>';
+
+    // assessment: tie outcomes back to the C-UAS C2 imperatives
+    const a = [];
+    if (d.engagements > 0) a.push(`Any-sensor / any-shooter held: the C2 node paired the best in-range effector at decision time across ${d.effUsed} of ${d.effTotal} effectors, with no fixed sensor-shooter wiring.`);
+    if (d.xvPct > 0 || d.xsPct > 0) a.push(`Open interfaces paid off: ${d.xvPct}% of engagements crossed a vendor boundary and ${d.xsPct}% crossed a service boundary \u2014 the anti-lock-in, joint argument, quantified.`);
+    if (d.airKills > 0) a.push(`Air assets contributed ${d.airKills} intercept(s) as shooters, not just sensors \u2014 the same picture cued armed CAP and ground effectors alike.`);
+    if (d.federated) a.push(`Rapid up-echelon federation to Battalion and Regiment shared the Red+Blue COP with no bespoke integration.`);
+    if (d.nodeLost) a.push(`C2 resilience demonstrated: a node was lost mid-fight and a second node continued from the shared COP.`);
+    if (d.arch === "HUB") a.push(`Run was in HUB-AND-SPOKE: fixed pairs left effectors idle and coverage gaps exposed \u2014 contrast with NETWORKED.`);
+    if (d.leakers > 0) a.push(`${d.leakers} leaker(s) reached the asset \u2014 examine sensor coverage, track-quality gating, and effector availability along that axis.`);
+    if (!a.length) a.push("Run the auto-play brief for a full any-sensor/any-shooter vignette, then reopen this review.");
+    $("aarAssess").innerHTML = "<ul>" + a.map((x) => `<li>${esc(x)}</li>`).join("") + "</ul>";
+
+    return d;
+  }
+
+  function aarPlainText() {
+    const d = aarData();
+    const fmt = (s) => s == null ? "n/a" : s.toFixed(1) + "s";
+    const L = [];
+    L.push("AFTER ACTION REVIEW (NOTIONAL / FOR DEMONSTRATION ONLY)");
+    L.push(`Scenario: ${d.scenario} - ${d.asset}`);
+    L.push(`Architecture: ${d.arch === "HUB" ? "Hub-and-spoke" : "Networked any-sensor/any-shooter"}`);
+    L.push("");
+    L.push(`Threats defeated: ${d.defeated}    Leakers: ${d.leakers}    Kill ratio: ${d.ratio}`);
+    L.push(`Air intercepts: ${d.airKills}    Engagements: ${d.engagements}`);
+    L.push(`Avg time-to-defeat: ${fmt(d.avg)} (fastest ${fmt(d.fastest)}, slowest ${fmt(d.slowest)})`);
+    L.push(`Effectors employed: ${d.effUsed}/${d.effTotal}`);
+    L.push(`Cross-vendor pairings: ${d.xvPct}%    Cross-service pairings: ${d.xsPct}%`);
+    L.push(`Echelon federation: ${d.federated ? "BN + RGT" : "Site only"}    C2 resilience: ${d.nodeLost ? "node loss survived" : "nominal"}`);
+    L.push("");
+    L.push("Assessment:");
+    document.querySelectorAll("#aarAssess li").forEach((li) => L.push("- " + li.textContent));
+    return L.join("\n");
+  }
+
+  function showAAR() { buildAAR(); $("aarBack").hidden = false; }
+  function hideAAR() { $("aarBack").hidden = true; }
 
   // ---- controls wiring ----
   function bindSeg(segId, key, after) {
@@ -1680,7 +1935,16 @@
     applyScenario(b.dataset.v);
   }));
   $("btnNode").onclick = () => toggleNode();
+  $("btnAAR").onclick = showAAR;
   $("btnReset").onclick = () => { if (S.autoplay.running) stopAutoplay(); resetScenario(); };
+  $("aarClose").onclick = hideAAR;
+  $("aarDone").onclick = hideAAR;
+  $("aarBack").addEventListener("click", (e) => { if (e.target === $("aarBack")) hideAAR(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("aarBack").hidden) hideAAR(); });
+  $("aarCopy").onclick = async () => {
+    try { await navigator.clipboard.writeText(aarPlainText()); toast("ok", "AAR copied to clipboard"); }
+    catch (e) { toast("deny", "Copy unavailable in this browser"); }
+  };
 
   function toggleNode(force) {
     S.nodeLost = force != null ? force : !S.nodeLost;
@@ -1874,9 +2138,10 @@
       const ratio = leak === 0 ? (defeated > 0 ? defeated + ":0" : "\u2014") : (defeated / leak).toFixed(1) + ":1";
       const pct = S.stats.engagements ? Math.round((100 * S.stats.crossVendor) / S.stats.engagements) : 0;
       setNarrator("10 \u00B7 Outcomes", `${defeated} defeated / ${leak} leakers \u00B7 kill ratio ${ratio} \u00B7 ${pct}% cross-vendor \u00B7 federated BN/RGT`);
-      await sleep(6500); autoGuard();
+      await sleep(5200); autoGuard();
       setNarrator(null, null);
       logEvent("INFO", "INFO", "AUTO-PLAY brief complete");
+      showAAR();   // present the After Action Review automatically at the end of the brief
     } catch (e) {
       /* stopped by user */
     } finally {
@@ -1888,7 +2153,8 @@
     S.tracks.clear(); S.selected = null; S.engaged = 0;
     S.effectors = JSON.parse(JSON.stringify(EFFECTORS));
     computeCoverage();
-    S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, airKills: 0, defeatTimes: [] };
+    S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, defeatTimes: [] };
+    S.events = []; S.runStart = perf();
     S.pendingEng.clear();
     S.echelon = { bn: false, rgt: false };
     S.view = "ALL"; applySeg("viewSeg", "view", "ALL");
@@ -1956,7 +2222,7 @@
     setInterval(renderRail, 300);   // keep counts / TQ / magazines live
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
     if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
-      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize };
+      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize, showAAR, buildAAR, aarData, applyScenario, resetScenario };
     }
     requestAnimationFrame(loop);
   }
