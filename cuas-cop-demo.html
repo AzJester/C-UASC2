@@ -304,7 +304,10 @@
     min-height: 0;
     background: var(--panel);
   }
-  .rail-scroll { overflow-y: auto; padding: var(--pad); display: flex; flex-direction: column; gap: 14px; }
+  .rail-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: var(--pad); display: flex; flex-direction: column; gap: 14px; }
+  /* Audit Log is pinned to the bottom of the rail so it is always visible while
+     the controls/status cards above it scroll independently. */
+  .rail-pinned { flex: 0 0 auto; padding: 12px var(--pad) var(--pad); border-top: 1px solid var(--hair); background: var(--panel); }
 
   .card {
     background: var(--raised);
@@ -427,7 +430,7 @@
   .btn.engage:hover:not(:disabled) { background: #4d1620; }
 
   /* effector list */
-  .efflist { display: flex; flex-direction: column; gap: 7px; max-height: 208px; overflow-y: auto; padding-right: 2px; }
+  .efflist { display: flex; flex-direction: column; gap: 7px; }
   .eff {
     display: grid;
     grid-template-columns: auto 1fr auto;
@@ -483,7 +486,7 @@
   /* audit log now lives in the right rail under Effectors: a bounded, scrollable
      panel rather than a full-width tray row. */
   .log {
-    max-height: 200px;
+    max-height: 168px;
     overflow-y: auto;
     font-family: var(--mono);
     font-size: 11px;
@@ -759,7 +762,9 @@
           <h3>Effectors</h3>
           <div class="efflist" id="effList"></div>
         </div>
+      </div>
 
+      <div class="rail-pinned">
         <div class="card">
           <h3>Audit Log</h3>
           <div class="log" id="log"></div>
