@@ -28,18 +28,19 @@
 
   #cuas {
     --pad: 14px;
-    position: relative;
-    width: 100%;
-    min-height: 100vh;
-    min-height: 100dvh;
+    position: fixed;
+    inset: 0;
+    height: 100vh;
+    height: 100dvh;
     display: grid;
-    grid-template-rows: 22px 44px minmax(360px, 1fr) 170px 22px;
+    grid-template-rows: 22px 44px 1fr 150px 22px;
     grid-template-columns: 1fr;
     background: var(--ground);
     color: var(--text);
     font-family: var(--sans);
     font-size: 14px;
     line-height: 1.45;
+    overflow: hidden;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -522,7 +523,7 @@
   }
 
   @media (max-width: 880px) {
-    #cuas { grid-template-rows: 20px 42px minmax(300px, 1fr) 150px 20px; }
+    #cuas { grid-template-rows: 20px 42px 1fr 132px 20px; }
     .main { grid-template-columns: 1fr; }
     .rail { display: none; }
   }
@@ -679,6 +680,7 @@
       asset: { name: "NAS NORTH ISLAND", sub: "DEFENDED ASSET \u00B7 NB SAN DIEGO", lat: 32.699, lon: -117.215 },
       grid: "GRID 11S MS \u00B7 WGS84 \u00B7 1 km",
       terrain: "coast",
+      coastX: -2000,                                     // water (Pacific) west of this meters-X
       threat: { angle: Math.PI, spread: 1.2 },          // inbound from the sea (west)
       sensors: [
         { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 200,   y: -150,  range: 6000 },
@@ -699,13 +701,13 @@
       ],
       hubPair: { "SEN-RAD-01": "EFF-GUN-06", "SEN-EO-03": "EFF-LAS-05", "SEN-MADIS-05": "EFF-LMADIS-09" },
       blue: [
-        { identity: "FRIEND", platform: "MH-60R", service: "USN", cls: "ROTARY", alt: 300, ox: -3300, oy: -600, orad: 600, ospeed: 0.28, speed: 70 },
-        { identity: "FRIEND", platform: "F/A-18E", service: "USN", cls: "FIXED_WING", alt: 6000, ox: -2400, oy: 1800, orad: 1500, ospeed: 0.20, speed: 180 },
+        { identity: "FRIEND", platform: "MH-60R", service: "USN", cls: "ROTARY", alt: 300, ox: -3300, oy: -600, orad: 600, ospeed: 0.28, speed: 70, armed: true, weapon: "GUN", weaponRange: 1900 },
+        { identity: "FRIEND", platform: "F/A-18E", service: "USN", cls: "FIXED_WING", alt: 6000, ox: -2500, oy: 700, orad: 1500, ospeed: 0.20, speed: 180, armed: true, weapon: "AAM", weaponRange: 4200, weaponCooldown: 2.0 },
         { identity: "FRIEND", platform: "MV-22B", service: "USMC", cls: "ROTARY", alt: 900, ox: -1200, oy: -1800, orad: 700, ospeed: 0.22, speed: 120 },
-        { identity: "FRIEND", platform: "AH-1Z", service: "USMC", cls: "ROTARY", alt: 150, ox: 1400, oy: 1500, orad: 500, ospeed: 0.30, speed: 80 },
+        { identity: "FRIEND", platform: "AH-1Z", service: "USMC", cls: "ROTARY", alt: 150, ox: -900, oy: 600, orad: 600, ospeed: 0.30, speed: 80, armed: true, weapon: "GUN", weaponRange: 2400 },
         { identity: "ASSUMED_FRIEND", platform: "RQ-21A", service: "USMC", cls: "UAS_GROUP_3", alt: 1500, ox: 2200, oy: 2000, orad: 900, ospeed: 0.18, speed: 40 },
         { identity: "FRIEND", platform: "RQ-7B", service: "USA", cls: "UAS_GROUP_3", alt: 2400, ox: 1600, oy: -1600, orad: 600, ospeed: 0.30, speed: 45 },
-        { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: 2600, oy: -2300, orad: 1300, ospeed: 0.14, speed: 90 },
+        { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: -2600, oy: -1900, orad: 1300, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 3200 },
       ],
     },
     elpaso: {
@@ -713,6 +715,7 @@
       asset: { name: "FORT BLISS", sub: "DEFENDED ASSET \u00B7 EL PASO SECTOR", lat: 31.813, lon: -106.421 },
       grid: "GRID 13R FU \u00B7 WGS84 \u00B7 1 km",
       terrain: "border",
+      borderY: -2000,                                    // Mexico south of this meters-Y
       threat: { angle: -Math.PI / 2, spread: 1.1 },     // inbound from the south (border)
       sensors: [
         { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 0,     y: -150,  range: 6000 },
@@ -735,10 +738,10 @@
       blue: [
         { identity: "FRIEND", platform: "UH-60M", service: "USA", cls: "ROTARY", alt: 250, ox: -2300, oy: 300, orad: 550, ospeed: 0.26, speed: 75 },
         { identity: "FRIEND", platform: "MV-22B", service: "USMC", cls: "ROTARY", alt: 900, ox: -1200, oy: 1600, orad: 700, ospeed: 0.22, speed: 120 },
-        { identity: "FRIEND", platform: "AH-1Z", service: "USMC", cls: "ROTARY", alt: 150, ox: 1400, oy: 900, orad: 500, ospeed: 0.30, speed: 80 },
+        { identity: "FRIEND", platform: "AH-1Z", service: "USMC", cls: "ROTARY", alt: 150, ox: 200, oy: -900, orad: 700, ospeed: 0.30, speed: 80, armed: true, weapon: "GUN", weaponRange: 2500 },
         { identity: "ASSUMED_FRIEND", platform: "RQ-21A", service: "USMC", cls: "UAS_GROUP_3", alt: 1500, ox: -2200, oy: 1500, orad: 900, ospeed: 0.18, speed: 40 },
         { identity: "FRIEND", platform: "RQ-7B", service: "USA", cls: "UAS_GROUP_3", alt: 2400, ox: 1800, oy: 1500, orad: 600, ospeed: 0.30, speed: 45 },
-        { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: 2400, oy: 600, orad: 1300, ospeed: 0.14, speed: 90 },
+        { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: -500, oy: -1400, orad: 1400, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 3200 },
       ],
     },
   };
@@ -784,7 +787,7 @@
     live: false,
     t0: 0,
     swapFlash: -1e9,
-    stats: { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, defeatTimes: [] },
+    stats: { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, airKills: 0, defeatTimes: [] },
     pendingEng: new Map(),                 // LIVE: engagementId -> {trackId, t0, firstSeen}
     autoplay: { running: false, timer: null },
     view: "ALL",                            // ALL | RED | BLUE COP filter
@@ -863,6 +866,11 @@
       platform: opts.platform || null,
       service: opts.service || "USA",
       altMeters: opts.alt != null ? opts.alt : 300,
+      armed: !!opts.armed,
+      weaponRange: opts.weaponRange || 0,
+      weapon: opts.weapon || null,
+      weaponCooldown: opts.weaponCooldown || 2.6,
+      cool: 0,
       ox, oy, orad, orbit, ospeed: opts.ospeed || 0.25,
       x: ox + Math.cos(orbit) * orad, y: oy + Math.sin(orbit) * orad,
       speed: opts.speed || 22, heading: 0, tq: opts.tq || 13,
@@ -911,10 +919,39 @@
         if (S.selected === t.trackId) selectTrack(null);
       }
     }
+    airDefense(dt);
     // drop fully faded
     for (const [id, t] of S.tracks) if (t.state === "NEUTRALIZED" && t.fade <= 0) {
       S.tracks.delete(id);
       if (S.selected === id) selectTrack(null);
+    }
+  }
+
+  // Armed Blue air assets autonomously intercept hostiles in weapon range (CAP).
+  function airDefense(dt) {
+    if (S.wcs === "WEAPONS_HOLD") return;
+    const hostiles = [...S.tracks.values()].filter((t) => t.identity === "HOSTILE" && t.state === "ACTIVE");
+    if (!hostiles.length) return;
+    for (const a of S.tracks.values()) {
+      if (!a.armed || a.state === "NEUTRALIZED") continue;
+      a.cool = (a.cool || 0) - dt;
+      if (a.cool > 0) continue;
+      let best = null, bd = a.weaponRange;
+      for (const h of hostiles) {
+        if (h.state !== "ACTIVE") continue;
+        const d = dist(a.x, a.y, h.x, h.y);
+        if (d < bd) { bd = d; best = h; }
+      }
+      if (!best) continue;
+      best.state = "ENGAGING"; best.engEff = a.trackId; best.engAir = true; best.engT = perf();
+      a.cool = a.weaponCooldown || 2.6;
+      S.stats.engagements++;
+      logEvent("PERMIT", "PERMIT", `AIR INTERCEPT ${best.trackId} <- ${a.platform} (${a.service}) ${a.weapon}`);
+      const tid = best.trackId, fs = best.firstSeen;
+      setTimeout(() => {
+        const x = S.tracks.get(tid);
+        if (x && x.state === "ENGAGING" && x.engAir) { x.state = "NEUTRALIZED"; recordDefeat(fs); S.stats.airKills++; }
+      }, 850);
     }
   }
 
@@ -1243,9 +1280,11 @@
     ctx.strokeStyle = c; ctx.fillStyle = "#0b1610"; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 6, y); ctx.closePath();
     ctx.fill(); ctx.stroke();
+    // effector labels below the glyph; sensor labels above -- so co-located
+    // sensor+effector (ship, LMADIS) never overlap.
     ctx.fillStyle = idle ? "#566273" : "#6f8294"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
-    ctx.fillText(e.effectorId + (e.service && e.service !== "USA" ? " " + e.service : ""), x, y - 10);
-    if (idle) { ctx.fillStyle = "#7a8190"; ctx.font = "7px " + MONO; ctx.fillText("IDLE \u00B7 no paired sensor", x, y + 16); }
+    ctx.fillText(e.effectorId + (e.service && e.service !== "USA" ? " " + e.service : ""), x, y + 16);
+    if (idle) { ctx.fillStyle = "#7a8190"; ctx.font = "7px " + MONO; ctx.fillText("IDLE \u00B7 no paired sensor", x, y + 26); }
     ctx.restore();
   }
   // ---- basemap, grid, overlays ----
@@ -1261,32 +1300,32 @@
   function drawTerrain() {
     const { w, h } = VIEW;
     if (SCN.terrain === "border") {
-      // desert land; US-Mexico border runs E-W south of the asset; Mexico to the south
+      // desert land; US-Mexico border (anchored in the meters frame) with Mexico south
       ctx.fillStyle = "#100f0a"; ctx.fillRect(0, 0, w, h);
-      const by = h * 0.66;
+      const by = clamp(sy(SCN.borderY), 0, h);   // border screen-y from meters
       ctx.fillStyle = "#0d0b07"; ctx.fillRect(0, by, w, h - by);
       ctx.strokeStyle = "rgba(210,170,90,0.5)"; ctx.lineWidth = 1.4; ctx.setLineDash([10, 4]);
       ctx.beginPath();
-      for (let i = 0; i <= 44; i++) { const xx = (w * i) / 44, yy = by + Math.sin(i * 0.5) * 6; i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); }
+      for (let i = 0; i <= 48; i++) { const xx = (w * i) / 48, yy = by + Math.sin(i * 0.5) * 6; i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); }
       ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = "rgba(210,170,90,0.45)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
-      ctx.fillText("UNITED STATES", 14, by - 8);
-      ctx.fillText("MEXICO \u00B7 INTERNATIONAL BORDER", 14, by + 16);
+      ctx.fillText("UNITED STATES", 14, clamp(by - 8, 14, h - 20));
+      ctx.fillText("MEXICO \u00B7 INTERNATIONAL BORDER", 14, clamp(by + 16, 24, h - 6));
       drawContours();
     } else {
-      // coast: Pacific Ocean to the WEST (left) behind a wavy coastline
+      // coast: Pacific Ocean to the WEST, coastline anchored in the meters frame so
+      // the Navy ship offshore stays in the water at any window size/aspect.
       ctx.fillStyle = "#0b1210"; ctx.fillRect(0, 0, w, h);
-      const steps = 26, coast = [];
-      for (let i = 0; i <= steps; i++) {
-        const tt = i / steps;
-        coast.push([w * (0.40 - 0.18 * tt) + Math.sin(tt * 7 + 0.6) * Math.min(20, w * 0.02), h * tt]);
-      }
-      ctx.beginPath(); ctx.moveTo(coast[0][0], coast[0][1]);
-      for (const [px, py] of coast) ctx.lineTo(px, py);
-      ctx.lineTo(0, h); ctx.lineTo(0, 0); ctx.closePath();
+      const steps = 28, wob = Math.min(20, w * 0.02);
+      const cpx = (tt) => sx(SCN.coastX) + Math.sin(tt * 7 + 0.6) * wob;
+      ctx.beginPath(); ctx.moveTo(0, 0);
+      for (let i = 0; i <= steps; i++) { const tt = i / steps; ctx.lineTo(cpx(tt), h * tt); }
+      ctx.lineTo(0, h); ctx.closePath();
       ctx.fillStyle = "#091622"; ctx.fill();
       ctx.strokeStyle = "rgba(86,140,170,0.28)"; ctx.lineWidth = 1.2;
-      ctx.beginPath(); coast.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.stroke();
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) { const tt = i / steps; i ? ctx.lineTo(cpx(tt), h * tt) : ctx.moveTo(cpx(tt), h * tt); }
+      ctx.stroke();
       ctx.fillStyle = "rgba(86,140,170,0.35)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
       ctx.fillText("PACIFIC OCEAN", 14, h * 0.5);
       drawContours();
@@ -1421,13 +1460,15 @@
 
     // engagement beam (kept even at scale - only a few are ever active at once)
     if (t.state === "ENGAGING" && t.engEff) {
-      const e = S.effectors.find((ef) => ef.effectorId === t.engEff);
-      if (e) {
+      let ox, oy, ok = false;
+      if (t.engAir) { const a = S.tracks.get(t.engEff); if (a) { ox = sx(a.x); oy = sy(a.y); ok = true; } }
+      else { const e = S.effectors.find((ef) => ef.effectorId === t.engEff); if (e) { ox = sx(e.x); oy = sy(e.y); ok = true; } }
+      if (ok) {
         const pulse = 0.5 + 0.5 * Math.sin(perf() / 80);
         ctx.save();
-        ctx.strokeStyle = `rgba(255,176,46,${0.35 + pulse * 0.5})`;
+        ctx.strokeStyle = t.engAir ? `rgba(120,200,255,${0.4 + pulse * 0.5})` : `rgba(255,176,46,${0.35 + pulse * 0.5})`;
         ctx.lineWidth = 1 + pulse * 1.6;
-        ctx.beginPath(); ctx.moveTo(sx(e.x), sy(e.y)); ctx.lineTo(x, y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(x, y); ctx.stroke();
         ctx.restore();
       }
     }
@@ -1684,6 +1725,7 @@
       `<div class="sb-row"><span class="l">In-flight</span><span class="n">${inflight}</span></div>` +
       `<div class="sb-row"><span class="l">Avg time-to-defeat</span><span class="n">${avg ? avg.toFixed(0) + "s" : "\u2014"}</span></div>` +
       `<div class="sb-row"><span class="l">Engagements</span><span class="n">${eng}</span></div>` +
+      `<div class="sb-row defeated"><span class="l">Air intercepts</span><span class="n">${S.stats.airKills || 0}</span></div>` +
       `<div class="sb-row"><span class="l">Engageable area (net/hub)</span><span class="n"><span style="color:var(--neutral)">${(S.coverage || {}).netPct ?? 0}%</span> / <span style="color:var(--hostile)">${(S.coverage || {}).hubPct ?? 0}%</span></span></div>` +
       `<div class="sb-row"><span class="l">Effectors usable (net/hub)</span><span class="n"><span style="color:var(--neutral)">${S.effectors.length}</span> / <span style="color:var(--hostile)">${HUB_EFFECTORS.size}</span></span></div>` +
       '<div class="sb-xv"><div class="l">Cross-vendor pairings</div>' +
@@ -1846,7 +1888,7 @@
     S.tracks.clear(); S.selected = null; S.engaged = 0;
     S.effectors = JSON.parse(JSON.stringify(EFFECTORS));
     computeCoverage();
-    S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, defeatTimes: [] };
+    S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, airKills: 0, defeatTimes: [] };
     S.pendingEng.clear();
     S.echelon = { bn: false, rgt: false };
     S.view = "ALL"; applySeg("viewSeg", "view", "ALL");

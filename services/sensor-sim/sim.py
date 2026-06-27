@@ -89,7 +89,8 @@ class Track:
 
     def __init__(self, identity: str, x: float, y: float, speed: float, tq: float, cls: str,
                  ox: float = 0.0, oy: float = 0.0, orad: float = 700.0, ospeed: float = 0.25,
-                 platform: str = None, service: str = None, alt: float = 120.0):
+                 platform: str = None, service: str = None, alt: float = 120.0,
+                 armed: bool = False, weapon_range: float = 0.0, weapon: str = None):
         Track._seq += 1
         self.id = f"TRK-{Track._seq}"
         self.identity = identity
@@ -97,6 +98,10 @@ class Track:
         self.platform = platform
         self.service = service
         self.altMeters = alt
+        self.armed = armed
+        self.weapon_range = weapon_range
+        self.weapon = weapon
+        self.cool = 0.0
         self.x, self.y = x, y
         self.speed = speed
         self.heading = math.atan2(-y, -x)  # toward asset
@@ -162,15 +167,15 @@ class Track:
 
 class Scenario:
     BLUE_ROSTER = [
-        # identity, ox, oy, orad, ospeed, cls, speed, platform, service, alt
-        ("FRIEND", 3300, -900, 600, 0.28, "ROTARY", 70, "MH-60R", "USN", 300),
-        ("FRIEND", 1900, 2500, 1500, 0.20, "FIXED_WING", 180, "F/A-18E", "USN", 6000),
-        ("FRIEND", -2600, -1500, 700, 0.22, "ROTARY", 120, "MV-22B", "USMC", 900),
-        ("FRIEND", -1200, 1500, 500, 0.30, "ROTARY", 80, "AH-1Z", "USMC", 150),
-        ("ASSUMED_FRIEND", -2700, 2000, 900, 0.18, "UAS_GROUP_3", 40, "RQ-21A", "USMC", 1500),
-        ("FRIEND", 300, 2800, 600, 0.30, "UAS_GROUP_3", 45, "RQ-7B", "USA", 2400),
-        ("FRIEND", -2300, 300, 550, 0.26, "ROTARY", 75, "UH-60M", "USA", 250),
-        ("FRIEND", 2700, -2500, 1300, 0.14, "FIXED_WING", 90, "MQ-9", "USAF", 7600),
+        # identity, ox, oy, orad, ospeed, cls, speed, platform, service, alt, armed, weapon_range, weapon
+        ("FRIEND", 3300, -900, 600, 0.28, "ROTARY", 70, "MH-60R", "USN", 300, True, 2600, "AGM-114"),
+        ("FRIEND", 1900, 2500, 1500, 0.20, "FIXED_WING", 180, "F/A-18E", "USN", 6000, True, 3200, "AIM-9X"),
+        ("FRIEND", -2600, -1500, 700, 0.22, "ROTARY", 120, "MV-22B", "USMC", 900, False, 0, None),
+        ("FRIEND", -1200, 1500, 500, 0.30, "ROTARY", 80, "AH-1Z", "USMC", 150, True, 2400, "AGM-114"),
+        ("ASSUMED_FRIEND", -2700, 2000, 900, 0.18, "UAS_GROUP_3", 40, "RQ-21A", "USMC", 1500, False, 0, None),
+        ("FRIEND", 300, 2800, 600, 0.30, "UAS_GROUP_3", 45, "RQ-7B", "USA", 2400, False, 0, None),
+        ("FRIEND", -2300, 300, 550, 0.26, "ROTARY", 75, "UH-60M", "USA", 250, False, 0, None),
+        ("FRIEND", 2700, -2500, 1300, 0.14, "FIXED_WING", 90, "MQ-9", "USAF", 7600, True, 2800, "AGM-114"),
     ]
 
     def __init__(self):
@@ -181,9 +186,11 @@ class Scenario:
         self._spawn_wave(6)
         self._wave_timer = 0.0
 
-    def _spawn_blue(self, identity, ox, oy, orad, ospeed, cls, speed, platform=None, service="USA", alt=300):
+    def _spawn_blue(self, identity, ox, oy, orad, ospeed, cls, speed, platform=None, service="USA",
+                    alt=300, armed=False, weapon_range=0.0, weapon=None):
         t = Track(identity, ox + orad, oy, speed, 13, cls, ox=ox, oy=oy, orad=orad, ospeed=ospeed,
-                  platform=platform, service=service, alt=alt)
+                  platform=platform, service=service, alt=alt,
+                  armed=armed, weapon_range=weapon_range, weapon=weapon)
         self.tracks[t.id] = t
 
     def _spawn_hostile(self, bearing=None, r=None, tq=4, cls=None, speed=None):
@@ -219,6 +226,34 @@ class Scenario:
             if not t.is_blue() and t.range_to_asset() < 250:
                 log.info("LEAKER: %s reached defended asset", t.id)
                 self.tracks.pop(t.id, None)
+        self._air_defense(dt)
+
+    def _air_defense(self, dt: float):
+        """Organic Blue-air engagement: an armed friendly autonomously defeats the
+        nearest hostile inside its weapon envelope (cooldown-gated). Mirrors the web
+        COP's any-shooter picture where air assets are shooters too, not just sensors.
+        Authority/ROE for C2-ordered fires still live in c2-core; this is the
+        platform's own close-in defense, simulated."""
+        hostiles = [t for t in self.tracks.values() if t.identity == "HOSTILE" and t.alive]
+        if not hostiles:
+            return
+        for a in self.tracks.values():
+            if not (a.is_blue() and a.armed):
+                continue
+            if a.cool > 0:
+                a.cool -= dt
+                continue
+            best, best_d = None, a.weapon_range
+            for h in hostiles:
+                d = math.hypot(a.x - h.x, a.y - h.y)
+                if d < best_d:
+                    best, best_d = h, d
+            if best is not None and best.alive:
+                best.alive = False
+                a.cool = 4.0
+                log.info("AIR INTERCEPT: %s (%s %s) defeated %s with %s at %dm",
+                         a.id, a.platform, a.service, best.id, a.weapon, int(best_d))
+                self.tracks.pop(best.id, None)
 
     def task(self, track_id: str) -> tuple[int, int] | None:
         t = self.tracks.get(track_id)
