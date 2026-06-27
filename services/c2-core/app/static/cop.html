@@ -129,20 +129,30 @@
   }
   #plot { display: block; width: 100%; height: 100%; }
 
-  .nodelost {
+  /* top-center stack: node-loss banner above the auto-play caption, never overlapping */
+  .topstack {
     position: absolute;
     top: 12px; left: 50%;
     transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    max-width: 70%;
+    z-index: 6;
+    pointer-events: none;
+  }
+  .nodelost {
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.1em;
     color: #ffd9a0;
-    background: rgba(60, 30, 0, 0.85);
+    background: rgba(60, 30, 0, 0.9);
     border: 1px solid #6b4310;
     padding: 5px 12px;
     border-radius: 3px;
+    text-align: center;
     display: none;
-    z-index: 5;
   }
   .nodelost.on { display: block; }
 
@@ -255,30 +265,26 @@
   .fed-note { margin-top: 7px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.04em; color: var(--neutral); }
   .fed-note.dim { color: var(--faint); }
 
-  /* auto-play narrator caption */
+  /* auto-play narrator caption (stacked under any node-loss banner) */
   .narrator {
-    position: absolute;
-    top: 16px; left: 50%;
-    transform: translateX(-50%);
-    max-width: 60%;
+    max-width: 100%;
     text-align: center;
     font-family: var(--sans);
     font-size: 15px;
     font-weight: 600;
     letter-spacing: 0.01em;
     color: #eaf2fb;
-    background: rgba(8, 11, 16, 0.8);
+    background: rgba(8, 11, 16, 0.85);
     border: 1px solid var(--accent-dim);
     border-radius: 5px;
     padding: 8px 16px;
-    opacity: 0;
-    transition: opacity 0.3s;
     pointer-events: none;
-    z-index: 6;
+    display: none;
   }
-  .narrator.on { opacity: 1; }
+  .narrator.on { display: block; animation: fadein 0.3s ease-out; }
   .narrator .step { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); margin-bottom: 2px; }
-  @media (prefers-reduced-motion: reduce) { .narrator { transition: none; } }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .narrator.on { animation: none; } }
 
   /* right rail */
   .rail {
@@ -484,11 +490,12 @@
   /* toast */
   .toast-wrap {
     position: fixed;
-    top: 78px;
+    bottom: 210px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 8px;
     z-index: 50;
     pointer-events: none;
@@ -540,8 +547,10 @@
   <div class="main">
     <div class="plotwrap">
       <canvas id="plot"></canvas>
-      <div class="nodelost" id="nodeLost"></div>
-      <div class="narrator" id="narrator"></div>
+      <div class="topstack" id="topstack">
+        <div class="nodelost" id="nodeLost"></div>
+        <div class="narrator" id="narrator"></div>
+      </div>
       <div class="scoreboard" id="scoreboard"></div>
       <div class="fedhud" id="fedhud"></div>
       <div class="legend" id="legend"></div>
@@ -1534,7 +1543,7 @@
   // ---- auto-play vignette ----
   function setNarrator(step, text) {
     const n = $("narrator");
-    if (!text) { n.classList.remove("on"); return; }
+    if (!text) { n.classList.remove("on"); n.innerHTML = ""; return; }
     n.innerHTML = `<span class="step">${step}</span>${text}`;
     n.classList.add("on");
   }
