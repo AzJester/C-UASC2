@@ -30,10 +30,12 @@
     --pad: 14px;
     position: fixed;
     inset: 0;
-    height: 100vh;
-    height: 100dvh;
+    height: 100%;
     display: grid;
-    grid-template-rows: 22px 44px 1fr 150px 22px;
+    /* minmax(0,1fr) lets the plot row SHRINK to fit so the fixed header/tray rows
+       always keep their height -- otherwise the canvas can force the plot row tall
+       and push the bottom tray past the clip (seen inside the artifact iframe). */
+    grid-template-rows: 22px 44px minmax(0, 1fr) 150px 22px;
     grid-template-columns: 1fr;
     background: var(--ground);
     color: var(--text);
@@ -579,7 +581,7 @@
   }
 
   @media (max-width: 880px) {
-    #cuas { grid-template-rows: 20px 42px 1fr 132px 20px; }
+    #cuas { grid-template-rows: 20px 42px minmax(0, 1fr) 132px 20px; }
     .main { grid-template-columns: 1fr; }
     .rail { display: none; }
   }
@@ -769,7 +771,9 @@
       grid: "GRID 11S MS \u00B7 WGS84 \u00B7 1 km",
       terrain: "coast",
       coastX: -2000,                                     // water (Pacific) west of this meters-X
-      threat: { angle: Math.PI, spread: 1.2 },          // inbound from the sea (west)
+      // San Diego is also on the border: threats arrive from the sea (west) AND
+      // from the south (Mexico). Spawns pick one of these axes per contact.
+      threat: { angle: Math.PI, spread: 1.0, axes: [Math.PI, -Math.PI / 2] },
       sensors: [
         { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 200,   y: -150,  range: 6000 },
         { sensorId: "SEN-EO-03",   sensorType: "EO_IR", vendor: "Vendor C", service: "USA",  x: 1600,  y: 1000,  range: 3600 },
@@ -839,7 +843,13 @@
   let HUB_EFFECTORS = new Set(Object.values(HUB_PAIR));
   const sensorVendor = (id) => (SENSORS.find((s) => s.sensorId === id) || {}).vendor;
   const sensorService = (id) => (SENSORS.find((s) => s.sensorId === id) || {}).service;
-  const threatBearing = () => SCN.threat.angle + (Math.random() - 0.5) * SCN.threat.spread;
+  // a scenario can declare multiple inbound axes (e.g. San Diego: sea + border);
+  // each contact picks one at random, then jitters within the sector spread.
+  const threatAxis = () => {
+    const ax = (SCN.threat.axes && SCN.threat.axes.length) ? SCN.threat.axes : [SCN.threat.angle];
+    return ax[Math.floor(Math.random() * ax.length)];
+  };
+  const threatBearing = () => threatAxis() + (Math.random() - 0.5) * SCN.threat.spread;
   function applyScenario(id) {
     if (!SCENARIOS[id]) return;
     SCN = SCENARIOS[id]; S.scenario = id;
@@ -1800,13 +1810,17 @@
   function buildAAR() {
     const d = aarData();
     const success = d.leakers === 0 && d.defeated > 0;
+    const nothing = d.engagements === 0 && d.defeated === 0 && d.airKills === 0;
+    const inProgress = !nothing && d.defeated === 0;   // shots initiated, outcomes pending
     const v = $("aarVerdict");
-    v.className = "aar-verdict" + (success ? "" : (d.leakers > 0 ? " warn" : ""));
-    v.textContent = d.defeated === 0
+    v.className = "aar-verdict" + (success ? "" : ((d.leakers > 0 || inProgress) ? " warn" : ""));
+    v.textContent = nothing
       ? "NO ENGAGEMENTS RECORDED \u2014 run the auto-play brief or engage a threat, then reopen the AAR."
-      : (success
-        ? `MISSION SUCCESS \u2014 ${d.defeated} threats defeated, 0 leakers. Defended asset ${d.asset} secure.`
-        : `PARTIAL \u2014 ${d.defeated} defeated, ${d.leakers} leaker(s) past the defense. Review coverage and pairing.`);
+      : inProgress
+        ? `ENGAGEMENTS IN PROGRESS \u2014 ${d.engagements} initiated, outcomes pending. Reopen the AAR once the action settles.`
+        : (success
+          ? `MISSION SUCCESS \u2014 ${d.defeated} threats defeated, 0 leakers. Defended asset ${d.asset} secure.`
+          : `PARTIAL \u2014 ${d.defeated} defeated, ${d.leakers} leaker(s) past the defense. Review coverage and pairing.`);
 
     $("aarSub").textContent = `${d.scenario} \u00b7 ${d.asset} \u00b7 ${d.arch === "HUB" ? "Hub-and-spoke" : "Networked any-sensor/any-shooter"} \u00b7 ${nowClock()} Z`;
 
@@ -1910,17 +1924,16 @@
 
   $("btnSwarm").onclick = () => {
     if (S.live) { toast("ok", "swarm is driven by the scenario engine in LIVE mode"); return; }
-    const b = SCN.threat.angle;
-    for (let i = 0; i < 8; i++) spawnHostile({ bearing: b + (i - 4) * 0.09, r: 4900 + (i % 3) * 160, speed: 26 + Math.random() * 12, cls: "UAS_GROUP_1", tq: 4 });
+    for (let i = 0; i < 8; i++) spawnHostile({ bearing: threatBearing(), r: 4900 + (i % 3) * 160, speed: 26 + Math.random() * 12, cls: "UAS_GROUP_1", tq: 4 });
     logEvent("INFO", "INFO", "SWARM inbound \u00B7 8 contacts");
     toast("ok", "Swarm launched \u00B7 8 inbound");
   };
   $("btnRaid").onclick = () => {
     if (S.live) { toast("ok", "scale is driven by the scenario engine in LIVE mode"); return; }
-    const N = 120, c = SCN.threat.angle;
+    const N = 120;
     let n = 0;
     for (let i = 0; i < N; i++) {
-      const b = c + (Math.random() - 0.5) * (SCN.threat.spread * 1.6);
+      const b = threatAxis() + (Math.random() - 0.5) * SCN.threat.spread;   // mix all inbound axes
       const r = 4200 + Math.random() * 2200;
       if (spawnHostile({ bearing: b, r, speed: 22 + Math.random() * 18, cls: Math.random() < 0.5 ? "UAS_GROUP_1" : "MULTIROTOR", tq: 4 })) n++;
     }
@@ -2089,8 +2102,7 @@
 
       setNarrator("01 \u00B7 Threat", "Mass UAS raid inbound at the perimeter");
       if (!S.live) {
-        const b0 = SCN.threat.angle;
-        for (let i = 0; i < 16; i++) spawnHostile({ bearing: b0 + (i - 8) * 0.06, r: 4800 + (i % 4) * 170, speed: 26 + Math.random() * 10, cls: "UAS_GROUP_1", tq: 4 });
+        for (let i = 0; i < 16; i++) spawnHostile({ bearing: threatBearing(), r: 4800 + (i % 4) * 170, speed: 26 + Math.random() * 10, cls: "UAS_GROUP_1", tq: 4 });
       }
       await sleep(3500); autoGuard();
 
@@ -2123,8 +2135,7 @@
       await sleep(2400); autoGuard();
       setNarrator("08 \u00B7 Resilience", "NODE-02 + BN-7 hold the shared COP \u2014 second wave inbound");
       if (!S.live) {
-        const b0 = SCN.threat.angle;
-        for (let i = 0; i < 10; i++) spawnHostile({ bearing: b0 + (i - 5) * 0.06, r: 5200 + (i % 3) * 150, speed: 26 + Math.random() * 10, cls: "UAS_GROUP_1", tq: 4 });
+        for (let i = 0; i < 10; i++) spawnHostile({ bearing: threatBearing(), r: 5200 + (i % 3) * 150, speed: 26 + Math.random() * 10, cls: "UAS_GROUP_1", tq: 4 });
       }
       await sleep(1800); autoGuard();
       await engageMany(4, "08 \u00B7 Resilience", 1000);
@@ -2140,8 +2151,9 @@
       setNarrator("10 \u00B7 Outcomes", `${defeated} defeated / ${leak} leakers \u00B7 kill ratio ${ratio} \u00B7 ${pct}% cross-vendor \u00B7 federated BN/RGT`);
       await sleep(5200); autoGuard();
       setNarrator(null, null);
-      logEvent("INFO", "INFO", "AUTO-PLAY brief complete");
-      showAAR();   // present the After Action Review automatically at the end of the brief
+      logEvent("INFO", "INFO", "AUTO-PLAY brief complete \u00b7 After Action Review available in the tray");
+      // The AAR is optional: surfaced on demand via the tray button, not forced open.
+      toast("ok", "After Action Review ready \u2014 open it from the tray");
     } catch (e) {
       /* stopped by user */
     } finally {
@@ -2161,7 +2173,7 @@
     S.nodeLost = false; S.node = "C2-NODE-01"; $("nodeLost").classList.remove("on");
     if (!S.live) {
       for (const b of SCN.blue) spawnBlue(b);   // joint Blue force air (platform/service/altitude)
-      spawnHostile({ bearing: SCN.threat.angle, r: 4200, tq: 5, cls: "MULTIROTOR" });
+      spawnHostile({ bearing: threatBearing(), r: 4200, tq: 5, cls: "MULTIROTOR" });
     }
     $("log").innerHTML = "";
     logEvent("INFO", "INFO", "Scenario reset");
