@@ -501,6 +501,7 @@
   }
   .log-row .d.PERMIT, .log-row .d.GRANTED, .log-row .d.COMPLETE { color: var(--neutral); }
   .log-row .d.DENY { color: var(--hostile); }
+  .log-row .d.MISS { color: var(--suspect); }
   .log-row .d.INFO { color: var(--accent); }
   .log-row .d.LEAKER { color: var(--suspect); }
   .log-row .m { color: var(--muted); }
@@ -586,6 +587,20 @@
   .aar-foot .sbtn:hover { background: #1c2531; border-color: #2a3645; }
   .aar-foot .sbtn.primary { background: var(--accent-dim); border-color: #2c6075; color: #dcf2fb; }
   @media (max-width: 720px) { .aar-grid { grid-template-columns: repeat(2, 1fr); } .aar-cols { grid-template-columns: 1fr; } }
+
+  /* help panel content */
+  .help-list { display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; line-height: 1.45; color: var(--text); }
+  .help-list > div { color: var(--muted); }
+  .help-list b { color: var(--text); font-weight: 600; }
+
+  /* paused indicator + pressed toggle button */
+  .pausebadge {
+    align-self: flex-start; font-family: var(--mono); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.12em; color: #ffd27a; background: rgba(40,30,8,0.85);
+    border: 1px solid #6b4a18; border-radius: 4px; padding: 5px 12px;
+  }
+  .pausebadge[hidden] { display: none; }
+  .scenario .sbtn.on { background: var(--accent-dim); border-color: #2c6075; color: #dcf2fb; }
 
   /* Regional / operational (theater) view overlay */
   .reg-back {
@@ -694,6 +709,7 @@
     <div class="plotwrap">
       <canvas id="plot"></canvas>
       <div class="topstack" id="topstack">
+        <div class="pausebadge" id="pauseBadge" hidden>&#10074;&#10074; PAUSED</div>
         <div class="nodelost" id="nodeLost"></div>
         <div class="narrator" id="narrator"></div>
       </div>
@@ -775,33 +791,44 @@
     <div class="scenario">
       <div class="ctl-grp">
         <span class="glabel">AO</span>
-        <div class="seg" id="scnSeg" style="flex:0 0 auto;width:200px">
-          <button data-v="sandiego" aria-pressed="true">San Diego</button>
-          <button data-v="elpaso">El Paso</button>
+        <div class="seg" id="scnSeg" style="flex:0 0 auto;width:200px" title="Choose the area of operations">
+          <button data-v="sandiego" aria-pressed="true" title="San Diego coast: Pacific to the west, Navy ships offshore, threats from the sea and the southern border">San Diego</button>
+          <button data-v="elpaso" title="El Paso border: US-Mexico border to the south, TARS aerostat, threats from the south">El Paso</button>
+        </div>
+      </div>
+      <span class="ctl-div"></span>
+      <div class="ctl-grp">
+        <span class="glabel">Time</span>
+        <button class="sbtn" id="btnPause" title="Pause or resume the simulation (Space)">&#10074;&#10074; Pause</button>
+        <div class="seg" id="spdSeg" style="flex:0 0 auto" title="Simulation speed">
+          <button data-v="0.5" title="Half speed">0.5x</button>
+          <button data-v="1" aria-pressed="true" title="Normal speed">1x</button>
+          <button data-v="2" title="Double speed">2x</button>
         </div>
       </div>
       <span class="ctl-div"></span>
       <div class="ctl-grp">
         <span class="glabel">Inject</span>
-        <button class="sbtn primary" id="btnAuto">&#9654; Auto-play brief</button>
-        <button class="sbtn" id="btnSwarm">Launch swarm</button>
-        <button class="sbtn" id="btnRaid">Mass raid</button>
+        <button class="sbtn primary" id="btnAuto" title="Hands-free ~90s narrated brief: raid, fuse, gate, task, any-shooter engagement, echelon, node loss, outcomes. Any click takes over.">&#9654; Auto-play brief</button>
+        <button class="sbtn" id="btnSwarm" title="Spawn a small swarm of inbound hostiles">Launch swarm</button>
+        <button class="sbtn" id="btnRaid" title="Spawn a mass raid (~120 contacts) to show scale and saturation">Mass raid</button>
       </div>
       <span class="ctl-div"></span>
       <div class="ctl-grp">
         <span class="glabel">Operate</span>
-        <button class="sbtn" id="btnSwap">Swap radar vendor</button>
-        <button class="sbtn" id="btnEchelon">Integrate up-echelon</button>
-        <button class="sbtn danger" id="btnNode">Simulate node loss</button>
+        <button class="sbtn" id="btnSwap" title="Change the search radar's vendor mid-scenario with zero integration and no track loss (conformance to the open interface is the only requirement)">Swap radar vendor</button>
+        <button class="sbtn" id="btnEchelon" title="Federate this site node up to Battalion (BN-7) and Regiment (RGT-3) over the common bus, sharing the Red+Blue COP">Integrate up-echelon</button>
+        <button class="sbtn danger" id="btnNode" title="Drop this C2 node; a second node continues the fight off the shared COP">Simulate node loss</button>
       </div>
       <span class="ctl-div"></span>
       <div class="ctl-grp">
         <span class="glabel">Review</span>
-        <button class="sbtn" id="btnRegional">Regional view</button>
-        <button class="sbtn" id="btnAAR">After action review</button>
+        <button class="sbtn" id="btnRegional" title="Open the operational (theater) rollup: USNORTHCOM alert view with per-base weapons/sustainment and autonomous-launcher tasking">Regional view</button>
+        <button class="sbtn" id="btnAAR" title="Open the After Action Review: outcomes, timeline, and assessment for the current run">After action review</button>
       </div>
       <span class="grow"></span>
-      <button class="sbtn" id="btnReset">Reset</button>
+      <button class="sbtn" id="btnHelp" title="How to read the COP and what each control does (?)">? Help</button>
+      <button class="sbtn" id="btnReset" title="Reset the scenario to its starting laydown">Reset</button>
     </div>
   </div>
 
@@ -869,6 +896,67 @@
       <span class="reg-note">For demonstration only &middot; not a fielded system &middot; geography and figures are illustrative.</span>
       <span class="grow"></span>
       <button class="sbtn primary" id="regDone">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="aar-back" id="helpBack" hidden>
+  <div class="aar" role="dialog" aria-modal="true" aria-labelledby="helpTitle" style="width:min(820px,96vw)">
+    <div class="aar-head">
+      <div>
+        <div class="aar-kicker">QUICK REFERENCE &middot; NOTIONAL DEMO</div>
+        <div class="aar-title" id="helpTitle">How to read &amp; drive the COP</div>
+        <div class="aar-sub">A leadership demo of any-sensor / any-shooter C-UAS C2. Not a fielded system.</div>
+      </div>
+      <button class="aar-x" id="helpClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="aar-cols" style="margin-top:14px">
+      <div class="aar-col">
+        <div class="aar-h">Symbology</div>
+        <div class="help-list">
+          <div><b style="color:#ff4256">&#9670; Red diamond</b> &mdash; hostile / suspect threat track</div>
+          <div><b style="color:#3da5ff">&#9711; Blue circle</b> &mdash; friendly air (CAP, ISR, lift); armed types shoot</div>
+          <div><b style="color:#46c66e">&#9670; Green diamond</b> &mdash; effector (gun, interceptor, EW, laser, net)</div>
+          <div><b>&#9634; Square</b> &mdash; sensor (radar, RF, EO/IR, ship)</div>
+          <div><b style="color:#cdd9e6">&#9711; White ring</b> &mdash; the defended asset (ring tints as integrity drops)</div>
+          <div><b style="color:#39a0c4">cyan / amber / violet beam</b> &mdash; air intercept / kinetic / directed-energy shot</div>
+          <div><b>dashed coastline / border</b> &mdash; terrain; naval assets sit offshore in blue water</div>
+        </div>
+      </div>
+      <div class="aar-col">
+        <div class="aar-h">Controls</div>
+        <div class="help-list">
+          <div><b>AO</b> &mdash; switch scenario (San Diego coast / El Paso border)</div>
+          <div><b>Time</b> &mdash; pause/resume and 0.5x / 1x / 2x speed</div>
+          <div><b>Inject</b> &mdash; auto-play brief, a swarm, or a mass raid</div>
+          <div><b>Operate</b> &mdash; swap a radar vendor, federate up-echelon, drop a C2 node</div>
+          <div><b>Review</b> &mdash; the operational (theater) rollup and the After Action Review</div>
+          <div><b>Rail</b> &mdash; COP view filter, architecture (networked vs hub), transport, authority role + weapons-control, effectors, and the audit log</div>
+          <div><b>Click a track</b> &mdash; see its detail, track quality, time-to-impact, and engage it</div>
+        </div>
+      </div>
+    </div>
+    <div class="aar-cols" style="margin-top:4px">
+      <div class="aar-col">
+        <div class="aar-h">The one-click story</div>
+        <div class="help-list">
+          <div>Press <b>Auto-play brief</b>. It narrates the full thesis hands-free: one fused picture, a track-quality gate, remote tasking, any-sensor/any-shooter engagement, echelon federation, a node loss the fight survives, then outcomes. Any click hands you control.</div>
+          <div>Flip <b>Architecture</b> to <b>Hub &amp; Spoke</b> to see the legacy model: fixed pairs, idle effectors, coverage gaps. Flip back and the gaps close.</div>
+        </div>
+      </div>
+      <div class="aar-col">
+        <div class="aar-h">Keyboard</div>
+        <div class="help-list">
+          <div><b>Space</b> &mdash; pause / resume</div>
+          <div><b>Esc</b> &mdash; close any open panel</div>
+          <div><b>?</b> &mdash; open this help</div>
+        </div>
+      </div>
+    </div>
+    <div class="aar-foot">
+      <span class="aar-note">For demonstration only &middot; not a fielded system &middot; figures are simulated.</span>
+      <span class="grow"></span>
+      <button class="sbtn primary" id="helpDone">Got it</button>
     </div>
   </div>
 </div>
@@ -1025,9 +1113,12 @@
     live: false,
     t0: 0,
     swapFlash: -1e9,
-    stats: { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, defeatTimes: [] },
+    stats: { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, misses: 0, defeatTimes: [] },
     events: [],                              // structured timeline for the After Action Review
     runStart: null,                          // perf() at the start of the current engagement run
+    paused: false,                           // SIM time frozen (presentation control)
+    timeScale: 1,                            // SIM time multiplier (0.5x / 1x / 2x)
+    assetIntegrity: 100,                     // defended-asset integrity %, drops on each leaker
     pendingEng: new Map(),                 // LIVE: engagementId -> {trackId, t0, firstSeen}
     autoplay: { running: false, timer: null },
     view: "ALL",                            // ALL | RED | BLUE COP filter
@@ -1054,6 +1145,28 @@
   function recordDefeat(firstSeen) {
     S.stats.defeated++;
     if (firstSeen != null) S.stats.defeatTimes.push((perf() - firstSeen) / 1000);
+  }
+
+  // Probability of kill per effector class / weapon. No shot is a guaranteed kill;
+  // a miss leaves the threat active to re-attack, which is why layered defense and
+  // high shot counts matter.
+  const PK_BY_TYPE = { KINETIC_INTERCEPTOR: 0.9, KINETIC_GUN: 0.7, DIRECTED_ENERGY: 0.86, EW_JAMMER: 0.8, RF_TAKEOVER: 0.82, NET_CAPTURE: 0.75, OTHER: 0.7 };
+  const PK_BY_WEAPON = { AAM: 0.85, MISSILE: 0.85, GUN: 0.7, SeaRAM: 0.9, "C-RAM Phalanx": 0.72, "HELIOS DE": 0.86, "AGM-114": 0.9, "AIM-9X": 0.85 };
+
+  // Resolve one shot against a track. Returns true on kill (neutralized), false on
+  // miss (track resumes its run). Logs and updates stats either way.
+  function resolveOutcome(t, firstSeen, pk, opts) {
+    opts = opts || {};
+    if (Math.random() < pk) {
+      t.state = "NEUTRALIZED";
+      recordDefeat(firstSeen);
+      if (opts.isAir) S.stats.airKills++;
+      return true;
+    }
+    t.state = "ACTIVE"; t.engEff = null; t.engAir = false; t.engNaval = false; t.engDE = false;
+    S.stats.misses++;
+    logEvent("MISS", "MISS", `MISS \u00b7 ${t.trackId} survived ${opts.label || "engagement"} \u00b7 re-engaging`);
+    return false;
   }
 
   // ---- helpers ----
@@ -1152,10 +1265,12 @@
         if (t.tq < target) t.tq = Math.min(target, t.tq + dt * 1.2);
         else if (covering === 0 && t.tq > 2) t.tq -= dt * 0.5;
       }
-      // leaker check
+      // leaker check: a hostile that reaches the asset degrades its integrity
       if (!isBlue(t) && dist(t.x, t.y, 0, 0) < 250) {
         S.stats.leakers++;
-        logEvent("LEAKER", "LEAKER", `${t.trackId} reached defended asset`);
+        const hit = 6 + Math.floor(Math.random() * 7);   // 6-12% per leaker
+        S.assetIntegrity = Math.max(0, S.assetIntegrity - hit);
+        logEvent("LEAKER", "LEAKER", `${t.trackId} reached ${ASSET.name} \u00b7 asset integrity -${hit}% (${S.assetIntegrity}%)`);
         S.tracks.delete(t.trackId);
         if (S.selected === t.trackId) selectTrack(null);
       }
@@ -1189,10 +1304,10 @@
       a.cool = a.weaponCooldown || 2.6;
       S.stats.engagements++;
       logEvent("PERMIT", "PERMIT", `AIR INTERCEPT ${best.trackId} <- ${a.platform} (${a.service}) ${a.weapon}`);
-      const tid = best.trackId, fs = best.firstSeen;
+      const tid = best.trackId, fs = best.firstSeen, pk = PK_BY_WEAPON[a.weapon] ?? 0.8, label = `${a.platform} ${a.weapon}`;
       setTimeout(() => {
         const x = S.tracks.get(tid);
-        if (x && x.state === "ENGAGING" && x.engAir) { x.state = "NEUTRALIZED"; recordDefeat(fs); S.stats.airKills++; }
+        if (x && x.state === "ENGAGING" && x.engAir) resolveOutcome(x, fs, pk, { isAir: true, label });
       }, 850);
     }
   }
@@ -1226,10 +1341,10 @@
       if (isCrossVendor(best, e)) S.stats.crossVendor++;
       if (isCrossService(best, e)) S.stats.crossService++;
       logEvent("PERMIT", "PERMIT", `${isDE ? "DE LASE" : "CIWS"} ${best.trackId} <- ${e.effectorId} (${e.vendor}/${e.service}) ${e.weapon || ""}`);
-      const tid = best.trackId, fs = best.firstSeen;
+      const tid = best.trackId, fs = best.firstSeen, pk = PK_BY_WEAPON[e.weapon] ?? PK_BY_TYPE[e.effectorType] ?? 0.75, label = e.weapon || e.effectorId;
       setTimeout(() => {
         const x = S.tracks.get(tid);
-        if (x && x.state === "ENGAGING" && x.engNaval) { x.state = "NEUTRALIZED"; recordDefeat(fs); }
+        if (x && x.state === "ENGAGING" && x.engNaval) resolveOutcome(x, fs, pk, { label });
       }, isDE ? 450 : 650);
     }
   }
@@ -1316,10 +1431,11 @@
     // lifecycle
     setTimeout(() => { if (t.state === "ENGAGING") { logEvent("INFO", "INFO", `${engId} ACTIVE`); } }, 500);
     setTimeout(() => {
-      if (S.tracks.get(t.trackId)) {
-        t.state = "NEUTRALIZED";
-        recordDefeat(t.firstSeen);
-        logEvent("COMPLETE", "COMPLETE", `${engId} COMPLETE \u00B7 ${t.trackId} defeated`);
+      if (S.tracks.get(t.trackId) && t.state === "ENGAGING") {
+        const pk = PK_BY_TYPE[eff.effectorType] ?? 0.8;
+        if (resolveOutcome(t, t.firstSeen, pk, { label: eff.effectorId })) {
+          logEvent("COMPLETE", "COMPLETE", `${engId} COMPLETE \u00B7 ${t.trackId} defeated`);
+        }
         renderRail();
       }
     }, 1500);
@@ -1517,11 +1633,16 @@
     ctx.strokeRect(-11, -3, 22, 6);
     ctx.setLineDash([3, 2]); ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
-    // defended-asset ring
-    ctx.strokeStyle = "#cdd9e6"; ctx.lineWidth = 1.5;
+    // defended-asset ring (tinted by integrity once it starts taking hits)
+    const integ = S.assetIntegrity != null ? S.assetIntegrity : 100;
+    const ringCol = integ > 66 ? "#cdd9e6" : integ > 33 ? "#ffb02e" : "#ff4256";
+    ctx.strokeStyle = ringCol; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.stroke();
     placeLabel(ASSET.name, x, y + 25, "#aeb9c7", "10px " + MONO, "center");
     placeLabel(ASSET.sub, x, y + 36, "#5f7286", "8px " + MONO, "center");
+    if (!S.live && integ < 100) {
+      placeLabel("INTEGRITY " + integ + "%", x, y + 47, ringCol, "8px " + MONO, "center");
+    }
     ctx.restore();
   }
   function drawSensor(s) {
@@ -1888,6 +2009,12 @@
     const col = COLORS[t.identity] || COLORS.UNKNOWN;
     const rng = Math.round(dist(t.x, t.y, 0, 0));
     const tqi = Math.floor(t.tq);
+    // time-to-impact: range / closing speed (hostiles steer toward the asset)
+    const etaSec = (!isBlue(t) && t.speed > 0) ? rng / t.speed : null;
+    const etaStr = etaSec == null ? "\u2014"
+      : etaSec >= 60 ? `${Math.floor(etaSec / 60)}:${String(Math.round(etaSec % 60)).padStart(2, "0")} min`
+      : `${Math.round(etaSec)} s`;
+    const etaColor = etaSec != null && etaSec < 25 ? "color:var(--hostile)" : etaSec != null && etaSec < 60 ? "color:var(--suspect)" : "";
     const eff = bestEffector(t);
     const minNeed = eff ? MIN_TQ[eff.effectorType] : 8;
     const segs = Array.from({ length: 15 }, (_, i) =>
@@ -1907,6 +2034,7 @@
         <dt>Service</dt><dd>${t.service || "\u2014"}</dd>
         <dt>Altitude</dt><dd>${Math.round(t.altMeters || 0)} m MSL</dd>
         <dt>Range to asset</dt><dd>${(rng / 1000).toFixed(1)} km</dd>
+        <dt>Time to impact</dt><dd style="${etaColor}">${etaStr}</dd>
         <dt>Sensors</dt><dd>${t.contributingSensors.length || 0}</dd>
         <dt>Pairing</dt><dd>${isBlue(t) ? "n/a (friendly)" : (eff ? eff.effectorId + " \u00B7 " + eff.vendor : "\u2014")}</dd>
       </dl>
@@ -1989,6 +2117,9 @@
       effUsed: used.size, effTotal: S.effectors.length,
       federated: !!(S.echelon.bn || S.echelon.rgt),
       nodeLost: !!S.nodeLost, totalThreats,
+      misses: st.misses || 0,
+      hitRate: st.engagements ? Math.round((100 * st.defeated) / st.engagements) : 0,
+      assetIntegrity: S.assetIntegrity != null ? S.assetIntegrity : 100,
     };
   }
 
@@ -2013,11 +2144,12 @@
     const cells = [
       ["Threats defeated", d.defeated, d.defeated > 0 ? "good" : ""],
       ["Leakers", d.leakers, d.leakers > 0 ? "bad" : "good"],
+      ["Asset integrity", d.assetIntegrity + "%", d.assetIntegrity > 66 ? "good" : d.assetIntegrity > 33 ? "" : "bad"],
       ["Kill ratio", d.ratio, d.leakers === 0 && d.defeated > 0 ? "good" : ""],
+      ["Shots / misses", `${d.engagements} <small>/ ${d.misses}</small>`, ""],
+      ["Hit rate (Pk)", d.hitRate + "%", ""],
       ["Air intercepts", d.airKills, ""],
-      ["Engagements", d.engagements, ""],
       ["Avg time-to-defeat", fmt(d.avg), ""],
-      ["Fastest / slowest", `${fmt(d.fastest)} <small>/ ${fmt(d.slowest)}</small>`, ""],
       ["Effectors employed", `${d.effUsed} <small>/ ${d.effTotal}</small>`, ""],
       ["Cross-vendor pairings", d.xvPct + "%", d.xvPct > 0 ? "good" : ""],
       ["Cross-service pairings", d.xsPct + "%", d.xsPct > 0 ? "good" : ""],
@@ -2063,8 +2195,9 @@
     L.push(`Architecture: ${d.arch === "HUB" ? "Hub-and-spoke" : "Networked any-sensor/any-shooter"}`);
     L.push("");
     L.push(`Threats defeated: ${d.defeated}    Leakers: ${d.leakers}    Kill ratio: ${d.ratio}`);
-    L.push(`Air intercepts: ${d.airKills}    Engagements: ${d.engagements}`);
-    L.push(`Avg time-to-defeat: ${fmt(d.avg)} (fastest ${fmt(d.fastest)}, slowest ${fmt(d.slowest)})`);
+    L.push(`Asset integrity: ${d.assetIntegrity}%`);
+    L.push(`Shots: ${d.engagements}    Misses: ${d.misses}    Hit rate (Pk): ${d.hitRate}%`);
+    L.push(`Air intercepts: ${d.airKills}    Avg time-to-defeat: ${fmt(d.avg)} (fastest ${fmt(d.fastest)}, slowest ${fmt(d.slowest)})`);
     L.push(`Effectors employed: ${d.effUsed}/${d.effTotal}`);
     L.push(`Cross-vendor pairings: ${d.xvPct}%    Cross-service pairings: ${d.xsPct}%`);
     L.push(`Echelon federation: ${d.federated ? "BN + RGT" : "Site only"}    C2 resilience: ${d.nodeLost ? "node loss survived" : "nominal"}`);
@@ -2076,6 +2209,19 @@
 
   function showAAR() { buildAAR(); $("aarBack").hidden = false; }
   function hideAAR() { $("aarBack").hidden = true; }
+
+  function showHelp() { $("helpBack").hidden = false; }
+  function hideHelp() { $("helpBack").hidden = true; }
+
+  // ---- pause / speed (presentation controls; SIM only) -----------------------
+  function setPaused(p) {
+    S.paused = !!p;
+    const b = $("btnPause");
+    if (b) { b.classList.toggle("on", S.paused); b.innerHTML = S.paused ? "\u275a\u275a Resume" : "\u275a\u275a Pause"; }
+    const badge = $("pauseBadge");
+    if (badge) badge.hidden = !S.paused;
+  }
+  function togglePause() { if (!S.live) setPaused(!S.paused); }
 
   // ---- Regional / operational (homeland-defense) view ------------------------
   // Rolls the tactical fight up an echelon: the operational HQ for the western US
@@ -2260,16 +2406,35 @@
   $("btnAAR").onclick = showAAR;
   $("btnRegional").onclick = showRegional;
   $("btnReset").onclick = () => { if (S.autoplay.running) stopAutoplay(); resetScenario(); };
+  $("btnHelp").onclick = showHelp;
+  $("btnPause").onclick = () => { if (S.autoplay.running) stopAutoplay(); togglePause(); };
+  document.querySelectorAll("#spdSeg button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#spdSeg button").forEach((x) => x.setAttribute("aria-pressed", "false"));
+    b.setAttribute("aria-pressed", "true");
+    S.timeScale = parseFloat(b.dataset.v) || 1;
+  }));
   $("aarClose").onclick = hideAAR;
   $("aarDone").onclick = hideAAR;
   $("aarBack").addEventListener("click", (e) => { if (e.target === $("aarBack")) hideAAR(); });
   $("regClose").onclick = hideRegional;
   $("regDone").onclick = hideRegional;
   $("regBack").addEventListener("click", (e) => { if (e.target === $("regBack")) hideRegional(); });
+  $("helpClose").onclick = hideHelp;
+  $("helpDone").onclick = hideHelp;
+  $("helpBack").addEventListener("click", (e) => { if (e.target === $("helpBack")) hideHelp(); });
   document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-    if (!$("aarBack").hidden) hideAAR();
-    else if (!$("regBack").hidden) hideRegional();
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if (e.key === "Escape") {
+      if (!$("aarBack").hidden) hideAAR();
+      else if (!$("regBack").hidden) hideRegional();
+      else if (!$("helpBack").hidden) hideHelp();
+    } else if (e.key === " ") {
+      e.preventDefault();
+      if (S.autoplay.running) stopAutoplay();
+      togglePause();
+    } else if (e.key === "?") {
+      if ($("helpBack").hidden) showHelp(); else hideHelp();
+    }
   });
   $("aarCopy").onclick = async () => {
     try { await navigator.clipboard.writeText(aarPlainText()); toast("ok", "AAR copied to clipboard"); }
@@ -2311,14 +2476,17 @@
     const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
     const eng = S.stats.engagements, xv = S.stats.crossVendor;
     const pct = eng ? Math.round((100 * xv) / eng) : 0;
+    const integ = S.assetIntegrity;
+    const integColor = integ > 66 ? "var(--neutral)" : integ > 33 ? "var(--suspect)" : "var(--hostile)";
     $("scoreboard").innerHTML =
       '<h4>Engagement Outcomes</h4>' +
       `<div class="sb-row defeated"><span class="l">Threats defeated</span><span class="n">${S.stats.defeated}</span></div>` +
       `<div class="sb-row leak"><span class="l">Leakers (through)</span><span class="n">${S.live ? "\u2014" : S.stats.leakers}</span></div>` +
+      `<div class="sb-row"><span class="l">Asset integrity</span><span class="n" style="color:${integColor}">${S.live ? "\u2014" : integ + "%"}</span></div>` +
       `<div class="sb-row defeated"><span class="l">Kill ratio</span><span class="n">${S.live ? "\u2014" : (S.stats.leakers === 0 ? (S.stats.defeated > 0 ? S.stats.defeated + ":0" : "\u2014") : (S.stats.defeated / S.stats.leakers).toFixed(1) + ":1")}</span></div>` +
       `<div class="sb-row"><span class="l">In-flight</span><span class="n">${inflight}</span></div>` +
       `<div class="sb-row"><span class="l">Avg time-to-defeat</span><span class="n">${avg ? avg.toFixed(0) + "s" : "\u2014"}</span></div>` +
-      `<div class="sb-row"><span class="l">Engagements</span><span class="n">${eng}</span></div>` +
+      `<div class="sb-row"><span class="l">Shots / misses</span><span class="n">${eng} / ${S.stats.misses || 0}</span></div>` +
       `<div class="sb-row defeated"><span class="l">Air intercepts</span><span class="n">${S.stats.airKills || 0}</span></div>` +
       `<div class="sb-row"><span class="l">Engageable area (net/hub)</span><span class="n"><span style="color:var(--neutral)">${(S.coverage || {}).netPct ?? 0}%</span> / <span style="color:var(--hostile)">${(S.coverage || {}).hubPct ?? 0}%</span></span></div>` +
       `<div class="sb-row"><span class="l">Effectors usable (net/hub)</span><span class="n"><span style="color:var(--neutral)">${S.effectors.length}</span> / <span style="color:var(--hostile)">${HUB_EFFECTORS.size}</span></span></div>` +
@@ -2482,8 +2650,9 @@
     S.tracks.clear(); S.selected = null; S.engaged = 0;
     S.effectors = JSON.parse(JSON.stringify(EFFECTORS));
     computeCoverage();
-    S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, defeatTimes: [] };
+    S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, misses: 0, defeatTimes: [] };
     S.events = []; S.runStart = perf();
+    S.assetIntegrity = 100; S.paused = false; setPaused(false);
     S.pendingEng.clear();
     S.echelon = { bn: false, rgt: false };
     S.view = "ALL"; applySeg("viewSeg", "view", "ALL");
@@ -2522,7 +2691,9 @@
     const now = perf();
     const dt = Math.min(0.05, (now - lastT) / 1000);
     lastT = now;
-    if (!S.live) simTick(dt);
+    // SIM time is scalable (0.5x/1x/2x) and pausable for live briefings; LIVE mode
+    // is driven by the backend and is unaffected.
+    if (!S.live && !S.paused) simTick(dt * S.timeScale);
     fpsFrames++;
     if (now - fpsT >= 500) {
       const el = $("sFps");
@@ -2551,7 +2722,7 @@
     setInterval(renderRail, 300);   // keep counts / TQ / magazines live
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
     if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
-      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario };
+      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp };
     }
     requestAnimationFrame(loop);
   }
