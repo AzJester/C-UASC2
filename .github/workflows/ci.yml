@@ -36,3 +36,21 @@ jobs:
 
       - name: Run tests
         run: make test
+
+  cop-smoke:
+    # Headless browser smoke test of the web COP: boots the page, runs a raid,
+    # checks pause/scoreboard/no-scroll, and fails on any console error.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: make venv
+
+      - name: Smoke-test the web COP (headless Chromium)
+        run: make cop-smoke

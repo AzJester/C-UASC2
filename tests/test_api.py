@@ -52,6 +52,16 @@ def client():
         yield c
 
 
+def test_ui_served_with_backend_flag(client):
+    # c2-core serves the web COP at / and injects the LIVE backend flag so the
+    # same page that runs an embedded sim standalone drives the real bus here.
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "__CUAS_BACKEND__=true" in r.text
+    assert 'id="cuas"' in r.text
+
+
 def test_health_endpoint_serves(client):
     # The node serves REST regardless of bus state (degraded-tolerant); we don't
     # assert a specific busConnected value because a broker may or may not be up in

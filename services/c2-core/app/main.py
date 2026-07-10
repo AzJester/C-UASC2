@@ -16,9 +16,11 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, Header, HTTPException, Response
+from fastapi.responses import HTMLResponse
 
 from . import SCHEMA_VERSION
 from .authority import ROE, authorize_engagement, authorize_tasking
@@ -127,6 +129,29 @@ app = FastAPI(
     description="Reference C2 node demonstrating government-owned C-UAS interfaces.",
     lifespan=lifespan,
 )
+
+
+# --- web COP UI -------------------------------------------------------------
+
+_UI_FILE = Path(__file__).parent / "static" / "cop.html"
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def cop_ui() -> HTMLResponse:
+    """Serve the web COP. The UI auto-detects this backend and runs in LIVE mode,
+    polling the REST endpoints below. The same file is published as a standalone
+    Artifact, where it runs an embedded simulation instead."""
+    try:
+        content = _UI_FILE.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return HTMLResponse("<h1>COP UI not found</h1>", status_code=404)
+    return HTMLResponse(
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        "<title>JIATF C-UAS C2 — Common Operating Picture</title>"
+        "<script>window.__CUAS_BACKEND__=true;</script></head>"
+        f"<body>{content}</body></html>"
+    )
 
 
 # --- health & COP -----------------------------------------------------------

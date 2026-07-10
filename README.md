@@ -71,9 +71,22 @@ specs/
   openapi/      OpenAPI 3.1 contract for the C2 REST API
   asyncapi/     AsyncAPI 3.0 contract for the pub/sub topic taxonomy
 services/
-  c2-core/      FastAPI C2 node: builds the COP from the track stream, tasks sensors, orders engagements (with authority checks)
-  sensor-sim/   publishes simulated detections/tracks to the bus
+  c2-core/      FastAPI C2 node: builds the COP from the track stream, tasks sensors,
+                orders engagements (with authority checks); serves the web COP at /
+    app/static/cop.html   the web COP UI (LIVE on the stack, embedded SIM standalone)
+  sensor-sim/   scenario engine: flies a moving UAS swarm, acts as taskable sensor + effector
 ```
+
+### Web COP (the leadership demo)
+
+A single self-contained page (`services/c2-core/app/static/cop.html`) is the visual
+front end: a live tactical map with track fusion, remote sensor tasking, distributed
+any-sensor/any-shooter engagement, and positive-control denials, plus an audit log.
+
+- **Served by c2-core** (`make up`, then http://localhost:8000/) it runs in **LIVE**
+  mode against the real bus and engagement gates.
+- **Opened standalone** it runs an **embedded simulation** with no backend — the
+  zero-install build you can hand to a briefer. See [`docs/QUICKSTART.md`](docs/QUICKSTART.md#the-web-cop-leadership-demo).
 
 Stand the whole thing up locally (broker + C2 node + a simulated sensor) with one command:
 

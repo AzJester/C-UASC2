@@ -14,13 +14,87 @@ any-sensor/any-shooter flow through the C2 REST API.
 ## Option A — Docker Compose (recommended)
 
 ```bash
-make up        # starts NATS (JetStream), c2-core (:8000), sensor-sim
-make demo      # scripted walkthrough of the full flow
+make up        # starts NATS (JetStream), c2-core (:8000), sensor-sim scenario
+make demo      # scripted (CLI) walkthrough of the full flow
 make logs      # tail all services
 make down      # stop and clean up
 ```
 
-Then open the API docs at **http://localhost:8000/docs** (FastAPI/OpenAPI UI).
+Then open:
+- **http://localhost:8000/** — the **web COP** (the leadership demo: live tactical
+  map, click-to-task, click-to-engage, with authority gates and the audit log).
+- **http://localhost:8000/docs** — the API docs (FastAPI/OpenAPI UI).
+
+## The web COP (leadership demo)
+
+The browser UI is the front end to everything below. Served by c2-core, it runs in
+**LIVE** mode (driven by the real bus and engagement gates). The *same* page,
+opened standalone, runs an embedded **SIM** (the shareable, zero-install build).
+
+**Fastest path — Auto-play brief.** Click **▶ Auto-play brief** for a ~90-second
+hands-free run that narrates itself: swarm inbound → fuse → track-quality gate →
+remote tasking → any-sensor/any-shooter engagement → C2 node loss → fight continues
+→ outcomes. Any click takes over manual control. This is the one to show leadership.
+
+The **outcomes scoreboard** (top-right) keeps the running score: threats defeated,
+leakers, average time-to-defeat, engagements, and the headline metric —
+**% of engagements that paired a sensor and shooter from different vendors** (the
+any-shooter / anti-lock-in argument, quantified).
+
+The **Red/Blue picture**: the status bar shows live **Red** (threat) and **Blue**
+(friendly force) counts, and the **COP View** control (ALL / RED / BLUE) filters the
+plot to each. Blue tracks (friendly CAP, ISR, UAS) patrol and are never engageable.
+
+The **echelon federation HUD** (top-left) shows this Site C2 node and its links to
+**BN-7 (Battalion)** and **RGT-3 (Regiment)**. **Integrate up-echelon** federates in
+~1.2s — joining a leaf node to the common bus, so the Red+Blue COP, tracks, and
+engagements are shared upward with no bespoke integration. If the site node is then
+lost, Battalion still holds the shared picture.
+
+**Scenarios** (bottom-left **AO** selector): **San Diego Coast** (Pacific to the
+west, a Navy ship offshore, threats from the sea) and **El Paso Border** (US-Mexico
+border, a TARS aerostat, threats from the south). Each switches the geography, the
+named defended asset, the MGRS grid, and the joint laydown.
+
+**Joint force**: the Blue picture is identifiable aircraft by **platform, service,
+and altitude** (e.g., F/A-18E USN 6000 m, MV-22B USMC 900 m, MQ-9 USAF 7600 m), and
+the effectors span **USA / USN / USMC** (Navy SeaRAM offshore, USMC LMADIS). Click a
+track for its platform/service/altitude; engagement logs flag **cross-service** and
+**cross-vendor** pairings.
+
+**Data transport** (rail control): overlay the **MANET** mesh among tactical nodes
+and the **5G** gNB with backhaul to echelon — the pub/sub bus riding real transports.
+
+The auto-play now defeats a **mass raid** and reports a **kill ratio** (defeated vs.
+leakers) in the scoreboard.
+
+The **Architecture toggle** (NETWORKED / HUB & SPOKE) is the thesis in one click.
+Flip to **HUB & SPOKE** and the legacy model appears: sensors hard-wired to single
+shooters (dedicated links), the long-range interceptors/EW sitting **idle** with no
+paired sensor, and a red **coverage-gap** overlay. The scoreboard quantifies it:
+engageable area and effectors-usable drop sharply (e.g. ~81%→~30% area, 7→3
+effectors). Flip back to **NETWORKED** and any sensor cues any shooter — the gaps
+close and every effector is back in play. The plot itself is now a tactical map:
+terrain and coastline, an MGRS grid, the named **FOB EAGLE** defended asset, a radar
+sweep, RF lines-of-bearing, EO/IR slew cone, and track trails.
+
+To drive it manually, in order:
+1. **Fused picture.** Hostiles (red) and a friendly (blue) are tracked from several
+   sensors at once — one coherent picture, not per-vendor screens.
+2. **Track quality gates fires.** Click an inbound hostile; try **Engage** — it's
+   denied while track quality is low.
+3. **Remote tasking raises quality.** Click **Task sensor · DWELL**; watch TQ climb
+   past the threshold. (Imperative 4.)
+4. **Any-sensor / any-shooter.** Click **Engage** — the C2 node *pairs the best
+   in-range effector at decision time* (no fixed sensor-shooter wiring) and the
+   engagement runs to COMPLETE. (Imperative 5.)
+5. **Positive control.** Try to engage the **friendly**, switch the operator role to
+   **OBS**, or set **WEAPONS HOLD** — each is denied with a reason. (docs/05.)
+6. **No vendor lock-in.** Hit **Swap radar vendor** — the radar's adapter changes
+   vendor mid-scenario with zero integration and no track loss (conformance to the
+   government-owned interface is the only requirement). (docs/02.)
+7. **Resilience.** Hit **Simulate node loss** — a second C2 node continues the fight
+   off the same shared COP. **Launch swarm** shows scale.
 
 ## Option B — No Docker (local Python)
 
