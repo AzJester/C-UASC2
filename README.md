@@ -47,12 +47,15 @@ to GitHub Pages so anyone can view it with no install:
 The published page is the standalone build ([`site/index.html`](site/index.html)):
 it runs an embedded simulation entirely in the browser and makes no backend
 calls. All figures are simulated; every view is labeled for demonstration only.
-The same page, served by `c2-core` (`make up`, then <http://localhost:8000/>),
-runs in LIVE mode against the real REST API and bus.
+The same page also has a LIVE mode that runs against the real c2-core REST API
+and bus when c2-core serves it (that serving path lands with the Web COP PR,
+[#2](https://github.com/AzJester/C-UASC2/pull/2)).
 
 Deployment is automated by
-[`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) on
-every push to `main` that touches `site/`.
+[`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml):
+every push to `main` that touches `site/` (or on-demand dispatch) snapshots
+the `site/` tree onto the `gh-pages` branch, which GitHub Pages serves. The
+`gh-pages` branch is a deployment artifact, not a development branch.
 
 ## The runnable scaffold
 

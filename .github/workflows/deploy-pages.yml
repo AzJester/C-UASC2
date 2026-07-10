@@ -1,12 +1,17 @@
 name: Deploy COP to GitHub Pages
 
-# Publishes the standalone Web COP (site/index.html) to GitHub Pages so the
-# demo is viewable on a public URL with no install. The published page is the
-# embedded-simulation build: it makes no backend calls (LIVE mode only
-# activates when c2-core serves the page and injects window.__CUAS_BACKEND__).
+# Publishes the standalone Web COP (site/) to the public URL
+#   https://azjester.github.io/C-UASC2/
+# by snapshotting the site/ tree onto the gh-pages branch, which GitHub Pages
+# serves ("deploy from a branch"). The published page is the embedded-simulation
+# build: it makes no backend calls (LIVE mode only activates when c2-core serves
+# the page and injects window.__CUAS_BACKEND__).
 #
-# Deploys on every push to main that touches the site, and on demand via
-# workflow_dispatch. Public URL: https://azjester.github.io/C-UASC2/
+# The gh-pages branch is a deployment artifact: a single parentless commit,
+# force-pushed on every deploy. Never develop on it. This model needs only the
+# default GITHUB_TOKEN (contents: write) - no Pages admin API calls.
+#
+# Runs on pushes to main that touch the site (or this workflow), and on demand.
 
 on:
   push:
@@ -17,9 +22,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -28,24 +31,13 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-        with:
-          # Creates the Pages site on first run so no manual settings step
-          # is needed (requires the repo to allow GitHub Actions deployments).
-          enablement: true
-
-      - name: Upload site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish site/ to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          SITE_TREE=$(git rev-parse "HEAD:site")
+          DEPLOY_COMMIT=$(git commit-tree "$SITE_TREE" -m "Deploy Web COP demo site (from ${GITHUB_SHA})")
+          git push --force origin "${DEPLOY_COMMIT}:refs/heads/gh-pages"
