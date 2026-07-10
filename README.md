@@ -37,6 +37,29 @@ descend for the engineering reference.
 | Standards crosswalk | [`docs/08-standards-crosswalk.md`](docs/08-standards-crosswalk.md) | Standards / interoperability leads |
 | Decisions (ADRs) | [`docs/decisions/`](docs/decisions/) | All |
 
+## Public COP demo
+
+The **Web COP** — the leadership-demo Common Operating Picture — is published
+to GitHub Pages so anyone can view it with no install:
+
+**<https://azjester.github.io/C-UASC2/>**
+
+The published page is the standalone build ([`site/index.html`](site/index.html)):
+it runs an embedded, seeded-random simulation entirely in the browser (no
+backend). The satellite basemap fetches public Esri World Imagery tiles; when
+they are unreachable the COP falls back to its synthetic tactical map, so the
+page still works fully offline. All figures are simulated; every view is
+labeled for demonstration only.
+The same page also has a LIVE mode that runs against the real c2-core REST API
+and bus when c2-core serves it (that serving path lands with the Web COP PR,
+[#2](https://github.com/AzJester/C-UASC2/pull/2)).
+
+Deployment is automated by
+[`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml):
+every push to `main` that touches `site/` (or on-demand dispatch) snapshots
+the `site/` tree onto the `gh-pages` branch, which GitHub Pages serves. The
+`gh-pages` branch is a deployment artifact, not a development branch.
+
 ## The runnable scaffold
 
 The interfaces are not just described, they are **specified and demonstrated** so
