@@ -166,6 +166,11 @@ def test_civilians_present_and_protected(page):
     }"""
     )
     assert out["air"] == "NEUTRAL" and out["civ"] and out["surface"]
+    # boats must spawn in the open Pacific, clear of the Point Loma peninsula
+    xs = page.evaluate(
+        "Array.from({length: 12}, () => window.__CUAS__.spawnCivBoat().x)"
+    )
+    assert max(xs) <= -4200, f"boat lane crosses land: {max(xs):.0f}"
     assert out["denied"], "civilian traffic must never be engageable"
 
 

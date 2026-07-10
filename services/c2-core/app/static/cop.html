@@ -1393,8 +1393,11 @@
     const t = spawnHostile({ identity: "NEUTRAL", cls: "SURFACE", intent: "transit", speed: 3.5 + rand() * 6, alt: 0, emitting: true, tq: 12 });
     if (t) {
       const north = rand() < 0.5;
-      t.x = (rand() < 0.5 ? -2650 : -3450) + (rand() - 0.5) * 500;
-      t.y = (north ? -1 : 1) * (AO_RADIUS - 500 - rand() * 1500);
+      // lanes sit in the open Pacific WEST of the Point Loma peninsula (which
+      // runs to ~-117.256 on real imagery), so boats stay wet on both basemaps
+      const outer = rand() < 0.5;
+      t.x = (outer ? -5100 : -4500) + (rand() - 0.5) * 500;
+      t.y = (north ? -1 : 1) * ((outer ? 3000 : 3600) * rand());
       t.heading = (north ? Math.PI / 2 : -Math.PI / 2) + (rand() - 0.5) * 0.1;
       t.platform = CIV_BOAT[(rand() * CIV_BOAT.length) | 0];
       t.civil = true; t.surface = true;
@@ -1449,7 +1452,7 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "20f46217";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "274c14bb";   // stamped by scripts/build_cop.py (content hash)
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
