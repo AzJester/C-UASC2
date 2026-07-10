@@ -745,6 +745,13 @@
               <button data-v="OFF">OFF</button>
             </div>
           </div>
+          <div class="field" style="margin-top:10px;margin-bottom:0">
+            <label>Basemap</label>
+            <div class="seg" id="baseSeg">
+              <button data-v="SAT" aria-pressed="true" title="Real satellite imagery of the AO (needs internet; falls back automatically)">SAT</button>
+              <button data-v="TAC" title="Synthetic tactical terrain (fully offline)">TACTICAL</button>
+            </div>
+          </div>
         </div>
 
         <div class="card" id="trackCard">
@@ -932,7 +939,8 @@
           <div><b>Inject</b> &mdash; auto-play brief, a swarm, or a mass raid</div>
           <div><b>Operate</b> &mdash; swap a radar vendor, federate up-echelon, drop a C2 node</div>
           <div><b>Review</b> &mdash; the operational (theater) rollup and the After Action Review</div>
-          <div><b>Rail</b> &mdash; COP view filter, architecture (networked vs hub), transport, authority role + weapons-control, effectors, and the audit log</div>
+          <div><b>Rail</b> &mdash; COP view filter, architecture (networked vs hub), transport, basemap, authority role + weapons-control, effectors, and the audit log</div>
+          <div><b>Basemap</b> &mdash; SAT is real satellite imagery of the AO (needs internet, falls back automatically); TACTICAL is the synthetic offline map</div>
           <div><b>Click a track</b> &mdash; see its detail, track quality, time-to-impact, and engage it</div>
         </div>
       </div>
@@ -951,6 +959,7 @@
           <div><b>Space</b> &mdash; pause / resume</div>
           <div><b>Esc</b> &mdash; close any open panel</div>
           <div><b>?</b> &mdash; open this help</div>
+          <div><b>?seed=N</b> &mdash; URL parameter: replay a run's laydown (the current seed is in the audit log)</div>
         </div>
       </div>
     </div>
@@ -1076,9 +1085,9 @@
   // each contact picks one at random, then jitters within the sector spread.
   const threatAxis = () => {
     const ax = (SCN.threat.axes && SCN.threat.axes.length) ? SCN.threat.axes : [SCN.threat.angle];
-    return ax[Math.floor(Math.random() * ax.length)];
+    return ax[Math.floor(rand() * ax.length)];
   };
-  const threatBearing = () => threatAxis() + (Math.random() - 0.5) * SCN.threat.spread;
+  const threatBearing = () => threatAxis() + (rand() - 0.5) * SCN.threat.spread;
   function applyScenario(id) {
     if (!SCENARIOS[id]) return;
     SCN = SCENARIOS[id]; S.scenario = id;
@@ -1128,6 +1137,7 @@
     arch: "NETWORKED",                       // NETWORKED | HUB (any-shooter vs legacy)
     coverage: null,                          // cached {netPct, hubPct, gap:[{x,y}]}
     transport: "BOTH",                       // BOTH | MANET | 5G | OFF (data transport overlay)
+    basemap: "SAT",                          // SAT (real imagery) | TAC (synthetic tactical)
   };
 
   function isCrossVendor(track, eff) {
@@ -1158,7 +1168,7 @@
   // miss (track resumes its run). Logs and updates stats either way.
   function resolveOutcome(t, firstSeen, pk, opts) {
     opts = opts || {};
-    if (Math.random() < pk) {
+    if (rand() < pk) {
       t.state = "NEUTRALIZED";
       recordDefeat(firstSeen);
       if (opts.isAir) S.stats.airKills++;
@@ -1183,6 +1193,24 @@
   let _perf0 = (typeof performance !== "undefined") ? performance.now() : 0;
   const perf = () => ((typeof performance !== "undefined") ? performance.now() : Date.now()) - _perf0;
 
+  // ---- seeded randomness ----
+  // Every run differs (opening laydown, inject sizes, ambient traffic, Pk rolls)
+  // but a run's laydown can be replayed: the seed is logged at boot and settable
+  // via ?seed=N. Timing-dependent outcomes still vary slightly between replays.
+  const SEED = (() => {
+    const q = new URLSearchParams(location.search).get("seed");
+    const n = q ? parseInt(q, 10) : NaN;
+    return Number.isFinite(n) ? (n >>> 0) : (Math.random() * 0xffffffff) >>> 0;
+  })();
+  let _rs = SEED || 1;
+  function rand() {   // mulberry32
+    _rs |= 0; _rs = (_rs + 0x6D2B79F5) | 0;
+    let t = Math.imul(_rs ^ (_rs >>> 15), 1 | _rs);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
+
   // ---- track factory (SIM) ----
   function spawnHostile(opts = {}) {
     if (S.tracks.size >= MAX_TRACKS) return null;   // hard cap (browser scalability)
@@ -1191,19 +1219,27 @@
     const r = opts.r != null ? opts.r : AO_RADIUS - 1200;
     const x = Math.cos(bearing) * r, y = Math.sin(bearing) * r;
     const types = ["MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "FIXED_WING"];
+    // transit contacts hold a crossing course past the AO (offset well clear of
+    // the asset) instead of diving it; attack contacts steer for the asset.
+    const intent = opts.intent || "attack";
+    const heading = intent === "transit"
+      ? Math.atan2(-y, -x) + (rand() < 0.5 ? 1 : -1) * (0.85 + rand() * 0.55)
+      : Math.atan2(-y, -x);
     const t = {
       trackId: id,
       identity: opts.identity || "HOSTILE",
-      classificationType: opts.cls || types[(Math.random() * types.length) | 0],
+      intent,
+      declareAt: opts.declareAt || null,   // ms after firstSeen: attack contacts declare HOSTILE
+      classificationType: opts.cls || types[(rand() * types.length) | 0],
       x, y,
-      speed: opts.speed || (26 + Math.random() * 14),     // m/s (fast UAS, demo pace)
-      heading: Math.atan2(-y, -x),                          // toward asset
-      tq: opts.tq != null ? opts.tq : (4 + (Math.random() * 3 | 0)),
-      altMeters: opts.alt != null ? opts.alt : (60 + (Math.random() * 340 | 0)),
+      speed: opts.speed || (26 + rand() * 14),     // m/s (fast UAS, demo pace)
+      heading,
+      tq: opts.tq != null ? opts.tq : (4 + (rand() * 3 | 0)),
+      altMeters: opts.alt != null ? opts.alt : (60 + (rand() * 340 | 0)),
       contributingSensors: [],
       state: "ACTIVE",
       fade: 1,
-      jitter: Math.random() * 6.28,
+      jitter: rand() * 6.28,
       firstSeen: perf(),
     };
     S.tracks.set(id, t);
@@ -1213,7 +1249,7 @@
   function spawnBlue(opts = {}) {
     const id = "TRK-" + (++S.seq);
     const ox = opts.ox != null ? opts.ox : -2300, oy = opts.oy != null ? opts.oy : 1700;
-    const orad = opts.orad || 700, orbit = Math.random() * Math.PI * 2;
+    const orad = opts.orad || 700, orbit = rand() * Math.PI * 2;
     const t = {
       trackId: id,
       identity: opts.identity || "FRIEND",
@@ -1237,12 +1273,45 @@
 
   // ---- SIM physics + fusion tick ----
   function simTick(dt) {
+    // ambient traffic: contacts keep arriving so the picture stays alive and no
+    // two runs look alike (SIM only; parked during the scripted auto-play brief)
+    if (!S.live && !S.autoplay.running) {
+      S.ambT = (S.ambT == null ? 6 + rand() * 10 : S.ambT) - dt;
+      if (S.ambT <= 0 && S.tracks.size < 60) {
+        S.ambT = 12 + rand() * 22;
+        const roll = rand();
+        let nt = null;
+        if (roll < 0.30) nt = spawnHostile({ tq: randi(4, 6) });
+        else if (roll < 0.55) nt = spawnHostile({ identity: "SUSPECT", tq: randi(3, 5), declareAt: 7000 + rand() * 10000 });
+        else if (roll < 0.80) nt = spawnHostile({ identity: "UNKNOWN", tq: randi(2, 4), intent: rand() < 0.55 ? "attack" : "transit", declareAt: 8000 + rand() * 12000 });
+        else nt = spawnHostile({ identity: "NEUTRAL", cls: rand() < 0.5 ? "FIXED_WING" : "MULTIROTOR", intent: "transit", speed: 18 + rand() * 20, alt: 150 + randi(0, 600) });
+        if (nt) logEvent("INFO", "INFO", `New contact ${nt.trackId} \u00b7 ${nt.identity} ${nt.classificationType}`);
+      }
+    }
     for (const t of S.tracks.values()) {
       if (t.state === "NEUTRALIZED") { t.fade = Math.max(0, t.fade - dt * 0.6); continue; }
+      // an attack contact that came in ambiguous declares HOSTILE partway in
+      if (!isBlue(t) && t.declareAt != null && perf() - t.firstSeen > t.declareAt) {
+        t.declareAt = null;
+        if (t.intent === "attack" && t.identity !== "HOSTILE") {
+          t.identity = "HOSTILE";
+          logEvent("DECLARE", "DENY", `${t.trackId} declared HOSTILE \u00b7 ${t.classificationType} inbound`);
+        }
+      }
       if (isBlue(t)) {
         t.orbit = (t.orbit || 0) + dt * (t.ospeed || 0.25);
         t.x = (t.ox || 0) + Math.cos(t.orbit) * (t.orad || 700);
         t.y = (t.oy || 0) + Math.sin(t.orbit) * (t.orad || 700);
+      } else if (t.intent === "transit") {
+        // crossing traffic holds course and exits the AO
+        const weave = Math.sin(perf() / 900 + t.jitter) * 0.08;
+        t.x += Math.cos(t.heading + weave) * t.speed * dt;
+        t.y += Math.sin(t.heading + weave) * t.speed * dt;
+        if (dist(t.x, t.y, 0, 0) > AO_RADIUS + 600) {
+          S.tracks.delete(t.trackId);
+          if (S.selected === t.trackId) selectTrack(null);
+          continue;
+        }
       } else {
         // steer toward asset with a little weave
         const desired = Math.atan2(-t.y, -t.x);
@@ -1269,7 +1338,7 @@
       // leaker check: a hostile that reaches the asset degrades its integrity
       if (!isBlue(t) && dist(t.x, t.y, 0, 0) < 250) {
         S.stats.leakers++;
-        const hit = 6 + Math.floor(Math.random() * 7);   // 6-12% per leaker
+        const hit = 6 + Math.floor(rand() * 7);   // 6-12% per leaker
         S.assetIntegrity = Math.max(0, S.assetIntegrity - hit);
         logEvent("LEAKER", "LEAKER", `${t.trackId} reached ${ASSET.name} \u00b7 asset integrity -${hit}% (${S.assetIntegrity}%)`);
         S.tracks.delete(t.trackId);
@@ -1729,8 +1798,100 @@
       ctx.beginPath(); ctx.ellipse(fx * w, fy * h, rx * 0.6, ry * 0.6, rot, 0, Math.PI * 2); ctx.stroke();
     }
   }
+  // ---- satellite basemap (real imagery of the AO) ----------------------------
+  // Esri World Imagery tiles, fetched by the viewer's browser and drawn under
+  // the tactical overlay. Each scenario is anchored at its true lat/lon; local
+  // meters map through Web Mercator, so glyph geometry is unchanged. When tiles
+  // cannot load (offline, or a CSP that blocks external hosts) the COP falls
+  // back to the synthetic tactical terrain automatically.
+  const TILE_URL = (z, x, y) => "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + z + "/" + y + "/" + x;
+  const EARTH_R = 6378137, TILE_PX = 256, TILE_MAX_Z = 17;
+  const tileCache = new Map();          // "z/x/y" -> {img, ok}
+  let satLoads = 0, satFails = 0, satDead = false;
+  function tileFor(z, x, y) {
+    const nTiles = 1 << z;
+    if (y < 0 || y >= nTiles) return null;
+    x = ((x % nTiles) + nTiles) % nTiles;
+    const key = z + "/" + x + "/" + y;
+    let t = tileCache.get(key);
+    if (!t) {
+      if (tileCache.size > 400) for (const k of tileCache.keys()) { tileCache.delete(k); if (tileCache.size <= 300) break; }
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      t = { img, ok: false };
+      img.onload = () => { t.ok = true; satLoads++; };
+      img.onerror = () => {
+        satFails++;
+        if (!satLoads && satFails >= 6 && !satDead) {
+          satDead = true;   // imagery unreachable: stop requesting, stay synthetic
+          logEvent("INFO", "INFO", "Satellite imagery unavailable \u00b7 using tactical basemap");
+        }
+      };
+      img.src = TILE_URL(z, x, y);
+      tileCache.set(key, t);
+    }
+    return t;
+  }
+  // Returns the number of tiles drawn (0 while loading / when unreachable).
+  function drawSatellite() {
+    const { w, h, cx, cy, scale } = VIEW;
+    const lat0 = ASSET.lat * Math.PI / 180;
+    const kStretch = 1 / Math.cos(lat0);                    // ground -> mercator meters
+    const mercX0 = EARTH_R * ASSET.lon * Math.PI / 180;
+    const mercY0 = EARTH_R * Math.log(Math.tan(Math.PI / 4 + lat0 / 2));
+    // zoom: ~1 tile pixel per screen pixel (one step sharper on hi-dpi)
+    const mPerPx = 1 / scale;
+    let z = Math.round(Math.log2((2 * Math.PI * EARTH_R * Math.cos(lat0)) / (TILE_PX * mPerPx))) + (VIEW.dpr > 1.5 ? 1 : 0);
+    z = clamp(z, 3, TILE_MAX_Z);
+    const mercPerTile = (2 * Math.PI * EARTH_R) / (1 << z);
+    const HALF = Math.PI * EARTH_R;
+    const west = mercX0 - (cx / scale) * kStretch, east = mercX0 + ((w - cx) / scale) * kStretch;
+    const north = mercY0 + (cy / scale) * kStretch, south = mercY0 - ((h - cy) / scale) * kStretch;
+    const tx0 = Math.floor((west + HALF) / mercPerTile), tx1 = Math.floor((east + HALF) / mercPerTile);
+    const ty0 = Math.floor((HALF - north) / mercPerTile), ty1 = Math.floor((HALF - south) / mercPerTile);
+    if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) > 150) return 0;  // sanity cap
+    let drawn = 0;
+    for (let tx = tx0; tx <= tx1; tx++) {
+      for (let ty = ty0; ty <= ty1; ty++) {
+        const t = tileFor(z, tx, ty);
+        if (!t || !t.ok) continue;
+        const gx = (tx * mercPerTile - HALF - mercX0) / kStretch;        // tile NW corner,
+        const gy = (HALF - ty * mercPerTile - mercY0) / kStretch;        // ground meters
+        const sizePx = (mercPerTile / kStretch) * scale;
+        ctx.drawImage(t.img, sx(gx), sy(gy), sizePx + 0.6, sizePx + 0.6); // overlap hides seams
+        drawn++;
+      }
+    }
+    return drawn;
+  }
+
   function drawTerrain() {
     const { w, h } = VIEW;
+    if (S.basemap === "SAT" && !satDead) {
+      ctx.fillStyle = "#0a0d12"; ctx.fillRect(0, 0, w, h);
+      if (drawSatellite() > 0) {
+        // dim to console luminance so glyphs, coverage, and labels stay readable
+        ctx.fillStyle = "rgba(5,9,15,0.45)"; ctx.fillRect(0, 0, w, h);
+        if (SCN.terrain === "border") {
+          // notional border line still drawn over imagery for orientation
+          const by = clamp(sy(SCN.borderY), 0, h);
+          ctx.strokeStyle = "rgba(210,170,90,0.5)"; ctx.lineWidth = 1.4; ctx.setLineDash([10, 4]);
+          ctx.beginPath();
+          for (let i = 0; i <= 48; i++) { const xx = (w * i) / 48, yy = by + Math.sin(i * 0.5) * 6; i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); }
+          ctx.stroke(); ctx.setLineDash([]);
+          ctx.fillStyle = "rgba(210,170,90,0.45)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
+          ctx.fillText("UNITED STATES", 14, clamp(by - 8, 14, h - 20));
+          ctx.fillText("MEXICO \u00b7 INTERNATIONAL BORDER", 14, clamp(by + 16, 24, h - 6));
+        } else {
+          ctx.fillStyle = "rgba(150,205,235,0.5)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
+          ctx.fillText("PACIFIC OCEAN", 14, h * 0.5);
+        }
+        ctx.fillStyle = "rgba(120,150,180,0.35)"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
+        ctx.fillText("IMAGERY \u00a9 ESRI \u00b7 MAXAR \u00b7 EARTHSTAR GEOGRAPHICS", VIEW.cx, h - 20);
+        return;
+      }
+      // tiles still loading: draw the synthetic terrain underneath meanwhile
+    }
     if (SCN.terrain === "border") {
       // desert land; US-Mexico border (anchored in the meters frame) with Mexico south
       ctx.fillStyle = "#100f0a"; ctx.fillRect(0, 0, w, h);
@@ -2365,6 +2526,7 @@
   bindSeg("viewSeg", "view");
   bindSeg("archSeg", "arch", onArchChange);
   bindSeg("transSeg", "transport");
+  bindSeg("baseSeg", "basemap");
 
   function onArchChange() {
     computeCoverage();
@@ -2380,18 +2542,19 @@
 
   $("btnSwarm").onclick = () => {
     if (S.live) { toast("ok", "swarm is driven by the scenario engine in LIVE mode"); return; }
-    for (let i = 0; i < 8; i++) spawnHostile({ bearing: threatBearing(), r: 4900 + (i % 3) * 160, speed: 26 + Math.random() * 12, cls: "UAS_GROUP_1", tq: 4 });
-    logEvent("INFO", "INFO", "SWARM inbound \u00B7 8 contacts");
-    toast("ok", "Swarm launched \u00B7 8 inbound");
+    const n = randi(6, 11);
+    for (let i = 0; i < n; i++) spawnHostile({ bearing: threatBearing(), r: 4700 + rand() * 700, speed: 26 + rand() * 12, cls: rand() < 0.7 ? "UAS_GROUP_1" : "MULTIROTOR", tq: 4 });
+    logEvent("INFO", "INFO", `SWARM inbound \u00B7 ${n} contacts`);
+    toast("ok", `Swarm launched \u00B7 ${n} inbound`);
   };
   $("btnRaid").onclick = () => {
     if (S.live) { toast("ok", "scale is driven by the scenario engine in LIVE mode"); return; }
-    const N = 120;
+    const N = randi(90, 150);
     let n = 0;
     for (let i = 0; i < N; i++) {
-      const b = threatAxis() + (Math.random() - 0.5) * SCN.threat.spread;   // mix all inbound axes
-      const r = 4200 + Math.random() * 2200;
-      if (spawnHostile({ bearing: b, r, speed: 22 + Math.random() * 18, cls: Math.random() < 0.5 ? "UAS_GROUP_1" : "MULTIROTOR", tq: 4 })) n++;
+      const b = threatAxis() + (rand() - 0.5) * SCN.threat.spread;   // mix all inbound axes
+      const r = 4200 + rand() * 2200;
+      if (spawnHostile({ bearing: b, r, speed: 22 + rand() * 18, cls: rand() < 0.5 ? "UAS_GROUP_1" : "MULTIROTOR", tq: 4 })) n++;
     }
     logEvent("INFO", "INFO", `MASS RAID inbound \u00B7 ${n} contacts (${S.tracks.size} total)`);
     toast("ok", `Mass raid \u00B7 ${n} inbound \u00B7 ${S.tracks.size} total tracks`);
@@ -2588,7 +2751,8 @@
 
       setNarrator("01 \u00B7 Threat", "Mass UAS raid inbound at the perimeter");
       if (!S.live) {
-        for (let i = 0; i < 16; i++) spawnHostile({ bearing: threatBearing(), r: 4800 + (i % 4) * 170, speed: 26 + Math.random() * 10, cls: "UAS_GROUP_1", tq: 4 });
+        const w1 = randi(13, 19);
+        for (let i = 0; i < w1; i++) spawnHostile({ bearing: threatBearing(), r: 4800 + (i % 4) * 170, speed: 26 + rand() * 10, cls: "UAS_GROUP_1", tq: 4 });
       }
       await sleep(3500); autoGuard();
 
@@ -2621,14 +2785,15 @@
       await sleep(2400); autoGuard();
       setNarrator("08 \u00B7 Resilience", "NODE-02 + BN-7 hold the shared COP \u2014 second wave inbound");
       if (!S.live) {
-        for (let i = 0; i < 10; i++) spawnHostile({ bearing: threatBearing(), r: 5200 + (i % 3) * 150, speed: 26 + Math.random() * 10, cls: "UAS_GROUP_1", tq: 4 });
+        const w2 = randi(8, 13);
+        for (let i = 0; i < w2; i++) spawnHostile({ bearing: threatBearing(), r: 5200 + (i % 3) * 150, speed: 26 + rand() * 10, cls: "UAS_GROUP_1", tq: 4 });
       }
       await sleep(1800); autoGuard();
       await engageMany(4, "08 \u00B7 Resilience", 1000);
       autoGuard();
 
       // saturate to a high kill ratio
-      await clearRaid("09 \u00B7 Clear", 36);
+      await clearRaid("09 \u00B7 Clear", randi(30, 44));
       autoGuard();
 
       const defeated = S.stats.defeated, leak = S.stats.leakers;
@@ -2660,7 +2825,15 @@
     S.nodeLost = false; S.node = "C2-NODE-01"; $("nodeLost").classList.remove("on");
     if (!S.live) {
       for (const b of SCN.blue) spawnBlue(b);   // joint Blue force air (platform/service/altitude)
-      spawnHostile({ bearing: threatBearing(), r: 4200, tq: 5, cls: "MULTIROTOR" });
+      // opening laydown varies run to run (seeded): count, identity mix, ranges
+      const n = randi(2, 5);
+      for (let i = 0; i < n; i++) {
+        const roll = rand();
+        if (roll < 0.45) spawnHostile({ r: 3600 + rand() * 1800, tq: randi(4, 6) });
+        else if (roll < 0.75) spawnHostile({ identity: "SUSPECT", r: 4000 + rand() * 1800, tq: randi(3, 5), declareAt: 6000 + rand() * 12000 });
+        else spawnHostile({ identity: "UNKNOWN", r: 4200 + rand() * 1600, tq: randi(2, 4), intent: rand() < 0.6 ? "attack" : "transit", declareAt: 9000 + rand() * 12000 });
+      }
+      S.ambT = 6 + rand() * 10;   // first ambient arrival
     }
     $("log").innerHTML = "";
     logEvent("INFO", "INFO", "Scenario reset");
@@ -2706,7 +2879,9 @@
 
   // ---- boot ----
   async function boot() {
-    S.t0 = Date.UTC(2026, 5, 26, 14, 30, 0);
+    S.t0 = Date.UTC(2026, 5, 26, randi(5, 21), randi(0, 59), 0);   // start clock varies per run
+    const qs = new URLSearchParams(location.search);
+    if ((qs.get("basemap") || "").toUpperCase() === "TAC") applySeg("baseSeg", "basemap", "TAC");
     resize();
     window.addEventListener("resize", resize);
     const live = detectBackend();
@@ -2719,6 +2894,7 @@
     } else {
       resetScenario();
       logEvent("INFO", "INFO", "Embedded simulation \u00B7 SIM mode");
+      logEvent("INFO", "INFO", "Run seed " + SEED + " \u00B7 append ?seed=" + SEED + " to replay this laydown");
     }
     setInterval(renderRail, 300);   // keep counts / TQ / magazines live
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks

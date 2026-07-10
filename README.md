@@ -45,8 +45,11 @@ to GitHub Pages so anyone can view it with no install:
 **<https://azjester.github.io/C-UASC2/>**
 
 The published page is the standalone build ([`site/index.html`](site/index.html)):
-it runs an embedded simulation entirely in the browser and makes no backend
-calls. All figures are simulated; every view is labeled for demonstration only.
+it runs an embedded, seeded-random simulation entirely in the browser (no
+backend). The satellite basemap fetches public Esri World Imagery tiles; when
+they are unreachable the COP falls back to its synthetic tactical map, so the
+page still works fully offline. All figures are simulated; every view is
+labeled for demonstration only.
 The same page also has a LIVE mode that runs against the real c2-core REST API
 and bus when c2-core serves it (that serving path lands with the Web COP PR,
 [#2](https://github.com/AzJester/C-UASC2/pull/2)).
