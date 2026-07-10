@@ -1102,7 +1102,8 @@
   // to level-of-detail rendering (no per-track labels/leaders) above a threshold so
   // hundreds of contacts still render at full frame rate.
   const MAX_TRACKS = 1200;
-  const LOD_THRESHOLD = 60;
+  const LOD_THRESHOLD = 60;      // above: drop labels/leaders/trails, keep identity frames
+  const LOD_DOT_THRESHOLD = 350; // above: bare dots (last-resort frame-rate guard)
 
   // Hub-and-spoke (legacy) fixed sensor->shooter pairs are defined per scenario
   // (HUB_PAIR / HUB_EFFECTORS, set by applyScenario above). Effectors not paired to a
@@ -2090,17 +2091,25 @@
       }
     }
 
-    // level-of-detail: above LOD_THRESHOLD tracks, non-selected contacts render as
-    // simple dots (no leader line, no per-track text) so hundreds stay at 60fps.
+    // level-of-detail: above LOD_THRESHOLD tracks, non-selected contacts shed the
+    // expensive parts (labels, leader lines, trails) but KEEP their doctrinal
+    // frame - hostile/suspect diamond, friendly/neutral circle - at reduced size.
+    // Only above LOD_DOT_THRESHOLD do they collapse to bare dots.
     if (S._lod && !sel) {
       ctx.save();
       ctx.globalAlpha = alpha;
       if (t.state === "NEUTRALIZED") {
         ctx.fillStyle = "#3a4452";
         ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
-      } else {
+      } else if (S.tracks.size > LOD_DOT_THRESHOLD) {
         ctx.fillStyle = col;
         ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+      } else if (t.identity === "FRIEND" || t.identity === "ASSUMED_FRIEND" || t.identity === "NEUTRAL") {
+        ctx.lineWidth = 1.5; ctx.strokeStyle = col;
+        ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.stroke();
+      } else {
+        ctx.lineWidth = 1.5; ctx.strokeStyle = col;
+        ctx.beginPath(); ctx.moveTo(x, y - 4.5); ctx.lineTo(x + 4, y); ctx.lineTo(x, y + 4.5); ctx.lineTo(x - 4, y); ctx.closePath(); ctx.stroke();
       }
       ctx.restore();
       return;
