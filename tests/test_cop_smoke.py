@@ -39,7 +39,7 @@ def page():
         pg.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
         pg.on("pageerror", lambda e: errors.append(f"pageerror {e}"))
         pg.console_errors = errors  # type: ignore[attr-defined]
-        pg.goto(f"file://{COP}?debug=1")
+        pg.goto(f"file://{COP}?debug=1&basemap=tac")
         pg.wait_for_timeout(500)
         yield pg
         browser.close()
