@@ -85,11 +85,21 @@ class EngagementType(str, Enum):
     NET_CAPTURE = "NET_CAPTURE"
 
 
+class EmitterState(str, Enum):
+    """RF emitter state from ESM/RF sensing. SILENT threats cannot be detected
+    or soft-killed through the RF path (docs/03)."""
+
+    EMITTING = "EMITTING"
+    SILENT = "SILENT"
+    UNKNOWN = "UNKNOWN"
+
+
 class EngagementState(str, Enum):
     PROPOSED = "PROPOSED"
     AUTHORIZED = "AUTHORIZED"
     ACCEPTED = "ACCEPTED"
     ACTIVE = "ACTIVE"
+    ASSESSING = "ASSESSING"
     COMPLETE = "COMPLETE"
     ABORTED = "ABORTED"
     FAILED = "FAILED"
@@ -133,6 +143,7 @@ class Track(BaseModel):
     trackQuality: int = Field(ge=0, le=15)
     identity: Identity
     classificationType: ClassificationType = ClassificationType.UNKNOWN
+    emitterState: Optional[EmitterState] = None
     platform: Optional[str] = None
     service: Optional[str] = None
     contributingSensors: list[str] = Field(default_factory=list)

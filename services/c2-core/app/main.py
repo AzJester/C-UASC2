@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -65,6 +66,29 @@ def subj_audit(domain: str) -> str:
     return f"cuas.audit.{domain}"
 
 
+def _load_no_fire_zones() -> list[dict]:
+    """No-fire zones (collateral geometry) from CUAS_NO_FIRE_ZONES: a JSON list
+    of {lat, lon, radiusMeters, label}. Empty by default; a fielded node gets
+    these from the ROE authority, not an environment variable."""
+    raw = os.environ.get("CUAS_NO_FIRE_ZONES", "")
+    if not raw:
+        return []
+    try:
+        zones = json.loads(raw)
+        return [z for z in zones if {"lat", "lon", "radiusMeters"} <= set(z)]
+    except (ValueError, TypeError):
+        log.warning("CUAS_NO_FIRE_ZONES is not valid JSON; ignoring")
+        return []
+
+
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    r = 6371000.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
 class State:
     """Process-local state for the reference node (in-memory by design)."""
 
@@ -76,6 +100,7 @@ class State:
         self.engagements: dict[str, EngagementStatus] = {}
         self.audit: list[AuditRecord] = []
         self.roe = ROE()  # default: WEAPONS_TIGHT, human-in-the-loop required
+        self.no_fire_zones: list[dict] = _load_no_fire_zones()
 
     def record(self, rec: AuditRecord) -> None:
         self.audit.append(rec)
@@ -290,13 +315,20 @@ async def request_engagement(
     if not feas.permit:
         return deny(feas.reasonCode, feas.detail)
 
-    # Gates 1 & 3: track quality + authority/ROE.
+    # Gates 1 & 3: track quality + authority/ROE (including collateral geometry).
+    zone = None
+    for z in state.no_fire_zones:
+        p = track.kinematics.position
+        if _haversine_m(p.lat, p.lon, z["lat"], z["lon"]) <= z["radiusMeters"]:
+            zone = str(z.get("label", "NO-FIRE"))
+            break
     auth = authorize_engagement(
         role=role,
         track=track,
         effector=effector,
         roe=state.roe,
         human_confirmation=req.humanConfirmation,
+        no_fire_zone=zone,
     )
     if not auth.permit:
         return deny(auth.reasonCode, auth.detail)

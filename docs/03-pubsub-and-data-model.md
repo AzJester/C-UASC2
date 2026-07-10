@@ -174,3 +174,10 @@ to correlate across sites into a wide-area single integrated air picture.
 - T0/T1 always preempt; the COP can lag before a fire order does.
 
 Continue to [§04 — Sensor Tasking & Fire Control](04-sensor-tasking-and-fire-control.md).
+
+## Emitter state
+
+`Track.emitterState` (`EMITTING | SILENT | UNKNOWN`) carries the ESM/RF
+picture: a SILENT contact (inertial or fiber-guided) cannot be detected by RF
+sensors or defeated by RF takeover, which is why the fused, multi-modality
+COP matters. Populated by RF/ESM contributors; optional for other sensors.

@@ -107,6 +107,9 @@ class Track:
         self.heading = math.atan2(-y, -x)  # toward asset
         self.tq = tq
         self.contrib: list[str] = []
+        # ~25% of red contacts fly comms-silent (inertial / fiber): RF-blind
+        self.emitterState = "EMITTING" if identity in BLUE_IDS else (
+            "SILENT" if random.random() < 0.25 else "EMITTING")
         self.ox, self.oy, self.orad, self.ospeed = ox, oy, orad, ospeed
         self.orbit = 0.0
         self.alive = True
@@ -153,6 +156,7 @@ class Track:
             "covariance": {"horizontalMeters": 40.0 if self.tq < 9 else 10.0, "verticalMeters": 25.0},
             "trackQuality": int(self.tq),
             "identity": self.identity,
+            "emitterState": self.emitterState,
             "classificationType": self.cls,
             "contributingSensors": self.contrib or [SENSOR_ID],
             "timeObserved": _now(),

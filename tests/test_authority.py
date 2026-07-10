@@ -155,3 +155,30 @@ def test_tasking_authority():
     assert authorize_tasking(Role.SENSOR_MANAGER, True, TaskType.DWELL).permit
     assert not authorize_tasking(Role.OBSERVER, True, TaskType.DWELL).permit
     assert not authorize_tasking(Role.SENSOR_MANAGER, False, TaskType.CUE).permit
+
+
+def test_collateral_hold_denies_kinetic_over_no_fire_zone():
+    # Gate 3e: a hostile over a protected area may not be engaged kinetically.
+    d = authorize_engagement(
+        role=Role.FIRE_CONTROL_AUTHORITY,
+        track=make_track(tq=15),
+        effector=make_effector(etype=EffectorType.KINETIC_INTERCEPTOR),
+        roe=base_roe(),
+        human_confirmation=True,
+        no_fire_zone="SAN DIEGO CITY",
+    )
+    assert not d.permit
+    assert d.reasonCode == "COLLATERAL_HOLD"
+
+
+def test_collateral_zone_still_allows_soft_kill():
+    # Soft effects (EW / RF takeover / net) remain legal over the zone.
+    d = authorize_engagement(
+        role=Role.FIRE_CONTROL_AUTHORITY,
+        track=make_track(tq=15),
+        effector=make_effector(etype=EffectorType.EW_JAMMER),
+        roe=base_roe(),
+        human_confirmation=True,
+        no_fire_zone="SAN DIEGO CITY",
+    )
+    assert d.permit, d.detail

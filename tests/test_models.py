@@ -62,3 +62,31 @@ def test_all_schemas_are_valid_draft2020():
     assert files, "no schemas found"
     for f in files:
         Draft202012Validator.check_schema(json.loads(f.read_text()))
+
+
+def test_track_emitter_state_round_trips_and_validates():
+    from jsonschema import validate
+
+    from app.models import EmitterState
+
+    track = Track(
+        trackId="TRK-9",
+        kinematics=Kinematics(position=Position(lat=32.7, lon=-117.2, altMeters=40)),
+        trackQuality=7,
+        identity=Identity.HOSTILE,
+        emitterState="SILENT",
+    )
+    assert track.emitterState == EmitterState.SILENT
+    instance = json.loads(track.model_dump_json(exclude_none=True))
+    validate(instance=instance, schema=load_schema("track.schema.json"))
+
+
+def test_track_rejects_invalid_emitter_state():
+    with pytest.raises(ValidationError):
+        Track(
+            trackId="TRK-9",
+            kinematics=Kinematics(position=Position(lat=32.7, lon=-117.2, altMeters=40)),
+            trackQuality=7,
+            identity=Identity.HOSTILE,
+            emitterState="LOUD",
+        )

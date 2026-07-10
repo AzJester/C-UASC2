@@ -55,6 +55,11 @@
       "enum": ["PENDING", "UNKNOWN", "SUSPECT", "FRIEND", "ASSUMED_FRIEND", "NEUTRAL", "HOSTILE"],
       "description": "Combat identity from fused CID. Gates engagement together with ROE."
     },
+    "emitterState": {
+      "type": "string",
+      "enum": ["EMITTING", "SILENT", "UNKNOWN"],
+      "description": "RF emitter state from ESM/RF sensing. SILENT threats are invisible to RF sensors and cannot be RF-takeover'd; they must be found and defeated through other modalities (docs/03)."
+    },
     "classificationType": {
       "type": "string",
       "enum": ["FIXED_WING", "ROTARY", "MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "UAS_GROUP_3", "UNKNOWN"],

@@ -50,6 +50,16 @@ MIN_TRACK_QUALITY = {
     EffectorType.OTHER: 12,
 }
 
+# Effector classes prohibited over declared no-fire zones (collateral
+# geometry, docs/05). Soft effects (EW, RF takeover, net capture) remain
+# available over protected areas.
+COLLATERAL_PROHIBITED = {
+    EffectorType.KINETIC_GUN,
+    EffectorType.KINETIC_INTERCEPTOR,
+    EffectorType.DIRECTED_ENERGY,
+    EffectorType.OTHER,
+}
+
 # Roles permitted to release fires vs. only propose.
 ROLES_MAY_RELEASE = {Role.FIRE_CONTROL_AUTHORITY}
 ROLES_MAY_PROPOSE = {Role.ENGAGEMENT_OPERATOR, Role.FIRE_CONTROL_AUTHORITY}
@@ -92,6 +102,7 @@ def authorize_engagement(
     effector: EffectorStatus,
     roe: ROE,
     human_confirmation: bool,
+    no_fire_zone: str | None = None,
 ) -> Decision:
     """Gates 1 and 3 for an engagement request (Imperative 5, bounded by docs/05).
 
@@ -137,6 +148,15 @@ def authorize_engagement(
             False,
             "TRACK_QUALITY_INSUFFICIENT",
             f"TQ {track.trackQuality} < required {min_tq} for {effector.effectorType.value}",
+        )
+
+    # Gate 3e: collateral geometry. Kinetic-class fires are prohibited while
+    # the target is over a declared no-fire zone; soft-kill remains available.
+    if no_fire_zone and effector.effectorType in COLLATERAL_PROHIBITED:
+        return Decision(
+            False,
+            "COLLATERAL_HOLD",
+            f"target over no-fire zone {no_fire_zone}: kinetic-class fires prohibited",
         )
 
     # Gate 3d: human-in-the-loop when ROE requires it.

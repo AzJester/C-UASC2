@@ -12,8 +12,8 @@
     "trackId": { "type": "string" },
     "state": {
       "type": "string",
-      "enum": ["PROPOSED", "AUTHORIZED", "ACCEPTED", "ACTIVE", "COMPLETE", "ABORTED", "FAILED", "DENIED"],
-      "description": "PROPOSED->AUTHORIZED->ACCEPTED->ACTIVE->COMPLETE on the nominal path; DENIED/ABORTED/FAILED otherwise."
+      "enum": ["PROPOSED", "AUTHORIZED", "ACCEPTED", "ACTIVE", "ASSESSING", "COMPLETE", "ABORTED", "FAILED", "DENIED"],
+      "description": "PROPOSED->AUTHORIZED->ACCEPTED->ACTIVE->ASSESSING->COMPLETE on the nominal path (ASSESSING = shot resolved, battle-damage assessment pending); DENIED/ABORTED/FAILED otherwise."
     },
     "reasonCode": {
       "type": "string",
@@ -26,6 +26,7 @@
         "NOT_AUTHORIZED",
         "ROE_PROHIBITED",
         "WEAPONS_HOLD",
+        "COLLATERAL_HOLD",
         "INTERLOCK_BLOCKED",
         "TRACK_STALE",
         "FRIENDLY_PROXIMITY",

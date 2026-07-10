@@ -761,11 +761,24 @@
               <button data-v="RAIN" title="EO/IR range and directed-energy performance degraded">RAIN</button>
             </div>
           </div>
+          <div class="field" style="margin-top:10px;margin-bottom:0">
+            <label>Time of day</label>
+            <div class="seg" id="todSeg">
+              <button data-v="AUTO" aria-pressed="true" title="Follow the scenario clock">AUTO</button>
+              <button data-v="DAY" title="Force daylight: full EO/IR performance">DAY</button>
+              <button data-v="NIGHT" title="Force night: EO/IR range cut to 55%">NIGHT</button>
+            </div>
+          </div>
         </div>
 
         <div class="card" id="trackCard">
           <h3>Selected Track</h3>
           <div id="trackBody"><p class="empty">No track selected. Click a contact on the plot.</p></div>
+        </div>
+
+        <div class="card" id="queueCard">
+          <h3>Engagement Queue</h3>
+          <div id="queueBody"><p class="empty">No active threats.</p></div>
         </div>
 
         <div class="card">
@@ -867,6 +880,12 @@
     </div>
     <div class="aar-verdict" id="aarVerdict"></div>
     <div class="aar-grid" id="aarGrid"></div>
+    <div class="aar-h" style="margin-top:10px">Replay</div>
+    <canvas id="repCv" style="width:100%;height:170px;background:#0a0d12;border:1px solid #1f2937;border-radius:4px"></canvas>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+      <input type="range" id="repSlider" min="0" max="0" value="0" style="flex:1" aria-label="Replay timeline">
+      <span id="repClock" style="font:11px ui-monospace,Menlo,Consolas,monospace;color:#76859b">--:--:--</span>
+    </div>
     <div class="aar-cols">
       <div class="aar-col">
         <div class="aar-h">Timeline</div>
@@ -952,7 +971,8 @@
           <div><b>Review</b> &mdash; the operational (theater) rollup and the After Action Review</div>
           <div><b>Rail</b> &mdash; COP view filter, architecture (networked vs hub), transport, basemap, authority role + weapons-control, effectors, and the audit log</div>
           <div><b>Basemap</b> &mdash; SAT is real satellite imagery of the AO (needs internet, falls back automatically); TACTICAL is the synthetic offline map</div>
-          <div><b>Weather</b> &mdash; CLEAR / WIND / RAIN: wind slows small UAS, rain shortens EO/IR and directed-energy reach; night (scenario clock) also degrades EO/IR</div>
+          <div><b>Weather</b> &mdash; CLEAR / WIND / RAIN: wind slows small UAS, rain shortens EO/IR and directed-energy reach</div>
+          <div><b>Time of day</b> &mdash; AUTO follows the scenario clock; NIGHT darkens the plot and cuts EO/IR to 55% (watch its ring shrink)</div>
           <div><b>Degrade comms</b> &mdash; DDIL inject: the COP goes stale (positions step every 2.5 s, TQ drops) and engagement orders add latency</div>
           <div><b>Click a track</b> &mdash; see its detail, track quality, time-to-impact, and engage it</div>
         </div>
@@ -974,12 +994,15 @@
           <div><b>Esc</b> &mdash; close any open panel</div>
           <div><b>?</b> &mdash; open this help</div>
           <div><b>?seed=N</b> &mdash; URL parameter: replay a run's laydown (the current seed is in the audit log)</div>
+          <div><b>Preset links</b> &mdash; combine <b>?scn=</b>sandiego|elpaso, <b>?arch=</b>HUB, <b>?wx=</b>RAIN, <b>?tod=</b>NIGHT, <b>?seed=</b>N to share an exact setup</div>
+          <div><b>AAR replay</b> &mdash; the After Action Review includes a timeline scrubber of the whole fight</div>
         </div>
       </div>
     </div>
     <div class="aar-foot">
       <span class="aar-note">For demonstration only &middot; not a fielded system &middot; figures are simulated.</span>
       <span class="grow"></span>
+      <button class="sbtn" id="helpTour">Replay the tour</button>
       <button class="sbtn primary" id="helpDone">Got it</button>
     </div>
   </div>
@@ -1041,9 +1064,9 @@
         { x: 1690, y: 3660, r: 1600, label: "SAN INTL APPROACH" },
       ],
       sensors: [
-        { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 200,   y: -150,  range: 6000 },
+        { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 200,   y: -150,  range: 6000, mask: [{ from: 2.85, to: 3.45, minAlt: 250, beyond: 2600 }] },
         { sensorId: "SEN-EO-03",   sensorType: "EO_IR", vendor: "Vendor C", service: "USA",  x: 2900,  y: -800,  range: 3600 },
-        { sensorId: "SEN-MADIS-05",sensorType: "RF",    vendor: "Vendor K", service: "USMC", x: 500,   y: -1000, range: 4500 },
+        { sensorId: "SEN-MADIS-05",sensorType: "RF",    vendor: "Vendor K", service: "USMC", x: 500,   y: -1000, range: 4500, mask: [{ from: 2.9, to: 3.4, minAlt: 250, beyond: 2400 }] },
         { sensorId: "SEN-SHIP-04", sensorType: "RADAR", vendor: "Vendor J", service: "USN",  x: -4700, y: -3400,  range: 6500 },
         { sensorId: "SEN-SHIP-10", sensorType: "RADAR", vendor: "Vendor M", service: "USN",  x: -5300, y: -900,   range: 6500 },
         { sensorId: "SEN-SHIP-11", sensorType: "RADAR", vendor: "Vendor N", service: "USN",  x: -3200, y: -4400, range: 6000 },
@@ -1088,8 +1111,8 @@
         { x: 500, y: -4400, r: 2400, label: "CROSS-BORDER \u00b7 MEXICO" },
       ],
       sensors: [
-        { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 0,     y: -150,  range: 6000 },
-        { sensorId: "SEN-RF-02",   sensorType: "RF",    vendor: "Vendor B", service: "USA",  x: -1500, y: 600,   range: 5200 },
+        { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 0,     y: -150,  range: 6000, mask: [{ from: 2.7, to: 3.6, minAlt: 900, beyond: 3000 }] },
+        { sensorId: "SEN-RF-02",   sensorType: "RF",    vendor: "Vendor B", service: "USA",  x: -1500, y: 600,   range: 5200, mask: [{ from: 2.6, to: 3.7, minAlt: 900, beyond: 1600 }] },
         { sensorId: "SEN-EO-03",   sensorType: "EO_IR", vendor: "Vendor C", service: "USA",  x: 1600,  y: 700,   range: 3600 },
         { sensorId: "SEN-TARS-04", sensorType: "RADAR", vendor: "Vendor L", service: "USA",  x: 0,     y: 2400,  range: 7000 },
         { sensorId: "SEN-MADIS-05",sensorType: "RF",    vendor: "Vendor K", service: "USMC", x: -300,  y: -1600, range: 4500 },
@@ -1182,6 +1205,7 @@
     transport: "BOTH",                       // BOTH | MANET | 5G | OFF (data transport overlay)
     basemap: "SAT",                          // SAT (real imagery) | TAC (synthetic tactical)
     wx: "CLEAR",                             // CLEAR | WIND | RAIN (seeded per run)
+    tod: "AUTO",                             // AUTO (scenario clock) | DAY | NIGHT
     degraded: false,                         // DDIL inject: stale COP + order latency
   };
 
@@ -1214,10 +1238,25 @@
   function resolveOutcome(t, firstSeen, pk, opts) {
     opts = opts || {};
     if (rand() < pk) {
-      t.state = "NEUTRALIZED";
-      recordDefeat(firstSeen);
-      creditKill(t, opts.eff || null);
-      if (opts.isAir) S.stats.airKills++;
+      // battle damage assessment: the shot connected, but the kill is not
+      // confirmed until BDA resolves; a damaged threat may keep coming
+      t.state = "ASSESSING"; t.engEff = null; t.engAir = false; t.engNaval = false; t.engDE = false;
+      logEvent("INFO", "INFO", `BDA \u00b7 assessing ${t.trackId} (${opts.label || "shot"})`);
+      setTimeout(() => {
+        const x = S.tracks.get(t.trackId);
+        if (!x || x.state !== "ASSESSING") return;
+        if (rand() < 0.85) {
+          x.state = "NEUTRALIZED";
+          recordDefeat(firstSeen);
+          creditKill(x, opts.eff || null);
+          if (opts.isAir) S.stats.airKills++;
+          logEvent("COMPLETE", "COMPLETE", `BDA CONFIRMED \u00b7 ${x.trackId} defeated \u00b7 ${opts.label || ""}`);
+        } else {
+          x.state = "ACTIVE"; x.speed *= 0.85;
+          logEvent("DECLARE", "DENY", `BDA \u00b7 ${x.trackId} still flying \u00b7 damaged, re-attacking`);
+        }
+        renderRail();
+      }, 1500 + rand() * 1500);
       return true;
     }
     t.state = "ACTIVE"; t.engEff = null; t.engAir = false; t.engNaval = false; t.engDE = false;
@@ -1229,8 +1268,9 @@
   // cost-exchange ledger: credit the defeated threat's value, and track how
   // much of the fight the cheap layers (EW / RF / net / DE) carried
   function creditKill(t, eff) {
-    const v = t.decoy ? 500 : (THREAT_COST[t.classificationType] || 5000);
+    const v = t.clutter ? 0 : t.decoy ? 500 : (THREAT_COST[t.classificationType] || 5000);
     S.stats.threatValue += v;
+    if (t.clutter) logEvent("INFO", "INFO", `${t.trackId} destroyed \u00b7 biological/clutter \u00b7 round wasted`);
     if (eff && SOFT_TYPES.has(eff.effectorType)) S.stats.softKills++;
     if (eff && (SOFT_TYPES.has(eff.effectorType) || eff.effectorType === "DIRECTED_ENERGY")) S.stats.cheapKills++;
     if (t.decoy) logEvent("INFO", "INFO", `${t.trackId} was a DECOY \u00b7 threat value ${fmtCost(v)} \u00b7 magazine burned`);
@@ -1276,6 +1316,20 @@
 
   const noFireZoneAt = (x, y) => (SCN.noFire || []).find((z) => dist(x, y, z.x, z.y) <= z.r) || null;
 
+  // terrain line-of-sight: a sensor's masked sector (Point Loma ridge, the
+  // Franklin Mountains) hides low targets beyond the ridge; elevated or
+  // close-in targets stay visible
+  function sensorMasked(s, t) {
+    for (const m of s.mask) {
+      if ((t.altMeters || 0) >= m.minAlt) continue;
+      if (dist(t.x, t.y, s.x, s.y) <= (m.beyond || 0)) continue;
+      let b = Math.atan2(t.y - s.y, t.x - s.x);
+      if (b < 0) b += Math.PI * 2;
+      if (b >= m.from && b <= m.to) return true;
+    }
+    return false;
+  }
+
   // threat archetypes: how raids actually arrive. p < .35 direct attack,
   // < .55 low ingress (under the radar clutter floor), < .75 OWA cruise with
   // dog-legs and a terminal dive, < .85 ISR orbiter at standoff, else a decoy.
@@ -1299,6 +1353,54 @@
       return spawnHostile({ ...base, identity: "SUSPECT", profile: "isr", cls: "UAS_GROUP_2", alt: 800 + randi(0, 1200), r: oR, orbR: oR, emitting: true, declareAt: null });
     }
     return spawnHostile({ ...base, decoy: true, cls: rand() < 0.5 ? "UAS_GROUP_1" : "MULTIROTOR", emitting: true, speed: 30 + rand() * 10 });
+  }
+
+  // false tracks: birds/clutter that a radar honestly reports. An EO/IR look
+  // (or a timeout) classifies them out of the picture; killing one wastes a
+  // round for zero threat value. This is the classification burden.
+  function spawnClutter() {
+    const nt = spawnHostile({ identity: "UNKNOWN", cls: "UNKNOWN", profile: "clutter", intent: "transit", speed: 6 + rand() * 8, alt: 30 + randi(0, 120), emitting: false, tq: 2 });
+    if (nt) { nt.clutter = true; nt.clutterTtl = perf() + 20000 + rand() * 20000; }
+    return nt;
+  }
+
+  // civilian traffic: ADS-B airliners/GA in the corridor and (San Diego) AIS
+  // boat traffic in the coastal lanes. NEUTRAL and never engageable; they make
+  // the COP look like real airspace, not a sterile range.
+  const CIV_AIR = ["A320", "B737", "E175", "C172", "CIVIL HELO"];
+  const CIV_BOAT = ["FERRY", "SAILBOAT", "FISHING VESSEL", "CARGO"];
+  function civCount() {
+    let n = 0;
+    for (const t of S.tracks.values()) if (t.civil) n++;
+    return n;
+  }
+  function spawnCivAir() {
+    const via = S.scenario === "sandiego" ? { x: 1690, y: 3660 } : { x: 0, y: 3000 };
+    const vx = via.x + (rand() - 0.5) * 1400, vy = via.y + (rand() - 0.5) * 1200;
+    const dir = rand() < 0.5 ? 1 : -1;
+    const hdg = (dir > 0 ? 0 : Math.PI) + (rand() - 0.5) * 0.25;
+    const plat = CIV_AIR[(rand() * CIV_AIR.length) | 0];
+    const ga = plat === "C172" || plat === "CIVIL HELO";
+    const t = spawnHostile({ identity: "NEUTRAL", cls: plat === "CIVIL HELO" ? "ROTARY" : "FIXED_WING", intent: "transit",
+      speed: ga ? 40 + rand() * 20 : 75 + rand() * 35, alt: ga ? 300 + randi(0, 500) : 900 + randi(0, 2100), emitting: true, tq: 12 });
+    if (t) {
+      t.x = vx + Math.cos(hdg + Math.PI) * (AO_RADIUS - 300);
+      t.y = vy + Math.sin(hdg + Math.PI) * (AO_RADIUS - 300);
+      t.heading = hdg; t.platform = plat; t.civil = true;
+    }
+    return t;
+  }
+  function spawnCivBoat() {
+    const t = spawnHostile({ identity: "NEUTRAL", cls: "SURFACE", intent: "transit", speed: 3.5 + rand() * 6, alt: 0, emitting: true, tq: 12 });
+    if (t) {
+      const north = rand() < 0.5;
+      t.x = (rand() < 0.5 ? -2650 : -3450) + (rand() - 0.5) * 500;
+      t.y = (north ? -1 : 1) * (AO_RADIUS - 500 - rand() * 1500);
+      t.heading = (north ? Math.PI / 2 : -Math.PI / 2) + (rand() - 0.5) * 0.1;
+      t.platform = CIV_BOAT[(rand() * CIV_BOAT.length) | 0];
+      t.civil = true; t.surface = true;
+    }
+    return t;
   }
 
   // no-fire zones: hatched, labeled, kinetic-exclusion geometry on the plot
@@ -1348,12 +1450,20 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
+  const COP_BUILD = "20f46217";   // stamped by scripts/build_cop.py (content hash)
+  const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
+  const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
   // ---- environment: weather (seeded per run, override in rail or ?wx=) and
   // day/night from the scenario clock. Conditions drive sensing and effector
   // performance: EO/IR loses range at night and in rain, directed energy
   // dwells longer in rain, small UAS slow down in wind.
-  const isNight = () => { const h = new Date(S.t0 + perf()).getUTCHours(); return h < 6 || h >= 19; };
+  const isNight = () => {
+    if (S.tod === "NIGHT") return true;
+    if (S.tod === "DAY") return false;
+    const h = new Date(S.t0 + perf()).getUTCHours();
+    return h < 6 || h >= 19;
+  };
   const eoFactor = () => (isNight() ? 0.55 : 1) * (S.wx === "RAIN" ? 0.6 : 1);
   const deDwellFactor = () => (S.wx === "RAIN" ? 1.6 : 1);
   const windSpeedFactor = (cls) => (S.wx === "WIND" && (cls === "MULTIROTOR" || cls === "UAS_GROUP_1")) ? 0.75 : 1;
@@ -1440,16 +1550,20 @@
         S.ambT = 12 + rand() * 22;
         const roll = rand();
         let nt = null;
-        if (roll < 0.75) {
+        if (roll < 0.55) {
           nt = spawnThreat(rand(), { tq: randi(3, 6) });
           if (nt && nt.profile !== "isr" && rand() < 0.5) {
             nt.identity = rand() < 0.6 ? "SUSPECT" : "UNKNOWN";
             nt.declareAt = 7000 + rand() * 11000;
           }
+        } else if (roll < 0.8 && civCount() < 7) {
+          nt = (S.scenario === "sandiego" && rand() < 0.45) ? spawnCivBoat() : spawnCivAir();
+        } else if (roll < 0.92) {
+          nt = spawnClutter();
         } else {
           nt = spawnHostile({ identity: "NEUTRAL", cls: rand() < 0.5 ? "FIXED_WING" : "MULTIROTOR", intent: "transit", speed: 18 + rand() * 20, alt: 150 + randi(0, 600) });
         }
-        if (nt) logEvent("INFO", "INFO", `New contact ${nt.trackId} \u00b7 ${nt.identity} ${nt.classificationType}${nt.emitting === false ? " \u00b7 no RF signature" : ""}`);
+        if (nt) logEvent("INFO", "INFO", `New contact ${nt.trackId} \u00b7 ${nt.identity} ${nt.platform || nt.classificationType}${nt.emitting === false ? " \u00b7 no RF signature" : ""}`);
       }
     }
     for (const t of S.tracks.values()) {
@@ -1462,7 +1576,34 @@
           logEvent("DECLARE", "DENY", `${t.trackId} declared HOSTILE \u00b7 ${t.classificationType} inbound`);
         }
       }
-      if (isBlue(t)) {
+      // false tracks: an EO/IR look (or timeout) classifies them out
+      if (t.clutter) {
+        const eoSees = t.contributingSensors.some((id) => (SENSORS.find((s) => s.sensorId === id) || {}).sensorType === "EO_IR");
+        if (eoSees || perf() > t.clutterTtl) {
+          logEvent("INFO", "INFO", `${t.trackId} classified ${eoSees ? "by EO/IR" : "on time-out"} \u00b7 biological/clutter \u00b7 dropped`);
+          S.tracks.delete(t.trackId);
+          if (S.selected === t.trackId) selectTrack(null);
+          continue;
+        }
+      }
+      // degraded fusion occasionally splits a real contact into a dual track
+      if (S.degraded && !t.ghost && !t.clutter && isRed(t) && t.state === "ACTIVE" && !t._split && rand() < dt * 0.02) {
+        t._split = true;
+        const g = spawnHostile({ identity: "UNKNOWN", cls: t.classificationType, tq: 3, emitting: t.emitting });
+        if (g) {
+          g.x = t.x + (rand() - 0.5) * 400; g.y = t.y + (rand() - 0.5) * 400;
+          g.ghost = true; g.intent = t.intent; g.heading = t.heading; g.speed = t.speed;
+          g.ghostTtl = perf() + 4000 + rand() * 4000; g.ghostOf = t.trackId;
+          logEvent("DECLARE", "DENY", `DUAL TRACK \u00b7 ${g.trackId} split from ${t.trackId} (degraded fusion)`);
+        }
+      }
+      if (t.ghost && perf() > t.ghostTtl) {
+        logEvent("INFO", "INFO", `${t.trackId} correlated with ${t.ghostOf} \u00b7 dual track merged`);
+        S.tracks.delete(t.trackId);
+        if (S.selected === t.trackId) selectTrack(null);
+        continue;
+      }
+      if (isBlue(t) && t.intent !== "transit") {
         // patrol wander (sim time, so pause freezes it): the station drifts in a
         // bounded box and altitude breathes around the aircraft's assigned band
         t.wt = (t.wt || 0) + dt;
@@ -1476,7 +1617,7 @@
         t.y = (t.oy || 0) + Math.sin(t.orbit) * (t.orad || 700);
       } else if (t.intent === "transit") {
         // crossing traffic holds course and exits the AO
-        const weave = Math.sin(perf() / 900 + t.jitter) * 0.08;
+        const weave = Math.sin(perf() / 900 + t.jitter) * (t.clutter ? 0.5 : 0.08);
         t.x += Math.cos(t.heading + weave) * t.speed * dt;
         t.y += Math.sin(t.heading + weave) * t.speed * dt;
         if (dist(t.x, t.y, 0, 0) > AO_RADIUS + 600) {
@@ -1521,6 +1662,8 @@
       let cuedByOther = false;
       for (const s of SENSORS) {
         if (s.sensorType === "EO_IR") continue;   // second pass, needs cue state
+        if (s.dwellUntil && perf() < s.dwellUntil && s.dwellTrack !== t.trackId) continue;   // committed to a dwell
+        if (!isBlue(t) && s.mask && sensorMasked(s, t)) continue;                            // terrain line-of-sight
         let r = s.range;
         if (!isBlue(t)) {
           if (s.sensorType === "RF" && t.emitting === false) continue;
@@ -1533,6 +1676,8 @@
       }
       for (const s of SENSORS) {
         if (s.sensorType !== "EO_IR") continue;
+        if (s.dwellUntil && perf() < s.dwellUntil && s.dwellTrack !== t.trackId) continue;
+        if (!isBlue(t) && s.mask && sensorMasked(s, t)) continue;
         const r = s.range * (isBlue(t) ? 1 : eoFactor());
         const d = dist(t.x, t.y, s.x, s.y);
         if (d <= r && (cuedByOther || d <= r * 0.5)) contrib.push(s.sensorId);
@@ -1556,6 +1701,31 @@
         }
         S.tracks.delete(t.trackId);
         if (S.selected === t.trackId) selectTrack(null);
+      }
+    }
+    // replay recorder: compact snapshot every 0.5 s of sim time (feeds the
+    // AAR scrubber; capped at ~6 minutes)
+    S._repT = (S._repT == null ? 0 : S._repT) - dt;
+    if (S._repT <= 0) {
+      S._repT = 0.5;
+      const snap = [];
+      for (const t of S.tracks.values()) {
+        snap.push([Math.round(t.dx != null ? t.dx : t.x), Math.round(t.dy != null ? t.dy : t.y), IDENT_CODE[t.identity] ?? 3, t.state === "NEUTRALIZED" ? 1 : 0]);
+      }
+      (S.replay || (S.replay = [])).push({ clock: nowClock(), snap, defeated: S.stats.defeated, leakers: S.stats.leakers, integ: S.assetIntegrity });
+      if (S.replay.length > 720) S.replay.shift();
+    }
+    // TEWA auto-release: WEAPONS FREE means the C2 releases the top authorized
+    // recommendation on a cadence; the operator supervises and can go to HOLD
+    if (!S.live && S.wcs === "WEAPONS_FREE") {
+      S._tewaT = (S._tewaT == null ? 1 : S._tewaT) - dt;
+      if (S._tewaT <= 0) {
+        S._tewaT = 1.2;
+        const top = threatQueue().find((q) => q.auth.ok);
+        if (top) {
+          logEvent("PERMIT", "PERMIT", `TEWA AUTO-RELEASE \u00b7 ${top.t.trackId} (WEAPONS FREE, on-the-loop)`);
+          engageTrack(top.t, true);
+        }
       }
     }
     // rearm cycle: empty magazines come back after a resupply delay
@@ -1714,19 +1884,30 @@
     t.tq = Math.min(15, t.tq + 6);
     const cued = SENSORS.find((s) => !t.contributingSensors.includes(s.sensorId)) || SENSORS[1];
     if (!t.contributingSensors.includes(cued.sensorId)) t.contributingSensors.push(cued.sensorId);
-    toast("ok", `DWELL on ${t.trackId} \u00B7 TQ ${before} \u2192 ${Math.floor(t.tq)}`);
-    logEvent("GRANTED", "GRANTED", `TASK DWELL ${t.trackId} via ${cued.sensorId} \u00B7 TQ ${before}\u2192${Math.floor(t.tq)}`);
+    // opportunity cost: the cued sensor is committed to this dwell for 4 s and
+    // contributes to no other track while committed
+    cued.dwellUntil = perf() + 4000; cued.dwellTrack = t.trackId;
+    toast("ok", `DWELL on ${t.trackId} \u00B7 TQ ${before} \u2192 ${Math.floor(t.tq)} \u00B7 ${cued.sensorId} committed 4 s`);
+    logEvent("GRANTED", "GRANTED", `TASK DWELL ${t.trackId} via ${cued.sensorId} \u00B7 TQ ${before}\u2192${Math.floor(t.tq)} \u00B7 sensor committed, other tracks degrade`);
     renderRail();
   }
 
   function engage() {
     const t = S.selected && S.tracks.get(S.selected);
     if (!t || t.state === "NEUTRALIZED") return;
+    engageTrack(t, false);
+  }
+  // Engage a specific track (TEWA queue approval or manual). quiet suppresses
+  // deny toasts when the call is machine-initiated (auto-release polling).
+  function engageTrack(t, quiet) {
+    if (!t || t.state !== "ACTIVE") return;
     if (S.live) { liveEngage(t); return; }
     const a = authorize(t);
     if (!a.ok) {
-      toast("deny", `DENIED \u00B7 ${a.code}`);
-      logEvent("DENY", "DENY", `ENGAGE ${t.trackId}: ${a.detail}`);
+      if (!quiet) {
+        toast("deny", `DENIED \u00B7 ${a.code}`);
+        logEvent("DENY", "DENY", `ENGAGE ${t.trackId}: ${a.detail}`);
+      }
       return;
     }
     const eff = a.eff;
@@ -1750,13 +1931,15 @@
     else if (SOFT_TYPES.has(eff.effectorType)) resolveMs = 900 + rand() * 600;
     else resolveMs = 350 + dEng * 2;
     if (S.degraded) resolveMs += 1500;               // order latency on a degraded bus
+    const authNode = S.nodeLost && S.echelon.bn ? "BN-7" : S.node;
+    if (authNode === "BN-7") resolveMs += 800;       // echelon approval latency
     t.state = "ENGAGING";
     t.engEff = eff.effectorId;
     t.engT = perf();
     S.engaged++;
     recordEngage(t, eff);
     toast("ok", `${EFFECT_FOR[eff.effectorType]} \u00B7 ${eff.effectorId} \u2192 ${t.trackId} \u00B7 ${fmtCost(cost)}`);
-    logEvent("PERMIT", "PERMIT", `ENGAGE ${t.trackId} \u00B7 paired ${eff.effectorId} (${eff.vendor}/${eff.service})${xv ? " \u00B7 CROSS-VENDOR" : ""}${xs ? " \u00B7 CROSS-SERVICE" : ""} \u00B7 ${fmtCost(cost)} \u00B7 auth ${S.node}`);
+    logEvent("PERMIT", "PERMIT", `ENGAGE ${t.trackId} \u00B7 paired ${eff.effectorId} (${eff.vendor}/${eff.service})${xv ? " \u00B7 CROSS-VENDOR" : ""}${xs ? " \u00B7 CROSS-SERVICE" : ""} \u00B7 ${fmtCost(cost)} \u00B7 auth ${authNode}${authNode === "BN-7" ? " (echelon handover +0.8 s)" : ""}`);
     // lifecycle
     setTimeout(() => { if (t.state === "ENGAGING") { logEvent("INFO", "INFO", `${engId} ACTIVE`); } }, 400);
     setTimeout(() => {
@@ -1770,9 +1953,7 @@
       }
       if (eff.effectorType === "EW_JAMMER") { resolveJam(t, eff, engId); renderRail(); return; }
       const pk = PK_BY_TYPE[eff.effectorType] ?? 0.8;
-      if (resolveOutcome(t, t.firstSeen, pk, { label: eff.effectorId, eff })) {
-        logEvent("COMPLETE", "COMPLETE", `${engId} COMPLETE \u00B7 ${t.trackId} defeated`);
-      }
+      resolveOutcome(t, t.firstSeen, pk, { label: engId + " \u00b7 " + eff.effectorId, eff });
       renderRail();
     }, resolveMs);
     renderRail();
@@ -1817,6 +1998,7 @@
         t.x = loc.x; t.y = loc.y;
         t.identity = tk.identity; t.classificationType = tk.classificationType || "UNKNOWN";
         t.tq = tk.trackQuality; t.contributingSensors = tk.contributingSensors || [];
+        t.emitting = tk.emitterState ? tk.emitterState !== "SILENT" : true;
         t.platform = tk.platform || null; t.service = tk.service || null;
         t.altMeters = (tk.kinematics && tk.kinematics.position && tk.kinematics.position.altMeters) || 0;
         (t.trail || (t.trail = [])).push({ x: t.x, y: t.y }); if (t.trail.length > 18) t.trail.shift();
@@ -1918,6 +2100,10 @@
     S._lod = S.tracks.size > LOD_THRESHOLD;   // simplify track glyphs at scale
 
     drawTerrain();
+    if (isNight()) {
+      // night: the plot darkens and EO/IR coverage visibly contracts
+      ctx.fillStyle = "rgba(3,7,18,0.32)"; ctx.fillRect(0, 0, w, h);
+    }
     drawGrid();
 
     // range rings (subtle, over the basemap)
@@ -1936,10 +2122,22 @@
 
     // sensor coverage + sensors (with modality effects)
     for (const s of SENSORS) {
-      ctx.beginPath(); ctx.arc(sx(s.x), sy(s.y), s.range * scale, 0, Math.PI * 2);
+      // draw EO/IR at its EFFECTIVE range so night/rain degradation is honest
+      const rEff = s.sensorType === "EO_IR" ? s.range * eoFactor() : s.range;
+      ctx.beginPath(); ctx.arc(sx(s.x), sy(s.y), rEff * scale, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(57,160,196,0.035)"; ctx.fill();
       ctx.strokeStyle = "rgba(57,160,196,0.20)"; ctx.setLineDash([4, 6]); ctx.lineWidth = 1; ctx.stroke();
       ctx.setLineDash([]);
+      if (s.mask) {
+        // terrain shadow: coverage lost to the ridge line for low targets
+        for (const m of s.mask) {
+          ctx.beginPath();
+          ctx.arc(sx(s.x), sy(s.y), s.range * scale, -m.to, -m.from);
+          ctx.arc(sx(s.x), sy(s.y), (m.beyond || 0) * scale, -m.from, -m.to, true);
+          ctx.closePath();
+          ctx.fillStyle = "rgba(2,4,8,0.45)"; ctx.fill();
+        }
+      }
       drawSensor(s);
     }
     // effector envelopes + effectors (idle ones greyed in HUB)
@@ -2334,7 +2532,7 @@
     const x = sx(t.dx != null ? t.dx : t.x), y = sy(t.dy != null ? t.dy : t.y);
     const col = COLORS[t.identity] || COLORS.UNKNOWN;
     const sel = t.trackId === S.selected;
-    const alpha = t.fade != null ? t.fade : 1;
+    const alpha = (t.fade != null ? t.fade : 1) * (t.state === "ASSESSING" ? 0.55 : 1);
 
     // engagement beam (kept even at scale - only a few are ever active at once)
     if (t.state === "ENGAGING" && t.engEff) {
@@ -2413,7 +2611,7 @@
     // label: blue tracks show platform + altitude; threats show id + track quality
     if (t.state !== "NEUTRALIZED") {
       const label = isBlue(t) && t.platform
-        ? `${t.platform} ${Math.round(t.altMeters || 0)}m`
+        ? `${t.platform}${(t.altMeters || 0) >= 5 ? " " + Math.round(t.altMeters) + "m" : ""}`
         : `${t.trackId.replace("TRK-", "")} TQ${Math.floor(t.tq)}`;
       placeLabel(label, x + 10, y + 3, isBlue(t) ? "#86b9e8" : "#9fb0c4", "9px " + MONO, "left");
     }
@@ -2427,6 +2625,7 @@
     renderScoreboard();
     renderFederation();
     $("envChip").textContent = (isNight() ? "NIGHT" : "DAY") + " \u00b7 " + S.wx;
+    renderQueue();
     const active = [...S.tracks.values()].filter((t) => t.state !== "NEUTRALIZED");
     $("sRed").textContent = active.filter(isRed).length;
     $("sBlue").textContent = active.filter(isBlue).length;
@@ -2476,8 +2675,8 @@
         <dt>Platform</dt><dd>${t.platform || (t.classificationType || "UNKNOWN").replace(/_/g, " ")}</dd>
         <dt>Service</dt><dd>${t.service || "\u2014"}</dd>
         <dt>Altitude</dt><dd>${Math.round(t.altMeters || 0)} m MSL</dd>
-        <dt>Signature</dt><dd>${isBlue(t) ? "IFF / cooperative" : t.emitting === false ? "comms-silent (RF-blind)" : "RF emitting"}</dd>
-        <dt>Flight profile</dt><dd>${isBlue(t) ? "patrol" : ({ direct: "direct attack", lowIngress: "low ingress", cruise: "cruise / OWA", isr: "ISR standoff orbit" }[t.profile] || "\u2014")}</dd>
+        <dt>Signature</dt><dd>${isBlue(t) ? (t.civil ? "ADS-B / AIS" : "IFF / cooperative") : t.emitting === false ? "comms-silent (RF-blind)" : "RF emitting"}</dd>
+        <dt>Flight profile</dt><dd>${isBlue(t) ? (t.civil ? (t.surface ? "surface transit (AIS)" : "civil corridor (ADS-B)") : "patrol") : ({ direct: "direct attack", lowIngress: "low ingress", cruise: "cruise / OWA", isr: "ISR standoff orbit", clutter: "erratic / low-slow" }[t.profile] || "\u2014")}</dd>
         <dt>Range to asset</dt><dd>${(rng / 1000).toFixed(1)} km</dd>
         <dt>Time to impact</dt><dd style="${etaColor}">${etaStr}</dd>
         <dt>Sensors</dt><dd>${t.contributingSensors.length || 0}</dd>
@@ -2495,6 +2694,47 @@
     $("btnTask").onclick = taskSensor;
     $("btnEngage").onclick = engage;
   }
+
+  // ---- threat evaluation & weapon assignment (TEWA) ----
+  // Ranked threat queue with recommended pairings. WEAPONS TIGHT = human-in-
+  // the-loop (operator approves each release); WEAPONS FREE = human-on-the-
+  // loop (C2 auto-releases the top authorized recommendation on a cadence).
+  function threatQueue() {
+    const reds = [...S.tracks.values()].filter((t) => isRed(t) && t.state === "ACTIVE" && t.intent !== "transit");
+    return reds.map((t) => {
+      const rng = dist(t.x, t.y, 0, 0);
+      const eta = t.speed > 0 ? rng / t.speed : 1e9;
+      return { t, eta, rec: bestEffector(t), auth: authorize(t) };
+    }).sort((a, b) => a.eta - b.eta).slice(0, 5);
+  }
+  function renderQueue() {
+    const q = threatQueue();
+    const mode = S.wcs === "WEAPONS_FREE" ? "auto-release (on the loop)"
+      : S.wcs === "WEAPONS_TIGHT" ? "consent required (in the loop)" : "holding";
+    const body = $("queueBody");
+    if (!q.length) { body.innerHTML = '<p class="empty">No active threats.</p>'; return; }
+    body.innerHTML = `<div style="font:9px ${MONO};color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">TEWA \u00b7 ${mode}</div>` +
+      q.map(({ t, eta, rec, auth }) => {
+        const col = COLORS[t.identity] || COLORS.UNKNOWN;
+        const etaStr = eta > 3600 ? "\u2014" : eta >= 60 ? Math.floor(eta / 60) + "m" + String(Math.round(eta % 60)).padStart(2, "0") : Math.round(eta) + "s";
+        const recStr = auth.ok ? `\u2192 ${rec.effectorId}` : `<span style="color:var(--faint)">${auth.code.replace(/_/g, " ").toLowerCase()}</span>`;
+        return `<div class="eff" style="cursor:pointer" data-sel="${t.trackId}">
+          <span class="dot" style="background:${col}"></span>
+          <span class="nm">${t.trackId}<small>${(t.classificationType || "").replace(/_/g, " ")} \u00b7 impact ${etaStr} \u00b7 ${recStr}</small></span>
+          <button class="sbtn" style="padding:1px 8px;flex:0 0 auto" data-tid="${t.trackId}" ${auth.ok && S.wcs !== "WEAPONS_FREE" ? "" : "disabled"} title="${auth.ok ? "Release " + rec.effectorId : auth.detail}">\u2713</button>
+        </div>`;
+      }).join("");
+  }
+  $("queueBody").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-tid]");
+    if (b) {
+      const t = S.tracks.get(b.dataset.tid);
+      if (t) { selectTrack(t.trackId); engageTrack(t, false); }
+      return;
+    }
+    const row = ev.target.closest("[data-sel]");
+    if (row) selectTrack(row.dataset.sel);
+  });
 
   // ---- selection / hit testing ----
   function selectTrack(id) { S.selected = id; renderRail(); }
@@ -2658,7 +2898,48 @@
     return L.join("\n");
   }
 
-  function showAAR() { buildAAR(); $("aarBack").hidden = false; }
+  // mini plot renderer for the replay scrubber: rings, zones, asset, contacts
+  function renderReplay(i) {
+    const cv = $("repCv");
+    const w = cv.clientWidth || 600, h = cv.clientHeight || 170;
+    cv.width = w; cv.height = h;
+    const c2 = cv.getContext("2d");
+    c2.fillStyle = "#0a0d12"; c2.fillRect(0, 0, w, h);
+    const sc = (Math.min(w, h) / 2 - 8) / AO_RADIUS;
+    const mx = (x) => w / 2 + x * sc, my = (y) => h / 2 - y * sc;
+    c2.strokeStyle = "rgba(120,150,180,0.12)";
+    for (const r of RINGS) { c2.beginPath(); c2.arc(w / 2, h / 2, r * sc, 0, Math.PI * 2); c2.stroke(); }
+    c2.strokeStyle = "rgba(255,66,86,0.3)"; c2.setLineDash([4, 3]);
+    for (const z of SCN.noFire || []) { c2.beginPath(); c2.arc(mx(z.x), my(z.y), z.r * sc, 0, Math.PI * 2); c2.stroke(); }
+    c2.setLineDash([]);
+    c2.strokeStyle = "#cdd9e6"; c2.beginPath(); c2.arc(w / 2, h / 2, 4, 0, Math.PI * 2); c2.stroke();
+    const rep = S.replay || [];
+    const f = rep[i];
+    if (!f) {
+      c2.fillStyle = "#4b586b"; c2.font = "11px " + MONO; c2.textAlign = "center";
+      c2.fillText("no replay recorded yet - run the fight, then reopen", w / 2, h / 2 - 14);
+      $("repClock").textContent = "--:--:--";
+      return;
+    }
+    for (const [x, y, ident, dead] of f.snap) {
+      if (dead) { c2.fillStyle = "#3a4452"; c2.fillRect(mx(x) - 1, my(y) - 1, 2, 2); continue; }
+      c2.fillStyle = IDENT_COLOR[ident] || "#9aa7b5";
+      c2.beginPath(); c2.arc(mx(x), my(y), 2.2, 0, Math.PI * 2); c2.fill();
+    }
+    c2.fillStyle = "#76859b"; c2.font = "10px " + MONO; c2.textAlign = "left";
+    c2.fillText(`${f.defeated} defeated \u00b7 ${f.leakers} leakers \u00b7 integrity ${f.integ}%`, 8, h - 8);
+    $("repClock").textContent = f.clock;
+  }
+  function showAAR() {
+    buildAAR();
+    $("aarBack").hidden = false;
+    const rep = S.replay || [];
+    const sl = $("repSlider");
+    sl.max = String(Math.max(0, rep.length - 1));
+    sl.value = sl.max;
+    sl.oninput = () => renderReplay(+sl.value);
+    renderReplay(+sl.value);
+  }
   function hideAAR() { $("aarBack").hidden = true; }
 
   function showHelp() { $("helpBack").hidden = false; }
@@ -2817,6 +3098,7 @@
   bindSeg("transSeg", "transport");
   bindSeg("baseSeg", "basemap");
   bindSeg("wxSeg", "wx");
+  bindSeg("todSeg", "tod");
 
   function onArchChange() {
     computeCoverage();
@@ -2893,6 +3175,7 @@
   $("regBack").addEventListener("click", (e) => { if (e.target === $("regBack")) hideRegional(); });
   $("helpClose").onclick = hideHelp;
   $("helpDone").onclick = hideHelp;
+  $("helpTour").onclick = () => { hideHelp(); startTour(); };
   $("helpBack").addEventListener("click", (e) => { if (e.target === $("helpBack")) hideHelp(); });
   document.addEventListener("keydown", (e) => {
     if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
@@ -2922,6 +3205,7 @@
       nl.classList.add("on");
       logEvent("INFO", "INFO", "C2-NODE-01 lost \u00B7 NODE-02 continues from shared COP");
       if (S.echelon.bn) logEvent("INFO", "INFO", "BN-7 retains the shared COP \u2014 regiment picture intact");
+      if (S.echelon.bn) logEvent("GRANTED", "GRANTED", "AUTHORITY HANDOVER \u00b7 BN-7 assumes fire-control approval (+0.8 s order latency)");
       toast("ok", "Node lost \u2014 fight continues on NODE-02");
     } else {
       S.node = "C2-NODE-01"; nl.classList.remove("on");
@@ -3133,6 +3417,8 @@
     S.view = "ALL"; applySeg("viewSeg", "view", "ALL");
     S.nodeLost = false; S.node = "C2-NODE-01"; $("nodeLost").classList.remove("on");
     S.degraded = false; $("btnDegrade").textContent = "Degrade comms";
+    for (const s of SENSORS) { s.dwellUntil = 0; s.dwellTrack = null; }
+    S.replay = [];
     if (!S.live) {
       for (const b of SCN.blue) spawnBlue(b);   // joint Blue force air (platform/service/altitude)
       // opening laydown varies run to run (seeded): threat profiles, identity
@@ -3145,6 +3431,11 @@
           t0.declareAt = 6000 + rand() * 12000;
         }
       }
+      // ambient civil picture from the start (airliners in the corridor, boats
+      // in the San Diego lanes)
+      spawnCivAir();
+      if (rand() < 0.5) spawnCivAir();
+      if (S.scenario === "sandiego") { spawnCivBoat(); spawnCivBoat(); }
       S.ambT = 6 + rand() * 10;   // first ambient arrival
     }
     $("log").innerHTML = "";
@@ -3170,6 +3461,51 @@
     `<span><i style="background:#b08cff;border-radius:1px"></i>5G</span>` +
     `<span><i style="background:#ff425622;border:1px dashed #ff4256aa;border-radius:1px"></i>No-fire</span>` +
     `<span style="opacity:.85">Joint: USA \u00B7 USN \u00B7 USMC \u00B7 USAF</span>`;
+
+  // ---- guided tour: six spotlight steps for first-time viewers ----
+  const TOUR_STEPS = [
+    { sel: "#cuas", title: "The Common Operating Picture", text: "One fused Red + Blue picture from every sensor. Click any contact to inspect and engage it. Real satellite imagery of the operating area sits under the overlay (SAT basemap)." },
+    { sel: "#scoreboard", title: "Engagement outcomes", text: "Live scoreboard: defeats, leakers, asset integrity, and the notional cost exchange - what you spent vs the threat value you defeated." },
+    { sel: "#queueCard", title: "Engagement queue (TEWA)", text: "Ranked threats with recommended pairings. WEAPONS TIGHT: you approve each release. WEAPONS FREE: the C2 releases automatically while you supervise." },
+    { sel: "#roleSeg", title: "Authority gates", text: "Role and weapons-control status gate every shot, alongside track quality, feasibility, and collateral geometry (no-fire zones)." },
+    { sel: "#btnAuto", title: "One-click brief", text: "Auto-play narrates the whole thesis hands-free: raid, fusion, gated fires, remote tasking, any-sensor/any-shooter, echelon, node loss, outcomes." },
+    { sel: "#btnHelp", title: "Everything else", text: "Weather and time-of-day, degraded comms, decoys, silent drones, mass raids, and the After Action Review with a replay scrubber. ? opens help. Have at it." },
+  ];
+  let _tourEl = null, _tourStep = 0;
+  function endTour() {
+    if (_tourEl) _tourEl.remove();
+    _tourEl = null;
+    try { localStorage.setItem("cuasTourDone", "1"); } catch (e) {}
+  }
+  function showTourStep() {
+    const st = TOUR_STEPS[_tourStep];
+    if (!st) { endTour(); return; }
+    const tgt = document.querySelector(st.sel);
+    if (!tgt) { _tourStep++; showTourStep(); return; }
+    if (!_tourEl) {
+      _tourEl = document.createElement("div");
+      _tourEl.style.cssText = "position:fixed;inset:0;z-index:900;background:rgba(3,6,10,0.55)";
+      document.body.appendChild(_tourEl);
+    }
+    const r = tgt.getBoundingClientRect();
+    const below = r.bottom + 190 < innerHeight;
+    _tourEl.innerHTML = `
+      <div style="position:fixed;left:${Math.max(4, r.left - 6)}px;top:${Math.max(4, r.top - 6)}px;width:${Math.min(r.width + 12, innerWidth - 8)}px;height:${r.height + 12}px;border:1.5px solid #39a0c4;border-radius:6px;box-shadow:0 0 0 4000px rgba(3,6,10,0.55);pointer-events:none"></div>
+      <div style="position:fixed;left:${Math.min(Math.max(12, r.left), innerWidth - 340)}px;top:${below ? r.bottom + 14 : Math.max(12, r.top - 180)}px;width:320px;background:#10151d;border:1px solid #1f2937;border-radius:8px;padding:14px 16px;font:12px system-ui;color:#c2cedd">
+        <div style="font:600 13px system-ui;color:#e7eef7;margin-bottom:6px">${st.title} <span style="color:#4b586b;font-weight:400">\u00b7 ${_tourStep + 1}/${TOUR_STEPS.length}</span></div>
+        <div style="line-height:1.5">${st.text}</div>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+          <button class="sbtn" id="tourSkip">Skip</button>
+          ${_tourStep > 0 ? '<button class="sbtn" id="tourBack">Back</button>' : ""}
+          <button class="sbtn primary" id="tourNext">${_tourStep === TOUR_STEPS.length - 1 ? "Done" : "Next"}</button>
+        </div>
+      </div>`;
+    $("tourSkip").onclick = endTour;
+    $("tourNext").onclick = () => { _tourStep++; showTourStep(); };
+    const tb = document.getElementById("tourBack");
+    if (tb) tb.onclick = () => { _tourStep--; showTourStep(); };
+  }
+  function startTour() { _tourStep = 0; showTourStep(); }
 
   // ---- main loops ----
   let lastT = perf();
@@ -3198,6 +3534,13 @@
     const wxq = (qs.get("wx") || "").toUpperCase();
     const wxRoll = (() => { const r = rand(); return r < 0.6 ? "CLEAR" : r < 0.85 ? "WIND" : "RAIN"; })();
     applySeg("wxSeg", "wx", ["CLEAR", "WIND", "RAIN"].includes(wxq) ? wxq : wxRoll);
+    const todq = (qs.get("tod") || "").toUpperCase();
+    if (["DAY", "NIGHT"].includes(todq)) applySeg("todSeg", "tod", todq);
+    // shareable presets: ?scn=sandiego|elpaso & ?arch=NETWORKED|HUB
+    const scnq = (qs.get("scn") || "").toLowerCase();
+    if (SCENARIOS[scnq] && scnq !== S.scenario) applyScenario(scnq);
+    const archq = (qs.get("arch") || "").toUpperCase();
+    if (archq === "HUB" || archq === "NETWORKED") applySeg("archSeg", "arch", archq);
     resize();
     window.addEventListener("resize", resize);
     const live = detectBackend();
@@ -3211,13 +3554,29 @@
       resetScenario();
       logEvent("INFO", "INFO", "Embedded simulation \u00B7 SIM mode");
       logEvent("INFO", "INFO", "Run seed " + SEED + " \u00B7 append ?seed=" + SEED + " to replay this laydown");
+      logEvent("INFO", "INFO", "COP build " + COP_BUILD);
       logEvent("INFO", "INFO", "Conditions: " + (isNight() ? "NIGHT" : "DAY") + " \u00B7 " + S.wx + (S.wx === "WIND" ? " \u00B7 small UAS slowed" : S.wx === "RAIN" ? " \u00B7 EO/IR + DE degraded" : "") + (isNight() ? " \u00B7 EO/IR degraded" : ""));
     }
     setInterval(renderRail, 300);   // keep counts / TQ / magazines live
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
     if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
-      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt };
+      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, engageTrack, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay };
     }
+    // small screens get an honest gate rather than a broken console
+    if (!qs.has("debug") && Math.min(window.innerWidth, window.innerHeight) < 560) {
+      const gate = document.createElement("div");
+      gate.style.cssText = "position:fixed;inset:0;z-index:950;background:#0a0d12;display:flex;align-items:center;justify-content:center;padding:24px";
+      gate.innerHTML = `<div style="max-width:420px;font:14px system-ui;color:#c2cedd;line-height:1.6;text-align:center">
+        <div style="font:600 16px system-ui;color:#e7eef7;margin-bottom:10px">JIATF C-UAS C2 \u00b7 Common Operating Picture</div>
+        This tactical console is built for a desktop-size screen. On this device the controls will be cramped.
+        <div style="margin-top:16px"><button class="sbtn primary" id="gateGo" style="font-size:14px;padding:8px 18px">Continue anyway</button></div></div>`;
+      document.body.appendChild(gate);
+      gate.querySelector("#gateGo").onclick = () => gate.remove();
+    }
+    // first-visit tour (skipped in automated/debug runs; ?tour=1 forces it)
+    let tourDone = true;
+    try { tourDone = !!localStorage.getItem("cuasTourDone"); } catch (e) {}
+    if (!S.live && !qs.has("debug") && (qs.get("tour") === "1" || !tourDone)) setTimeout(startTour, 1200);
     requestAnimationFrame(loop);
   }
   boot();

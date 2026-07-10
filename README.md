@@ -50,10 +50,21 @@ backend). The satellite basemap fetches public Esri World Imagery tiles; when
 they are unreachable the COP falls back to its synthetic tactical map, so the
 page still works fully offline. All figures are simulated; every view is
 labeled for demonstration only.
-The same page also has a LIVE mode that runs against the real c2-core REST API
-and bus when c2-core serves it (that serving path lands with the Web COP PR,
-[#2](https://github.com/AzJester/C-UASC2/pull/2)).
+The same page runs in LIVE mode against the real c2-core REST API and bus
+when c2-core serves it (`make up`, then <http://localhost:8000/>).
 
+The COP models the fight with modality-true sensing (radar clutter floor,
+RF-blind comms-silent threats, EO/IR cueing and night/rain degradation),
+per-class engagement physics (flight times, directed-energy dwell, EW
+soft-kill outcomes, magazine rearm), a TEWA engagement queue with human-in
+/on-the-loop consent, battle damage assessment, no-fire collateral zones,
+threat profiles (low ingress, OWA cruise, ISR orbiters, decoys), civilian
+air and boat traffic, seeded weather and time of day, a degraded-comms
+inject, a notional cost-exchange ledger, and an AAR replay scrubber.
+Preset links: `?scn=elpaso&arch=HUB&wx=RAIN&tod=NIGHT&seed=N`.
+
+`site/index.html` is the single source; `make build-cop` regenerates the
+served and demo copies and stamps `COP_BUILD` (drift is CI-checked).
 Deployment is automated by
 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml):
 every push to `main` that touches `site/` (or on-demand dispatch) snapshots

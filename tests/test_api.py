@@ -34,6 +34,7 @@ def client():
         state.effectors.clear()
         state.engagements.clear()
         state.audit.clear()
+        state.no_fire_zones = []
         c.post("/sensors", json={"sensorId": "SEN-RAD-01", "sensorType": "RADAR", "taskable": True})
         c.post(
             "/effectors",
@@ -168,3 +169,37 @@ def test_audit_records_engagement_decision(client):
     )
     decisions = [a["decision"] for a in client.get("/audit").json()]
     assert "PERMIT" in decisions
+
+
+def test_engage_denied_over_no_fire_zone(client):
+    # Collateral geometry: kinetic fires denied over the zone, soft-kill permitted.
+    state.no_fire_zones = [{"lat": 34.20, "lon": -118.20, "radiusMeters": 3000, "label": "TEST CITY"}]
+    client.post(
+        "/effectors",
+        json={
+            "effectorId": "EFF-INT-99",
+            "effectorType": "KINETIC_INTERCEPTOR",
+            "readiness": "READY",
+            "magazine": {"remaining": 8, "capacity": 8, "unit": "rounds"},
+            "engagementEnvelope": {
+                "location": {"lat": 34.20, "lon": -118.20, "altMeters": 0},
+                "maxRangeMeters": 8000,
+                "maxAltMeters": 3000,
+            },
+        },
+    )
+    seed_track(tq=15, identity=Identity.HOSTILE)   # track sits inside the zone
+    r = client.post(
+        "/engagements",
+        headers={"X-Operator-Role": "FIRE_CONTROL_AUTHORITY"},
+        json={"trackId": "TRK-1001", "effectorId": "EFF-INT-99", "engagementType": "KINETIC", "humanConfirmation": True},
+    )
+    assert r.status_code == 403
+    assert r.json()["reasonCode"] == "COLLATERAL_HOLD"
+    # the soft-kill path through the same zone is still legal
+    r2 = client.post(
+        "/engagements",
+        headers={"X-Operator-Role": "FIRE_CONTROL_AUTHORITY"},
+        json={"trackId": "TRK-1001", "effectorId": "EFF-EW-01", "engagementType": "EW_DEFEAT", "humanConfirmation": True},
+    )
+    assert r2.status_code == 202, r2.text

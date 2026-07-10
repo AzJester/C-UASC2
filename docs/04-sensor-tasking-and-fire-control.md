@@ -160,3 +160,18 @@ competed:
   whose track is older than a configured tolerance.
 
 Continue to [§05 — Security, Authority & Safety](05-security-authority-safety.md).
+
+## Collateral geometry and battle damage assessment (reference COP additions)
+
+Two gate refinements demonstrated by the reference implementation:
+
+- **Collateral geometry (gate 3e).** The ROE authority declares no-fire zones
+  (`CUAS_NO_FIRE_ZONES` on the reference node). While a target is over a zone,
+  kinetic-class fires (guns, interceptors, directed energy) are denied with
+  `COLLATERAL_HOLD`; soft-kill effects (EW, RF takeover, net capture) remain
+  available. The web COP draws these zones and its TEWA queue recommends
+  accordingly.
+- **Battle damage assessment.** A resolved shot enters `ASSESSING` before
+  `COMPLETE`: the kill is not credited until BDA confirms, and a damaged
+  threat may resume its attack. `EngagementStatus.state` carries the new
+  `ASSESSING` value.

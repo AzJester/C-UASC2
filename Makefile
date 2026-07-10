@@ -35,10 +35,13 @@ test: ## Run the unit tests (no broker needed)
 validate-specs: ## Validate JSON Schemas / OpenAPI / AsyncAPI structure
 	$(VENV)/bin/python scripts/validate_specs.py
 
-cop-smoke: ## Headless browser smoke test of the web COP (installs Playwright + Chromium)
+cop-smoke: ## Headless browser smoke + behavior tests of the web COP (installs Playwright + Chromium)
 	$(VENV)/bin/pip install -q playwright
 	$(VENV)/bin/python -m playwright install --with-deps chromium
-	$(VENV)/bin/pytest -q tests/test_cop_smoke.py
+	$(VENV)/bin/pytest -q tests/test_cop_smoke.py tests/test_cop_behavior.py
+
+build-cop: ## Regenerate the COP distribution copies from site/index.html (stamps COP_BUILD)
+	$(PY) scripts/build_cop.py
 
 lint: ## Byte-compile all Python (cheap syntax check)
 	$(PY) -m compileall -q services scripts tests
