@@ -37,6 +37,23 @@ descend for the engineering reference.
 | Standards crosswalk | [`docs/08-standards-crosswalk.md`](docs/08-standards-crosswalk.md) | Standards / interoperability leads |
 | Decisions (ADRs) | [`docs/decisions/`](docs/decisions/) | All |
 
+## Public COP demo
+
+The **Web COP** — the leadership-demo Common Operating Picture — is published
+to GitHub Pages so anyone can view it with no install:
+
+**<https://azjester.github.io/C-UASC2/>**
+
+The published page is the standalone build ([`site/index.html`](site/index.html)):
+it runs an embedded simulation entirely in the browser and makes no backend
+calls. All figures are simulated; every view is labeled for demonstration only.
+The same page, served by `c2-core` (`make up`, then <http://localhost:8000/>),
+runs in LIVE mode against the real REST API and bus.
+
+Deployment is automated by
+[`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) on
+every push to `main` that touches `site/`.
+
 ## The runnable scaffold
 
 The interfaces are not just described, they are **specified and demonstrated** so
