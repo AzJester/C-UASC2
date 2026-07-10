@@ -701,6 +701,7 @@
       <div class="stat ready"><div class="v" id="sReady">0</div><div class="k">Effectors</div></div>
       <div class="stat"><div class="v" id="sEng">0</div><div class="k">Engaged</div></div>
       <div class="stat"><div class="v" id="sFps">60</div><div class="k">FPS</div></div>
+      <span class="modechip" id="envChip" title="Conditions &middot; affect EO/IR range, directed-energy dwell, and small-UAS speed">DAY &middot; CLEAR</span>
       <span class="modechip" id="modeChip" data-mode="SIM">SIM</span>
     </div>
   </div>
@@ -749,6 +750,14 @@
             <div class="seg" id="baseSeg">
               <button data-v="SAT" aria-pressed="true" title="Real satellite imagery of the AO (needs internet; falls back automatically)">SAT</button>
               <button data-v="TAC" title="Synthetic tactical terrain (fully offline)">TACTICAL</button>
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px;margin-bottom:0">
+            <label>Weather</label>
+            <div class="seg" id="wxSeg">
+              <button data-v="CLEAR" aria-pressed="true" title="Full sensor and effector performance">CLEAR</button>
+              <button data-v="WIND" title="Small UAS slow down (new arrivals)">WIND</button>
+              <button data-v="RAIN" title="EO/IR range and directed-energy performance degraded">RAIN</button>
             </div>
           </div>
         </div>
@@ -826,6 +835,7 @@
         <button class="sbtn" id="btnSwap" title="Change the search radar's vendor mid-scenario with zero integration and no track loss (conformance to the open interface is the only requirement)">Swap radar vendor</button>
         <button class="sbtn" id="btnEchelon" title="Federate this site node up to Battalion (BN-7) and Regiment (RGT-3) over the common bus, sharing the Red+Blue COP">Integrate up-echelon</button>
         <button class="sbtn danger" id="btnNode" title="Drop this C2 node; a second node continues the fight off the shared COP">Simulate node loss</button>
+        <button class="sbtn danger" id="btnDegrade" title="DDIL inject: bus latency makes the COP go stale (positions step, TQ drops) and engagement orders lag">Degrade comms</button>
       </div>
       <span class="ctl-div"></span>
       <div class="ctl-grp">
@@ -928,6 +938,7 @@
           <div><b style="color:#cdd9e6">&#9711; White ring</b> &mdash; the defended asset (ring tints as integrity drops)</div>
           <div><b style="color:#39a0c4">cyan / amber / violet beam</b> &mdash; air intercept / kinetic / directed-energy shot</div>
           <div><b>dashed coastline / border</b> &mdash; terrain; naval assets sit offshore in blue water</div>
+          <div><b style="color:#ff6b78">red dashed circle</b> &mdash; no-fire zone: kinetic fires prohibited over it; soft-kill (EW / RF takeover / net) only</div>
         </div>
       </div>
       <div class="aar-col">
@@ -940,6 +951,8 @@
           <div><b>Review</b> &mdash; the operational (theater) rollup and the After Action Review</div>
           <div><b>Rail</b> &mdash; COP view filter, architecture (networked vs hub), transport, basemap, authority role + weapons-control, effectors, and the audit log</div>
           <div><b>Basemap</b> &mdash; SAT is real satellite imagery of the AO (needs internet, falls back automatically); TACTICAL is the synthetic offline map</div>
+          <div><b>Weather</b> &mdash; CLEAR / WIND / RAIN: wind slows small UAS, rain shortens EO/IR and directed-energy reach; night (scenario clock) also degrades EO/IR</div>
+          <div><b>Degrade comms</b> &mdash; DDIL inject: the COP goes stale (positions step every 2.5 s, TQ drops) and engagement orders add latency</div>
           <div><b>Click a track</b> &mdash; see its detail, track quality, time-to-impact, and engage it</div>
         </div>
       </div>
@@ -950,6 +963,7 @@
         <div class="help-list">
           <div>Press <b>Auto-play brief</b>. It narrates the full thesis hands-free: one fused picture, a track-quality gate, remote tasking, any-sensor/any-shooter engagement, echelon federation, a node loss the fight survives, then outcomes. Any click hands you control.</div>
           <div>Flip <b>Architecture</b> to <b>Hub &amp; Spoke</b> to see the legacy model: fixed pairs, idle effectors, coverage gaps. Flip back and the gaps close.</div>
+          <div>Sensing is modality-true: radar loses range against low flyers, RF cannot see comms-silent drones, EO/IR needs a cue and hates night/rain. EW is a soft-kill that can be resisted or recovered from; directed energy dwells one target at a time; every shot carries a notional cost and the AAR totals the exchange. Watch for decoys, ISR orbiters, and cruise profiles with dog-legs.</div>
         </div>
       </div>
       <div class="aar-col">
@@ -991,6 +1005,19 @@
   const ROLES_RELEASE = new Set(["FIRE_CONTROL_AUTHORITY"]);
   const ROLES_TASK = new Set(["SENSOR_MANAGER", "ENGAGEMENT_OPERATOR", "FIRE_CONTROL_AUTHORITY"]);
 
+  // ---- realism model: notional economics, kinematics, engagement physics ----
+  // Costs are NOTIONAL order-of-magnitude figures for the cost-exchange story,
+  // not real program numbers. The asymmetry (cheap threat vs expensive round)
+  // is why the low-cost EW / DE / net layers matter.
+  const SHOT_COST = { EW_JAMMER: 100, RF_TAKEOVER: 100, NET_CAPTURE: 2000, DIRECTED_ENERGY: 25, KINETIC_GUN: 15000, KINETIC_INTERCEPTOR: 120000 };
+  const SHOT_COST_WEAPON = { AAM: 450000, MISSILE: 150000, GUN: 8000, SeaRAM: 900000, "C-RAM Phalanx": 40000, "HELIOS DE": 25 };
+  const THREAT_COST = { MULTIROTOR: 3000, UAS_GROUP_1: 2000, UAS_GROUP_2: 20000, FIXED_WING: 60000 };
+  // class kinematics (m/s): fixed-wing OWA cruisers are fast, small multirotors slow
+  const CLASS_SPEED = { MULTIROTOR: [15, 25], UAS_GROUP_1: [18, 30], UAS_GROUP_2: [30, 45], FIXED_WING: [50, 75] };
+  const MIN_RANGE = { KINETIC_INTERCEPTOR: 400, KINETIC_GUN: 150, NET_CAPTURE: 60, DIRECTED_ENERGY: 120, EW_JAMMER: 0, RF_TAKEOVER: 0 };
+  const SOFT_TYPES = new Set(["EW_JAMMER", "RF_TAKEOVER", "NET_CAPTURE"]);
+  const fmtCost = (n) => n >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M" : n >= 1000 ? "$" + Math.round(n / 1000) + "k" : "$" + Math.round(n);
+
   // ---- area of operations (meters, asset-centric); lat/lon used only in LIVE ----
   const AO_RADIUS = 6200;            // meters shown to edge
   const RINGS = [2000, 4000, 6000];
@@ -1007,6 +1034,11 @@
       // San Diego is also on the border: threats arrive from the sea (west) AND
       // from the south (Mexico). Spawns pick one of these axes per contact.
       threat: { angle: Math.PI, spread: 1.0, axes: [Math.PI, -Math.PI / 2] },
+      // collateral geometry: kinetic fires prohibited over these (soft-kill only)
+      noFire: [
+        { x: 4870, y: 1890, r: 2300, label: "SAN DIEGO CITY" },
+        { x: 1690, y: 3660, r: 1600, label: "SAN INTL APPROACH" },
+      ],
       sensors: [
         { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 200,   y: -150,  range: 6000 },
         { sensorId: "SEN-EO-03",   sensorType: "EO_IR", vendor: "Vendor C", service: "USA",  x: 2900,  y: -800,  range: 3600 },
@@ -1037,6 +1069,9 @@
         { identity: "ASSUMED_FRIEND", platform: "RQ-21A", service: "USMC", cls: "UAS_GROUP_3", alt: 1500, ox: 2200, oy: 2000, orad: 900, ospeed: 0.18, speed: 40 },
         { identity: "FRIEND", platform: "RQ-7B", service: "USA", cls: "UAS_GROUP_3", alt: 2400, ox: 1600, oy: -1600, orad: 600, ospeed: 0.30, speed: 45 },
         { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: -2600, oy: -1900, orad: 1300, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 3200 },
+        { identity: "FRIEND", platform: "F-35C", service: "USN", cls: "FIXED_WING", alt: 9100, ox: -1800, oy: 2500, orad: 1600, ospeed: 0.16, speed: 200, armed: true, weapon: "AAM", weaponRange: 4500, weaponCooldown: 2.2 },
+        { identity: "FRIEND", platform: "MH-60S", service: "USN", cls: "ROTARY", alt: 250, ox: -3600, oy: -2600, orad: 650, ospeed: 0.27, speed: 70, armed: true, weapon: "GUN", weaponRange: 1800 },
+        { identity: "FRIEND", platform: "UH-1Y", service: "USMC", cls: "ROTARY", alt: 350, ox: 1300, oy: -2600, orad: 600, ospeed: 0.24, speed: 75 },
       ],
     },
     elpaso: {
@@ -1046,6 +1081,11 @@
       terrain: "border",
       borderY: -2000,                                    // Mexico south of this meters-Y
       threat: { angle: -Math.PI / 2, spread: 1.1 },     // inbound from the south (border)
+      // collateral geometry: kinetic fires prohibited over these (soft-kill only)
+      noFire: [
+        { x: -3800, y: -800, r: 2200, label: "EL PASO CITY" },
+        { x: 500, y: -4400, r: 2400, label: "CROSS-BORDER \u00b7 MEXICO" },
+      ],
       sensors: [
         { sensorId: "SEN-RAD-01",  sensorType: "RADAR", vendor: "Vendor A", service: "USA",  x: 0,     y: -150,  range: 6000 },
         { sensorId: "SEN-RF-02",   sensorType: "RF",    vendor: "Vendor B", service: "USA",  x: -1500, y: 600,   range: 5200 },
@@ -1071,6 +1111,8 @@
         { identity: "ASSUMED_FRIEND", platform: "RQ-21A", service: "USMC", cls: "UAS_GROUP_3", alt: 1500, ox: -2200, oy: 1500, orad: 900, ospeed: 0.18, speed: 40 },
         { identity: "FRIEND", platform: "RQ-7B", service: "USA", cls: "UAS_GROUP_3", alt: 2400, ox: 1800, oy: 1500, orad: 600, ospeed: 0.30, speed: 45 },
         { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: -500, oy: -1400, orad: 1400, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 3200 },
+        { identity: "FRIEND", platform: "AH-64E", service: "USA", cls: "ROTARY", alt: 200, ox: -1900, oy: -1100, orad: 700, ospeed: 0.28, speed: 80, armed: true, weapon: "MISSILE", weaponRange: 3500, weaponCooldown: 3.0 },
+        { identity: "FRIEND", platform: "UH-72A", service: "USA", cls: "ROTARY", alt: 250, ox: 2600, oy: 600, orad: 550, ospeed: 0.26, speed: 65 },
       ],
     },
   };
@@ -1123,7 +1165,7 @@
     live: false,
     t0: 0,
     swapFlash: -1e9,
-    stats: { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, misses: 0, defeatTimes: [] },
+    stats: { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, misses: 0, defeatTimes: [], costSpent: 0, threatValue: 0, softKills: 0, cheapKills: 0 },
     events: [],                              // structured timeline for the After Action Review
     runStart: null,                          // perf() at the start of the current engagement run
     paused: false,                           // SIM time frozen (presentation control)
@@ -1138,6 +1180,8 @@
     coverage: null,                          // cached {netPct, hubPct, gap:[{x,y}]}
     transport: "BOTH",                       // BOTH | MANET | 5G | OFF (data transport overlay)
     basemap: "SAT",                          // SAT (real imagery) | TAC (synthetic tactical)
+    wx: "CLEAR",                             // CLEAR | WIND | RAIN (seeded per run)
+    degraded: false,                         // DDIL inject: stale COP + order latency
   };
 
   function isCrossVendor(track, eff) {
@@ -1171,6 +1215,7 @@
     if (rand() < pk) {
       t.state = "NEUTRALIZED";
       recordDefeat(firstSeen);
+      creditKill(t, opts.eff || null);
       if (opts.isAir) S.stats.airKills++;
       return true;
     }
@@ -1178,6 +1223,98 @@
     S.stats.misses++;
     logEvent("MISS", "MISS", `MISS \u00b7 ${t.trackId} survived ${opts.label || "engagement"} \u00b7 re-engaging`);
     return false;
+  }
+
+  // cost-exchange ledger: credit the defeated threat's value, and track how
+  // much of the fight the cheap layers (EW / RF / net / DE) carried
+  function creditKill(t, eff) {
+    const v = t.decoy ? 500 : (THREAT_COST[t.classificationType] || 5000);
+    S.stats.threatValue += v;
+    if (eff && SOFT_TYPES.has(eff.effectorType)) S.stats.softKills++;
+    if (eff && (SOFT_TYPES.has(eff.effectorType) || eff.effectorType === "DIRECTED_ENERGY")) S.stats.cheapKills++;
+    if (t.decoy) logEvent("INFO", "INFO", `${t.trackId} was a DECOY \u00b7 threat value ${fmtCost(v)} \u00b7 magazine burned`);
+  }
+
+  // EW soft-kill: jamming severs the control link, it does not blow anything
+  // up. Comms-silent (inertial / fiber) threats mostly shrug it off; connected
+  // ones are forced down, wander off (and may recover), or burn through.
+  function resolveJam(t, eff, engId) {
+    const silent = t.emitting === false;
+    const r = rand();
+    if (silent ? r < 0.3 : r < 0.55) {
+      t.state = "NEUTRALIZED";
+      recordDefeat(t.firstSeen);
+      creditKill(t, eff);
+      logEvent("COMPLETE", "COMPLETE", `${engId} SOFT KILL \u00b7 ${t.trackId} link severed \u00b7 forced down`);
+    } else if (!silent && r < 0.85) {
+      t.state = "ACTIVE"; t.engEff = null;
+      t.intent = "transit";
+      t.heading = Math.atan2(t.y, t.x) + (rand() - 0.5) * 0.6;   // outbound
+      logEvent("MISS", "MISS", `${engId} PARTIAL \u00b7 ${t.trackId} lost link \u00b7 wandering off-axis`);
+      setTimeout(() => {
+        const x = S.tracks.get(t.trackId);
+        if (x && x.state === "ACTIVE" && rand() < 0.5) {
+          x.intent = "attack";
+          logEvent("DECLARE", "DENY", `${x.trackId} recovered link \u00b7 re-attacking`);
+        }
+      }, 6000 + rand() * 6000);
+    } else {
+      t.state = "ACTIVE"; t.engEff = null;
+      S.stats.misses++;
+      logEvent("MISS", "MISS", `${engId} RESISTED \u00b7 ${t.trackId} ${silent ? "comms-silent: jam-resistant" : "burned through the jam"}`);
+    }
+  }
+
+  // empty magazines come back after a resupply delay (rounds/nets only)
+  function scheduleRearm(eff) {
+    if (eff.mag > 0 || eff.rearmT) return;
+    if (!(eff.unit === "rounds" || eff.unit === "rds" || eff.unit === "nets")) { eff.mag = eff.cap; return; }
+    eff.rearmT = perf() + 25000 + rand() * 15000;
+    logEvent("INFO", "INFO", `${eff.effectorId} magazine empty \u00b7 rearming`);
+  }
+
+  const noFireZoneAt = (x, y) => (SCN.noFire || []).find((z) => dist(x, y, z.x, z.y) <= z.r) || null;
+
+  // threat archetypes: how raids actually arrive. p < .35 direct attack,
+  // < .55 low ingress (under the radar clutter floor), < .75 OWA cruise with
+  // dog-legs and a terminal dive, < .85 ISR orbiter at standoff, else a decoy.
+  function spawnThreat(profileRoll, base = {}) {
+    const p = profileRoll != null ? profileRoll : rand();
+    if (p < 0.35) return spawnHostile({ ...base });
+    if (p < 0.55) return spawnHostile({ ...base, profile: "lowIngress", alt: 20 + randi(0, 30), emitting: rand() < 0.5 });
+    if (p < 0.75) {
+      const b = base.bearing != null ? base.bearing : threatBearing();
+      const r = base.r != null ? base.r : AO_RADIUS - 400;
+      const wps = [];
+      let wb = b, wr = r;
+      for (let k = 0; k < 2; k++) {
+        wr = wr * (0.55 + rand() * 0.15); wb += (rand() - 0.5) * 0.9;
+        wps.push({ x: Math.cos(wb) * wr, y: Math.sin(wb) * wr });
+      }
+      return spawnHostile({ ...base, bearing: b, r, cls: "FIXED_WING", profile: "cruise", wps, alt: 80 + randi(0, 60), emitting: rand() < 0.5 });
+    }
+    if (p < 0.85) {
+      const oR = 3500 + rand() * 1200;
+      return spawnHostile({ ...base, identity: "SUSPECT", profile: "isr", cls: "UAS_GROUP_2", alt: 800 + randi(0, 1200), r: oR, orbR: oR, emitting: true, declareAt: null });
+    }
+    return spawnHostile({ ...base, decoy: true, cls: rand() < 0.5 ? "UAS_GROUP_1" : "MULTIROTOR", emitting: true, speed: 30 + rand() * 10 });
+  }
+
+  // no-fire zones: hatched, labeled, kinetic-exclusion geometry on the plot
+  function drawNoFire() {
+    for (const z of SCN.noFire || []) {
+      const x = sx(z.x), y = sy(z.y), r = z.r * VIEW.scale;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+      ctx.strokeStyle = "rgba(255,66,86,0.09)"; ctx.lineWidth = 1;
+      for (let k = -2 * r; k < 2 * r; k += 14) {
+        ctx.beginPath(); ctx.moveTo(x + k - r, y - r); ctx.lineTo(x + k + r, y + r); ctx.stroke();
+      }
+      ctx.restore();
+      ctx.strokeStyle = "rgba(255,66,86,0.35)"; ctx.lineWidth = 1; ctx.setLineDash([6, 5]);
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      placeLabel("NO-FIRE \u00b7 " + z.label, x, y - r - 6, "rgba(255,120,130,0.55)", "9px " + MONO, "center");
+    }
   }
 
   // ---- helpers ----
@@ -1211,6 +1348,15 @@
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
 
+  // ---- environment: weather (seeded per run, override in rail or ?wx=) and
+  // day/night from the scenario clock. Conditions drive sensing and effector
+  // performance: EO/IR loses range at night and in rain, directed energy
+  // dwells longer in rain, small UAS slow down in wind.
+  const isNight = () => { const h = new Date(S.t0 + perf()).getUTCHours(); return h < 6 || h >= 19; };
+  const eoFactor = () => (isNight() ? 0.55 : 1) * (S.wx === "RAIN" ? 0.6 : 1);
+  const deDwellFactor = () => (S.wx === "RAIN" ? 1.6 : 1);
+  const windSpeedFactor = (cls) => (S.wx === "WIND" && (cls === "MULTIROTOR" || cls === "UAS_GROUP_1")) ? 0.75 : 1;
+
   // ---- track factory (SIM) ----
   function spawnHostile(opts = {}) {
     if (S.tracks.size >= MAX_TRACKS) return null;   // hard cap (browser scalability)
@@ -1225,14 +1371,21 @@
     const heading = intent === "transit"
       ? Math.atan2(-y, -x) + (rand() < 0.5 ? 1 : -1) * (0.85 + rand() * 0.55)
       : Math.atan2(-y, -x);
+    const cls = opts.cls || types[(rand() * types.length) | 0];
+    const spd = CLASS_SPEED[cls] || [18, 30];
     const t = {
       trackId: id,
       identity: opts.identity || "HOSTILE",
       intent,
       declareAt: opts.declareAt || null,   // ms after firstSeen: attack contacts declare HOSTILE
-      classificationType: opts.cls || types[(rand() * types.length) | 0],
+      classificationType: cls,
+      profile: opts.profile || "direct",   // direct | lowIngress | cruise | isr
+      wps: opts.wps || null,               // cruise dog-leg waypoints
+      orbR: opts.orbR || null,             // isr standoff orbit radius
+      emitting: opts.emitting != null ? opts.emitting : rand() < 0.7,  // false = RF-blind
+      decoy: !!opts.decoy,
       x, y,
-      speed: opts.speed || (26 + rand() * 14),     // m/s (fast UAS, demo pace)
+      speed: (opts.speed || (spd[0] + rand() * (spd[1] - spd[0]))) * windSpeedFactor(cls),
       heading,
       tq: opts.tq != null ? opts.tq : (4 + (rand() * 3 | 0)),
       altMeters: opts.alt != null ? opts.alt : (60 + (rand() * 340 | 0)),
@@ -1286,11 +1439,16 @@
         S.ambT = 12 + rand() * 22;
         const roll = rand();
         let nt = null;
-        if (roll < 0.30) nt = spawnHostile({ tq: randi(4, 6) });
-        else if (roll < 0.55) nt = spawnHostile({ identity: "SUSPECT", tq: randi(3, 5), declareAt: 7000 + rand() * 10000 });
-        else if (roll < 0.80) nt = spawnHostile({ identity: "UNKNOWN", tq: randi(2, 4), intent: rand() < 0.55 ? "attack" : "transit", declareAt: 8000 + rand() * 12000 });
-        else nt = spawnHostile({ identity: "NEUTRAL", cls: rand() < 0.5 ? "FIXED_WING" : "MULTIROTOR", intent: "transit", speed: 18 + rand() * 20, alt: 150 + randi(0, 600) });
-        if (nt) logEvent("INFO", "INFO", `New contact ${nt.trackId} \u00b7 ${nt.identity} ${nt.classificationType}`);
+        if (roll < 0.75) {
+          nt = spawnThreat(rand(), { tq: randi(3, 6) });
+          if (nt && nt.profile !== "isr" && rand() < 0.5) {
+            nt.identity = rand() < 0.6 ? "SUSPECT" : "UNKNOWN";
+            nt.declareAt = 7000 + rand() * 11000;
+          }
+        } else {
+          nt = spawnHostile({ identity: "NEUTRAL", cls: rand() < 0.5 ? "FIXED_WING" : "MULTIROTOR", intent: "transit", speed: 18 + rand() * 20, alt: 150 + randi(0, 600) });
+        }
+        if (nt) logEvent("INFO", "INFO", `New contact ${nt.trackId} \u00b7 ${nt.identity} ${nt.classificationType}${nt.emitting === false ? " \u00b7 no RF signature" : ""}`);
       }
     }
     for (const t of S.tracks.values()) {
@@ -1325,37 +1483,85 @@
           if (S.selected === t.trackId) selectTrack(null);
           continue;
         }
+      } else if (t.profile === "isr" && t.orbR) {
+        // ISR orbiter: holds a standoff ring around the asset, observing
+        const b = Math.atan2(t.y, t.x) + (t.speed / t.orbR) * dt;
+        t.x = Math.cos(b) * t.orbR; t.y = Math.sin(b) * t.orbR;
+        t.heading = b + Math.PI / 2;
       } else {
-        // steer toward asset with a little weave
-        const desired = Math.atan2(-t.y, -t.x);
+        // steer toward the current objective (next dog-leg waypoint on a
+        // cruise profile, else the asset) with a little weave
+        let gx = 0, gy = 0;
+        if (t.wps && t.wps.length) {
+          gx = t.wps[0].x; gy = t.wps[0].y;
+          if (dist(t.x, t.y, gx, gy) < 220) {
+            t.wps.shift();
+            if (!t.wps.length) logEvent("DECLARE", "DENY", `${t.trackId} terminal \u00b7 turning onto ${ASSET.name}`);
+          }
+        } else if (t.profile === "cruise" && t.altMeters > 30) {
+          t.altMeters = Math.max(20, t.altMeters - 35 * dt);   // terminal descent
+        }
+        const desired = Math.atan2(gy - t.y, gx - t.x);
         t.heading += clamp(((desired - t.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI, -0.5 * dt, 0.5 * dt);
         const weave = Math.sin(perf() / 900 + t.jitter) * 0.15;
         t.x += Math.cos(t.heading + weave) * t.speed * dt;
         t.y += Math.sin(t.heading + weave) * t.speed * dt;
       }
+      // COP display position: under degraded comms the picture goes stale -
+      // tracks render at their last bus-synced position, stepping every 2.5 s
+      if (!S.degraded || t.syncT == null || perf() - t.syncT > 2500) { t.dx = t.x; t.dy = t.y; t.syncT = perf(); }
       // track trail history (throttled)
       t._tt = (t._tt || 0) + dt;
-      if (t._tt > 0.15) { t._tt = 0; (t.trail || (t.trail = [])).push({ x: t.x, y: t.y }); if (t.trail.length > 18) t.trail.shift(); }
-      // fusion: track quality rises with number of covering sensors
-      let covering = 0;
+      if (t._tt > 0.15) { t._tt = 0; (t.trail || (t.trail = [])).push({ x: t.dx != null ? t.dx : t.x, y: t.dy != null ? t.dy : t.y }); if (t.trail.length > 18) t.trail.shift(); }
+      // fusion, modality-true: radar degrades against low flyers (clutter
+      // floor), RF only sees emitting targets, EO/IR is short-legged at night
+      // or in rain and needs a cue from another sensor beyond half range.
       const contrib = [];
+      let cuedByOther = false;
       for (const s of SENSORS) {
-        if (dist(t.x, t.y, s.x, s.y) <= s.range) { covering++; contrib.push(s.sensorId); }
+        if (s.sensorType === "EO_IR") continue;   // second pass, needs cue state
+        let r = s.range;
+        if (!isBlue(t)) {
+          if (s.sensorType === "RF" && t.emitting === false) continue;
+          if (s.sensorType === "RADAR") {
+            const alt = t.altMeters || 0;
+            if (alt < 60) r *= 0.55; else if (alt < 120) r *= 0.8;
+          }
+        }
+        if (dist(t.x, t.y, s.x, s.y) <= r) { contrib.push(s.sensorId); cuedByOther = true; }
       }
+      for (const s of SENSORS) {
+        if (s.sensorType !== "EO_IR") continue;
+        const r = s.range * (isBlue(t) ? 1 : eoFactor());
+        const d = dist(t.x, t.y, s.x, s.y);
+        if (d <= r && (cuedByOther || d <= r * 0.5)) contrib.push(s.sensorId);
+      }
+      const covering = contrib.length;
       t.contributingSensors = contrib;
-      const target = clamp(3 + covering * 3, 0, covering >= 2 ? 11 : 7);
+      const target = Math.max(0, clamp(3 + covering * 3, 0, covering >= 2 ? 11 : 7) - (S.degraded ? 3 : 0));
       if (!isBlue(t)) {
         if (t.tq < target) t.tq = Math.min(target, t.tq + dt * 1.2);
         else if (covering === 0 && t.tq > 2) t.tq -= dt * 0.5;
       }
       // leaker check: a hostile that reaches the asset degrades its integrity
       if (!isBlue(t) && dist(t.x, t.y, 0, 0) < 250) {
-        S.stats.leakers++;
-        const hit = 6 + Math.floor(rand() * 7);   // 6-12% per leaker
-        S.assetIntegrity = Math.max(0, S.assetIntegrity - hit);
-        logEvent("LEAKER", "LEAKER", `${t.trackId} reached ${ASSET.name} \u00b7 asset integrity -${hit}% (${S.assetIntegrity}%)`);
+        if (t.decoy) {
+          logEvent("INFO", "INFO", `${t.trackId} crossed the asset \u00b7 DECOY \u00b7 no warhead`);
+        } else {
+          S.stats.leakers++;
+          const hit = 6 + Math.floor(rand() * 7);   // 6-12% per leaker
+          S.assetIntegrity = Math.max(0, S.assetIntegrity - hit);
+          logEvent("LEAKER", "LEAKER", `${t.trackId} reached ${ASSET.name} \u00b7 asset integrity -${hit}% (${S.assetIntegrity}%)`);
+        }
         S.tracks.delete(t.trackId);
         if (S.selected === t.trackId) selectTrack(null);
+      }
+    }
+    // rearm cycle: empty magazines come back after a resupply delay
+    for (const e of S.effectors) {
+      if (e.rearmT && perf() >= e.rearmT) {
+        e.rearmT = null; e.mag = e.cap;
+        logEvent("GRANTED", "GRANTED", `${e.effectorId} rearm complete \u00b7 ${e.cap} ${e.unit}`);
       }
     }
     airDefense(dt);
@@ -1379,6 +1585,7 @@
       let best = null, bd = a.weaponRange;
       for (const h of hostiles) {
         if (h.state !== "ACTIVE") continue;
+        if (noFireZoneAt(h.x, h.y)) continue;   // collateral hold
         const d = dist(a.x, a.y, h.x, h.y);
         if (d < bd) { bd = d; best = h; }
       }
@@ -1386,12 +1593,13 @@
       best.state = "ENGAGING"; best.engEff = a.trackId; best.engAir = true; best.engT = perf();
       a.cool = a.weaponCooldown || 2.6;
       S.stats.engagements++;
-      logEvent("PERMIT", "PERMIT", `AIR INTERCEPT ${best.trackId} <- ${a.platform} (${a.service}) ${a.weapon}`);
+      S.stats.costSpent += SHOT_COST_WEAPON[a.weapon] ?? 100000;
+      logEvent("PERMIT", "PERMIT", `AIR INTERCEPT ${best.trackId} <- ${a.platform} (${a.service}) ${a.weapon} \u00b7 ${fmtCost(SHOT_COST_WEAPON[a.weapon] ?? 100000)}`);
       const tid = best.trackId, fs = best.firstSeen, pk = PK_BY_WEAPON[a.weapon] ?? 0.8, label = `${a.platform} ${a.weapon}`;
       setTimeout(() => {
         const x = S.tracks.get(tid);
         if (x && x.state === "ENGAGING" && x.engAir) resolveOutcome(x, fs, pk, { isAir: true, label });
-      }, 850);
+      }, 400 + bd * 1.2);
     }
   }
 
@@ -1409,32 +1617,47 @@
       if (S.arch === "HUB" && !HUB_EFFECTORS.has(e.effectorId)) continue;   // idle, no paired sensor
       e.cool = (e.cool || 0) - dt;
       if (e.cool > 0) continue;
-      let best = null, bd = e.maxRange;
+      const isDE = e.effectorType === "DIRECTED_ENERGY";
+      if (isDE && e.busyUntil && perf() < e.busyUntil) continue;            // one beam, one target
+      let best = null, bd = e.maxRange * (isDE && S.wx === "RAIN" ? 0.75 : 1);
       for (const h of hostiles) {
         if (h.state !== "ACTIVE") continue;
+        if (noFireZoneAt(h.x, h.y)) continue;   // collateral hold
         const d = dist(e.x, e.y, h.x, h.y);
         if (d < bd) { bd = d; best = h; }
       }
       if (!best) continue;
-      const isDE = e.effectorType === "DIRECTED_ENERGY";
       best.state = "ENGAGING"; best.engEff = e.effectorId; best.engAir = false; best.engNaval = true; best.engDE = isDE; best.engT = perf();
       e.cool = isDE ? 0.9 : 1.5;                                            // laser cycles faster
-      if (e.unit === "rounds" || e.unit === "rds") e.mag = Math.max(0, e.mag - 1);
+      if (e.unit === "rounds" || e.unit === "rds") { e.mag = Math.max(0, e.mag - 1); scheduleRearm(e); }
       S.stats.engagements++;
+      S.stats.costSpent += SHOT_COST_WEAPON[e.weapon] ?? SHOT_COST[e.effectorType] ?? 50000;
       if (isCrossVendor(best, e)) S.stats.crossVendor++;
       if (isCrossService(best, e)) S.stats.crossService++;
-      logEvent("PERMIT", "PERMIT", `${isDE ? "DE LASE" : "CIWS"} ${best.trackId} <- ${e.effectorId} (${e.vendor}/${e.service}) ${e.weapon || ""}`);
+      logEvent("PERMIT", "PERMIT", `${isDE ? "DE LASE" : "CIWS"} ${best.trackId} <- ${e.effectorId} (${e.vendor}/${e.service}) ${e.weapon || ""} \u00b7 ${fmtCost(SHOT_COST_WEAPON[e.weapon] ?? SHOT_COST[e.effectorType] ?? 50000)}`);
       const tid = best.trackId, fs = best.firstSeen, pk = PK_BY_WEAPON[e.weapon] ?? PK_BY_TYPE[e.effectorType] ?? 0.75, label = e.weapon || e.effectorId;
+      const resolveMs = isDE ? 1400 * deDwellFactor() : 350 + bd * 2;
+      if (isDE) e.busyUntil = perf() + resolveMs;
       setTimeout(() => {
         const x = S.tracks.get(tid);
-        if (x && x.state === "ENGAGING" && x.engNaval) resolveOutcome(x, fs, pk, { label });
-      }, isDE ? 450 : 650);
+        if (x && x.state === "ENGAGING" && x.engNaval) resolveOutcome(x, fs, pk, { label, eff: e });
+      }, resolveMs);
     }
   }
 
   // ---- authority gates (mirror authority.py + pairing.py) ----
   function feasibleEffectors(t) {
-    let effs = S.effectors.filter((e) => e.mag > 0 && dist(t.x, t.y, e.x, e.y) <= e.maxRange);
+    const zone = noFireZoneAt(t.x, t.y);
+    let effs = S.effectors.filter((e) => {
+      if (e.mag <= 0 || e.rearmT) return false;
+      const d = dist(t.x, t.y, e.x, e.y);
+      const rMax = e.maxRange * (e.effectorType === "DIRECTED_ENERGY" && S.wx === "RAIN" ? 0.75 : 1);
+      if (d > rMax || d < (MIN_RANGE[e.effectorType] || 0)) return false;
+      if (e.effectorType === "RF_TAKEOVER" && t.emitting === false) return false;   // nothing to take over
+      if (e.busyUntil && perf() < e.busyUntil) return false;                        // DE dwells one target at a time
+      if (zone && !SOFT_TYPES.has(e.effectorType)) return false;                    // collateral: soft-kill only
+      return true;
+    });
     if (S.arch === "HUB") {
       // legacy: a track is only engageable by the effector hard-wired to a sensor
       // that currently detects it -- everything else is a coverage gap.
@@ -1464,7 +1687,13 @@
     if (!ENGAGEABLE.has(t.identity)) return { ok: false, code: "ROE_PROHIBITED", detail: `identity ${t.identity} is not engageable` };
     if (S.wcs === "WEAPONS_TIGHT" && t.identity !== "HOSTILE") return { ok: false, code: "ROE_PROHIBITED", detail: "WEAPONS_TIGHT requires positively identified HOSTILE" };
     const feas = feasibleEffectors(t);
-    if (!feas.length) return { ok: false, code: "OUT_OF_ENVELOPE", detail: S.arch === "HUB" ? "no dedicated sensor-shooter pair covers this track (coverage gap)" : "no effector in range" };
+    if (!feas.length) {
+      const zone = noFireZoneAt(t.x, t.y);
+      if (zone && S.effectors.some((e) => e.mag > 0 && dist(t.x, t.y, e.x, e.y) <= e.maxRange)) {
+        return { ok: false, code: "COLLATERAL_HOLD", detail: `target over ${zone.label}: kinetic fires prohibited, no soft-kill effector in range` };
+      }
+      return { ok: false, code: "OUT_OF_ENVELOPE", detail: S.arch === "HUB" ? "no dedicated sensor-shooter pair covers this track (coverage gap)" : "no effector in range" };
+    }
     const eff = bestEffector(t);
     if (!eff) {
       const need = Math.min(...feas.map((e) => MIN_TQ[e.effectorType]));
@@ -1502,26 +1731,49 @@
     const eff = a.eff;
     const MAG_COST = { KINETIC_GUN: 20, KINETIC_INTERCEPTOR: 1, NET_CAPTURE: 1, EW_JAMMER: 8, RF_TAKEOVER: 8, DIRECTED_ENERGY: 5 };
     eff.mag = Math.max(0, eff.mag - (MAG_COST[eff.effectorType] || 10));
+    scheduleRearm(eff);
     const engId = "ENG-" + (++S.seq);
     const xv = isCrossVendor(t, eff), xs = isCrossService(t, eff);
+    const dEng = dist(t.x, t.y, eff.x, eff.y);
+    const cost = SHOT_COST[eff.effectorType] || 10000;
+    S.stats.costSpent += cost;
+    // engagement physics: kinetic rounds fly out (~500 m/s, demo pace), nets
+    // are slow and short, directed energy dwells on one target at a time
+    // (longer in rain, longer vs bigger airframes), EW resolves as a soft kill
+    let resolveMs;
+    if (eff.effectorType === "DIRECTED_ENERGY") {
+      resolveMs = (2500 + ((t.classificationType === "UAS_GROUP_2" || t.classificationType === "FIXED_WING") ? 1200 : 0)) * deDwellFactor();
+      eff.busyUntil = perf() + resolveMs;
+      t.engDE = true;
+    } else if (eff.effectorType === "NET_CAPTURE") resolveMs = 350 + dEng * 4;
+    else if (SOFT_TYPES.has(eff.effectorType)) resolveMs = 900 + rand() * 600;
+    else resolveMs = 350 + dEng * 2;
+    if (S.degraded) resolveMs += 1500;               // order latency on a degraded bus
     t.state = "ENGAGING";
     t.engEff = eff.effectorId;
     t.engT = perf();
     S.engaged++;
     recordEngage(t, eff);
-    toast("ok", `${EFFECT_FOR[eff.effectorType]} \u00B7 ${eff.effectorId} \u2192 ${t.trackId}`);
-    logEvent("PERMIT", "PERMIT", `ENGAGE ${t.trackId} \u00B7 paired ${eff.effectorId} (${eff.vendor}/${eff.service})${xv ? " \u00B7 CROSS-VENDOR" : ""}${xs ? " \u00B7 CROSS-SERVICE" : ""} \u00B7 auth ${S.node}`);
+    toast("ok", `${EFFECT_FOR[eff.effectorType]} \u00B7 ${eff.effectorId} \u2192 ${t.trackId} \u00B7 ${fmtCost(cost)}`);
+    logEvent("PERMIT", "PERMIT", `ENGAGE ${t.trackId} \u00B7 paired ${eff.effectorId} (${eff.vendor}/${eff.service})${xv ? " \u00B7 CROSS-VENDOR" : ""}${xs ? " \u00B7 CROSS-SERVICE" : ""} \u00B7 ${fmtCost(cost)} \u00B7 auth ${S.node}`);
     // lifecycle
-    setTimeout(() => { if (t.state === "ENGAGING") { logEvent("INFO", "INFO", `${engId} ACTIVE`); } }, 500);
+    setTimeout(() => { if (t.state === "ENGAGING") { logEvent("INFO", "INFO", `${engId} ACTIVE`); } }, 400);
     setTimeout(() => {
-      if (S.tracks.get(t.trackId) && t.state === "ENGAGING") {
-        const pk = PK_BY_TYPE[eff.effectorType] ?? 0.8;
-        if (resolveOutcome(t, t.firstSeen, pk, { label: eff.effectorId })) {
-          logEvent("COMPLETE", "COMPLETE", `${engId} COMPLETE \u00B7 ${t.trackId} defeated`);
-        }
+      if (!S.tracks.get(t.trackId) || t.state !== "ENGAGING") return;
+      if (eff.effectorType === "DIRECTED_ENERGY" && dist(t.x, t.y, eff.x, eff.y) > eff.maxRange) {
+        t.state = "ACTIVE"; t.engEff = null; t.engDE = false;
+        S.stats.misses++;
+        logEvent("MISS", "MISS", `${engId} DWELL BROKEN \u00B7 ${t.trackId} left the beam envelope`);
         renderRail();
+        return;
       }
-    }, 1500);
+      if (eff.effectorType === "EW_JAMMER") { resolveJam(t, eff, engId); renderRail(); return; }
+      const pk = PK_BY_TYPE[eff.effectorType] ?? 0.8;
+      if (resolveOutcome(t, t.firstSeen, pk, { label: eff.effectorId, eff })) {
+        logEvent("COMPLETE", "COMPLETE", `${engId} COMPLETE \u00B7 ${t.trackId} defeated`);
+      }
+      renderRail();
+    }, resolveMs);
     renderRail();
   }
 
@@ -1675,6 +1927,8 @@
 
     // hub coverage-gap overlay (legacy architecture)
     if (S.arch === "HUB" && S.coverage) drawCoverageOverlay();
+
+    drawNoFire();   // collateral kinetic-exclusion geometry
 
     // data transport layer (MANET mesh / 5G), under the node markers
     drawTransports();
@@ -2076,7 +2330,7 @@
   }
 
   function drawTrack(t) {
-    const x = sx(t.x), y = sy(t.y);
+    const x = sx(t.dx != null ? t.dx : t.x), y = sy(t.dy != null ? t.dy : t.y);
     const col = COLORS[t.identity] || COLORS.UNKNOWN;
     const sel = t.trackId === S.selected;
     const alpha = t.fade != null ? t.fade : 1;
@@ -2171,6 +2425,7 @@
   function renderRail() {
     renderScoreboard();
     renderFederation();
+    $("envChip").textContent = (isNight() ? "NIGHT" : "DAY") + " \u00b7 " + S.wx;
     const active = [...S.tracks.values()].filter((t) => t.state !== "NEUTRALIZED");
     $("sRed").textContent = active.filter(isRed).length;
     $("sBlue").textContent = active.filter(isBlue).length;
@@ -2179,11 +2434,11 @@
 
     // effector list
     $("effList").innerHTML = S.effectors.map((e) => {
-      const c = e.mag > 0 ? "var(--neutral)" : "var(--faint)";
+      const c = e.rearmT ? "var(--suspect)" : e.mag > 0 ? "var(--neutral)" : "var(--faint)";
       const pct = Math.round((e.mag / e.cap) * 100);
       return `<div class="eff"><span class="dot" style="background:${c}"></span>
-        <span class="nm">${e.effectorId}<small>${e.effectorType.replace(/_/g, " ")} &middot; ${e.vendor} &middot; ${e.service || "USA"}</small></span>
-        <span class="mag">${pct}%</span></div>`;
+        <span class="nm">${e.effectorId}<small>${e.effectorType.replace(/_/g, " ")} &middot; ${e.vendor} &middot; ${e.service || "USA"} &middot; ${fmtCost(SHOT_COST[e.effectorType] || 10000)}/shot</small></span>
+        <span class="mag">${e.rearmT ? "REARM" : pct + "%"}</span></div>`;
     }).join("");
 
     const t = S.selected && S.tracks.get(S.selected);
@@ -2210,12 +2465,18 @@
     body.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span class="trk-id">${t.trackId}</span>
-        <span class="idpill" style="color:${col};background:${col}22;border:1px solid ${col}55">${t.identity}</span>
+        <span style="display:flex;gap:6px">
+          ${!isBlue(t) && t.emitting === false ? '<span class="idpill" style="color:var(--suspect);background:#241a08;border:1px solid #6b4a12">SILENT</span>' : ""}
+          ${S.degraded ? '<span class="idpill" style="color:var(--hostile);background:#240a10;border:1px solid #6b1420">STALE</span>' : ""}
+          <span class="idpill" style="color:${col};background:${col}22;border:1px solid ${col}55">${t.identity}</span>
+        </span>
       </div>
       <dl class="kv">
         <dt>Platform</dt><dd>${t.platform || (t.classificationType || "UNKNOWN").replace(/_/g, " ")}</dd>
         <dt>Service</dt><dd>${t.service || "\u2014"}</dd>
         <dt>Altitude</dt><dd>${Math.round(t.altMeters || 0)} m MSL</dd>
+        <dt>Signature</dt><dd>${isBlue(t) ? "IFF / cooperative" : t.emitting === false ? "comms-silent (RF-blind)" : "RF emitting"}</dd>
+        <dt>Flight profile</dt><dd>${isBlue(t) ? "patrol" : ({ direct: "direct attack", lowIngress: "low ingress", cruise: "cruise / OWA", isr: "ISR standoff orbit" }[t.profile] || "\u2014")}</dd>
         <dt>Range to asset</dt><dd>${(rng / 1000).toFixed(1)} km</dd>
         <dt>Time to impact</dt><dd style="${etaColor}">${etaStr}</dd>
         <dt>Sensors</dt><dd>${t.contributingSensors.length || 0}</dd>
@@ -2243,7 +2504,7 @@
     let best = null, bd = 22;
     for (const t of S.tracks.values()) {
       if (t.state === "NEUTRALIZED") continue;
-      const d = dist(px, py, sx(t.x), sy(t.y));
+      const d = dist(px, py, sx(t.dx != null ? t.dx : t.x), sy(t.dy != null ? t.dy : t.y));
       if (d < bd) { bd = d; best = t.trackId; }
     }
     selectTrack(best);
@@ -2303,6 +2564,8 @@
       misses: st.misses || 0,
       hitRate: st.engagements ? Math.round((100 * st.defeated) / st.engagements) : 0,
       assetIntegrity: S.assetIntegrity != null ? S.assetIntegrity : 100,
+      costSpent: st.costSpent || 0, threatValue: st.threatValue || 0,
+      cheapPct: st.defeated ? Math.round((100 * (st.cheapKills || 0)) / st.defeated) : 0,
     };
   }
 
@@ -2336,6 +2599,10 @@
       ["Effectors employed", `${d.effUsed} <small>/ ${d.effTotal}</small>`, ""],
       ["Cross-vendor pairings", d.xvPct + "%", d.xvPct > 0 ? "good" : ""],
       ["Cross-service pairings", d.xsPct + "%", d.xsPct > 0 ? "good" : ""],
+      ["Interceptor cost (notional)", fmtCost(d.costSpent), ""],
+      ["Threat value defeated", fmtCost(d.threatValue), ""],
+      ["Cost exchange", !d.costSpent ? "\u2014" : d.threatValue >= d.costSpent ? "favorable" : (d.costSpent / Math.max(1, d.threatValue)).toFixed(1) + ":1 against", !d.costSpent ? "" : d.threatValue >= d.costSpent ? "good" : "bad"],
+      ["Low-cost-layer kills (EW/DE/net)", d.cheapPct + "%", d.cheapPct >= 50 ? "good" : ""],
       ["Echelon federation", d.federated ? "BN + RGT" : "Site only", d.federated ? "good" : ""],
       ["C2 resilience", d.nodeLost ? "Node loss survived" : "Nominal", ""],
     ];
@@ -2548,6 +2815,7 @@
   bindSeg("archSeg", "arch", onArchChange);
   bindSeg("transSeg", "transport");
   bindSeg("baseSeg", "basemap");
+  bindSeg("wxSeg", "wx");
 
   function onArchChange() {
     computeCoverage();
@@ -2564,21 +2832,28 @@
   $("btnSwarm").onclick = () => {
     if (S.live) { toast("ok", "swarm is driven by the scenario engine in LIVE mode"); return; }
     const n = randi(6, 11);
-    for (let i = 0; i < n; i++) spawnHostile({ bearing: threatBearing(), r: 4700 + rand() * 700, speed: 26 + rand() * 12, cls: rand() < 0.7 ? "UAS_GROUP_1" : "MULTIROTOR", tq: 4 });
-    logEvent("INFO", "INFO", `SWARM inbound \u00B7 ${n} contacts`);
+    for (let i = 0; i < n; i++) spawnThreat(rand() < 0.25 ? 0.95 : rand() * 0.5, { bearing: threatBearing(), r: 4700 + rand() * 700, tq: 4 });
+    logEvent("INFO", "INFO", `SWARM inbound \u00B7 ${n} contacts \u00B7 mixed profiles, decoys likely`);
     toast("ok", `Swarm launched \u00B7 ${n} inbound`);
   };
   $("btnRaid").onclick = () => {
     if (S.live) { toast("ok", "scale is driven by the scenario engine in LIVE mode"); return; }
     const N = randi(90, 150);
-    let n = 0;
-    for (let i = 0; i < N; i++) {
-      const b = threatAxis() + (rand() - 0.5) * SCN.threat.spread;   // mix all inbound axes
-      const r = 4200 + rand() * 2200;
-      if (spawnHostile({ bearing: b, r, speed: 22 + rand() * 18, cls: rand() < 0.5 ? "UAS_GROUP_1" : "MULTIROTOR", tq: 4 })) n++;
-    }
-    logEvent("INFO", "INFO", `MASS RAID inbound \u00B7 ${n} contacts (${S.tracks.size} total)`);
-    toast("ok", `Mass raid \u00B7 ${n} inbound \u00B7 ${S.tracks.size} total tracks`);
+    const perWave = Math.ceil(N / 3);
+    let launched = 0;
+    const pulse = (w) => {
+      if (S.live) return;
+      let n = 0;
+      for (let i = 0; i < perWave && launched < N; i++, launched++) {
+        const b = threatAxis() + (rand() - 0.5) * SCN.threat.spread;   // mix all inbound axes
+        const r = 4200 + rand() * 2200;
+        if (spawnThreat(rand() < 0.2 ? 0.95 : rand() * 0.72, { bearing: b, r, tq: 4 })) n++;
+      }
+      logEvent("INFO", "INFO", `MASS RAID wave ${w}/3 \u00B7 ${n} contacts (${S.tracks.size} total)`);
+      if (w < 3) setTimeout(() => pulse(w + 1), 2500);
+    };
+    pulse(1);
+    toast("ok", `Mass raid \u00B7 ${N} inbound across 3 waves`);
   };
   $("btnAuto").onclick = autoplay;
   $("btnSwap").onclick = swapVendor;
@@ -2588,6 +2863,17 @@
     applyScenario(b.dataset.v);
   }));
   $("btnNode").onclick = () => toggleNode();
+  $("btnDegrade").onclick = () => {
+    S.degraded = !S.degraded;
+    $("btnDegrade").textContent = S.degraded ? "Restore comms" : "Degrade comms";
+    if (S.degraded) {
+      logEvent("DENY", "DENY", "COMMS DEGRADED \u00b7 bus latency injected \u00b7 COP stale (positions step, TQ -3, orders +1.5 s)");
+      toast("deny", "Comms degraded \u00b7 COP is stale");
+    } else {
+      logEvent("INFO", "INFO", "Comms restored \u00b7 COP current");
+      toast("ok", "Comms restored");
+    }
+  };
   $("btnAAR").onclick = showAAR;
   $("btnRegional").onclick = showRegional;
   $("btnReset").onclick = () => { if (S.autoplay.running) stopAutoplay(); resetScenario(); };
@@ -2675,6 +2961,7 @@
       `<div class="sb-row defeated"><span class="l">Air intercepts</span><span class="n">${S.stats.airKills || 0}</span></div>` +
       `<div class="sb-row"><span class="l">Engageable area (net/hub)</span><span class="n"><span style="color:var(--neutral)">${(S.coverage || {}).netPct ?? 0}%</span> / <span style="color:var(--hostile)">${(S.coverage || {}).hubPct ?? 0}%</span></span></div>` +
       `<div class="sb-row"><span class="l">Effectors usable (net/hub)</span><span class="n"><span style="color:var(--neutral)">${S.effectors.length}</span> / <span style="color:var(--hostile)">${HUB_EFFECTORS.size}</span></span></div>` +
+      `<div class="sb-row"><span class="l">Cost: spent / threats (notional)</span><span class="n">${fmtCost(S.stats.costSpent || 0)} / <span style="color:${(S.stats.threatValue || 0) >= (S.stats.costSpent || 0) ? "var(--neutral)" : "var(--hostile)"}">${fmtCost(S.stats.threatValue || 0)}</span></span></div>` +
       '<div class="sb-xv"><div class="l">Cross-vendor pairings</div>' +
       `<div class="big">${pct}%</div>` +
       `<div class="sub">${xv} of ${eng} shots crossed a vendor boundary</div></div>`;
@@ -2773,7 +3060,7 @@
       setNarrator("01 \u00B7 Threat", "Mass UAS raid inbound at the perimeter");
       if (!S.live) {
         const w1 = randi(13, 19);
-        for (let i = 0; i < w1; i++) spawnHostile({ bearing: threatBearing(), r: 4800 + (i % 4) * 170, speed: 26 + rand() * 10, cls: "UAS_GROUP_1", tq: 4 });
+        for (let i = 0; i < w1; i++) spawnThreat(rand() * 0.72, { bearing: threatBearing(), r: 4800 + (i % 4) * 170, tq: 4 });
       }
       await sleep(3500); autoGuard();
 
@@ -2807,7 +3094,7 @@
       setNarrator("08 \u00B7 Resilience", "NODE-02 + BN-7 hold the shared COP \u2014 second wave inbound");
       if (!S.live) {
         const w2 = randi(8, 13);
-        for (let i = 0; i < w2; i++) spawnHostile({ bearing: threatBearing(), r: 5200 + (i % 3) * 150, speed: 26 + rand() * 10, cls: "UAS_GROUP_1", tq: 4 });
+        for (let i = 0; i < w2; i++) spawnThreat(rand() * 0.72, { bearing: threatBearing(), r: 5200 + (i % 3) * 150, tq: 4 });
       }
       await sleep(1800); autoGuard();
       await engageMany(4, "08 \u00B7 Resilience", 1000);
@@ -2837,22 +3124,25 @@
     S.tracks.clear(); S.selected = null; S.engaged = 0;
     S.effectors = JSON.parse(JSON.stringify(EFFECTORS));
     computeCoverage();
-    S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, misses: 0, defeatTimes: [] };
+    S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, misses: 0, defeatTimes: [], costSpent: 0, threatValue: 0, softKills: 0, cheapKills: 0 };
     S.events = []; S.runStart = perf();
     S.assetIntegrity = 100; S.paused = false; setPaused(false);
     S.pendingEng.clear();
     S.echelon = { bn: false, rgt: false };
     S.view = "ALL"; applySeg("viewSeg", "view", "ALL");
     S.nodeLost = false; S.node = "C2-NODE-01"; $("nodeLost").classList.remove("on");
+    S.degraded = false; $("btnDegrade").textContent = "Degrade comms";
     if (!S.live) {
       for (const b of SCN.blue) spawnBlue(b);   // joint Blue force air (platform/service/altitude)
-      // opening laydown varies run to run (seeded): count, identity mix, ranges
+      // opening laydown varies run to run (seeded): threat profiles, identity
+      // ambiguity (suspects/unknowns that may declare hostile), ranges
       const n = randi(2, 5);
       for (let i = 0; i < n; i++) {
-        const roll = rand();
-        if (roll < 0.45) spawnHostile({ r: 3600 + rand() * 1800, tq: randi(4, 6) });
-        else if (roll < 0.75) spawnHostile({ identity: "SUSPECT", r: 4000 + rand() * 1800, tq: randi(3, 5), declareAt: 6000 + rand() * 12000 });
-        else spawnHostile({ identity: "UNKNOWN", r: 4200 + rand() * 1600, tq: randi(2, 4), intent: rand() < 0.6 ? "attack" : "transit", declareAt: 9000 + rand() * 12000 });
+        const t0 = spawnThreat(rand(), { r: 3800 + rand() * 1600, tq: randi(3, 6) });
+        if (t0 && t0.profile !== "isr" && rand() < 0.45) {
+          t0.identity = rand() < 0.6 ? "SUSPECT" : "UNKNOWN";
+          t0.declareAt = 6000 + rand() * 12000;
+        }
       }
       S.ambT = 6 + rand() * 10;   // first ambient arrival
     }
@@ -2877,6 +3167,7 @@
     `<span><i style="background:#46c66e;transform:rotate(45deg);border-radius:1px"></i>Effector</span>` +
     `<span><i style="background:#78c8ff;border-radius:1px"></i>MANET</span>` +
     `<span><i style="background:#b08cff;border-radius:1px"></i>5G</span>` +
+    `<span><i style="background:#ff425622;border:1px dashed #ff4256aa;border-radius:1px"></i>No-fire</span>` +
     `<span style="opacity:.85">Joint: USA \u00B7 USN \u00B7 USMC \u00B7 USAF</span>`;
 
   // ---- main loops ----
@@ -2903,6 +3194,9 @@
     S.t0 = Date.UTC(2026, 5, 26, randi(5, 21), randi(0, 59), 0);   // start clock varies per run
     const qs = new URLSearchParams(location.search);
     if ((qs.get("basemap") || "").toUpperCase() === "TAC") applySeg("baseSeg", "basemap", "TAC");
+    const wxq = (qs.get("wx") || "").toUpperCase();
+    const wxRoll = (() => { const r = rand(); return r < 0.6 ? "CLEAR" : r < 0.85 ? "WIND" : "RAIN"; })();
+    applySeg("wxSeg", "wx", ["CLEAR", "WIND", "RAIN"].includes(wxq) ? wxq : wxRoll);
     resize();
     window.addEventListener("resize", resize);
     const live = detectBackend();
@@ -2916,11 +3210,12 @@
       resetScenario();
       logEvent("INFO", "INFO", "Embedded simulation \u00B7 SIM mode");
       logEvent("INFO", "INFO", "Run seed " + SEED + " \u00B7 append ?seed=" + SEED + " to replay this laydown");
+      logEvent("INFO", "INFO", "Conditions: " + (isNight() ? "NIGHT" : "DAY") + " \u00B7 " + S.wx + (S.wx === "WIND" ? " \u00B7 small UAS slowed" : S.wx === "RAIN" ? " \u00B7 EO/IR + DE degraded" : "") + (isNight() ? " \u00B7 EO/IR degraded" : ""));
     }
     setInterval(renderRail, 300);   // keep counts / TQ / magazines live
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
     if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
-      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp };
+      window.__CUAS__ = { S, selectTrack, taskSensor, engage, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt };
     }
     requestAnimationFrame(loop);
   }

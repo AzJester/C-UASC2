@@ -57,7 +57,7 @@ def test_cop_boots_clean(page):
 
 def test_raid_runs_and_defeats_threats(page):
     page.click("#btnRaid")
-    page.wait_for_timeout(5000)
+    page.wait_for_timeout(9000)
     stats = page.evaluate(
         "() => ({ tracks: window.__CUAS__.S.tracks.size,"
         " defeated: window.__CUAS__.S.stats.defeated,"
