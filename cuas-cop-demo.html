@@ -199,37 +199,28 @@
     letter-spacing: 0.06em;
   }
 
-  /* outcomes scoreboard (HUD) */
-  .scoreboard {
-    position: absolute;
-    top: 12px; right: 12px;
-    width: 224px;
-    background: rgba(8, 11, 16, 0.82);
-    border: 1px solid var(--hair);
-    border-radius: 6px;
-    padding: 11px 12px;
-    backdrop-filter: blur(3px);
-    z-index: 4;
-  }
-  .scoreboard h4 {
-    margin: 0 0 9px;
+  /* outcomes scoreboard: a rail card (top of the right rail, never over the
+     map) with a scannable KPI tile grid instead of a wall of stacked rows. */
+  .sb-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 4px; margin-bottom: 12px; }
+  .sb-tile { text-align: center; }
+  .sb-tile .n {
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 15px;
     font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
   }
+  .sb-tile .l { margin-top: 3px; font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .sb-tile.good .n { color: var(--neutral); }
+  .sb-tile.bad .n { color: var(--hostile); }
   .sb-row { display: flex; justify-content: space-between; align-items: baseline; margin: 5px 0; }
   .sb-row .l { font-size: 11px; color: var(--muted); }
   .sb-row .n {
     font-family: var(--mono);
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .sb-row.defeated .n { color: var(--neutral); }
-  .sb-row.leak .n { color: var(--suspect); }
   .sb-xv {
     margin-top: 9px;
     padding-top: 9px;
@@ -452,7 +443,7 @@
   }
   .scenario {
     display: flex;
-    gap: 8px 10px;
+    gap: 8px 6px;
     padding: 9px var(--pad);
     align-items: center;
     flex-wrap: wrap;
@@ -479,6 +470,18 @@
   .scenario .sbtn.primary { background: var(--accent-dim); border-color: #2c6075; color: #dcf2fb; }
   .scenario .sbtn.primary:hover { background: #235264; }
   .scenario .sbtn.primary[data-on="1"] { background: #5a1620; border-color: #6b1e2a; color: #ffc6cd; }
+  .scenario .sbsel {
+    background: var(--raised);
+    border: 1px solid var(--hair);
+    color: var(--text);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+  }
+  .scenario .sbsel:hover { background: #1c2531; border-color: #2a3645; }
   .scenario .grow { flex: 1; }
   .scenario .lbl { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.1em; }
 
@@ -719,7 +722,6 @@
         <div class="nodelost" id="nodeLost"></div>
         <div class="narrator" id="narrator"></div>
       </div>
-      <div class="scoreboard" id="scoreboard"></div>
       <div class="fedhud" id="fedhud"></div>
       <div class="legend" id="legend"></div>
       <div class="hint">click a track to select &middot; sensors &#9634; &middot; effectors &#9670;</div>
@@ -728,6 +730,8 @@
 
     <aside class="rail">
       <div class="rail-scroll">
+        <div class="card" id="scoreboard"></div>
+
         <div class="card">
           <h3>COP View</h3>
           <div class="seg" id="viewSeg">
@@ -817,11 +821,11 @@
         <div class="card">
           <h3>Audit Log</h3>
           <div class="seg" id="logFmtSeg" style="margin-bottom:8px" title="Same event feed, two formats">
-            <button data-v="TEXT" aria-pressed="true">LOG</button>
-            <button data-v="L16" title="Stylized Link-16 J-series message format &mdash; for demonstration flavor, not certified TADIL-J">J-SERIES</button>
+            <button data-v="TEXT">LOG</button>
+            <button data-v="L16" aria-pressed="true" title="Stylized Link-16 J-series message format &mdash; for demonstration flavor, not certified TADIL-J">J-SERIES</button>
           </div>
-          <div class="log" id="log"></div>
-          <div class="log" id="logL16" hidden></div>
+          <div class="log" id="log" hidden></div>
+          <div class="log" id="logL16"></div>
         </div>
       </div>
     </aside>
@@ -850,21 +854,27 @@
       <div class="ctl-grp">
         <span class="glabel">Inject</span>
         <button class="sbtn primary" id="btnAuto" title="Hands-free ~90s narrated brief: raid, fuse, gate, task, any-shooter engagement, echelon, node loss, outcomes. Any click takes over.">&#9654; Auto-play brief</button>
-        <button class="sbtn" id="btnSwarm" title="Spawn a small swarm of inbound hostiles">Launch swarm</button>
-        <button class="sbtn" id="btnRaid" title="Spawn a mass raid (~120 contacts) to show scale and saturation">Mass raid</button>
+        <select class="sbsel" id="injectSel" title="Spawn inbound contacts">
+          <option value="" selected>Inject&hellip;</option>
+          <option value="swarm">Launch swarm</option>
+          <option value="raid">Mass raid</option>
+        </select>
       </div>
       <span class="ctl-div"></span>
       <div class="ctl-grp">
         <span class="glabel">Operate</span>
-        <button class="sbtn" id="btnSwap" title="Change the search radar's vendor mid-scenario with zero integration and no track loss (conformance to the open interface is the only requirement)">Swap radar vendor</button>
-        <button class="sbtn" id="btnEchelon" title="Federate this site node up to Battalion (BN-7) and Regiment (RGT-3) over the common bus, sharing the Red+Blue COP">Integrate up-echelon</button>
-        <button class="sbtn danger" id="btnNode" title="Drop this C2 node; a second node continues the fight off the shared COP">Simulate node loss</button>
-        <button class="sbtn danger" id="btnDegrade" title="DDIL inject: bus latency makes the COP go stale (positions step, TQ drops) and engagement orders lag">Degrade comms</button>
+        <select class="sbsel" id="operateSel" title="Vendor swap, echelon federation, node loss, and comms degradation injects">
+          <option value="" selected>Operate&hellip;</option>
+          <option value="swap" title="Change the search radar's vendor mid-scenario with zero integration and no track loss">Swap radar vendor</option>
+          <option value="echelon" title="Federate this site node up to Battalion (BN-7) and Regiment (RGT-3) over the common bus">Up-echelon</option>
+          <option value="node" title="Drop this C2 node; a second node continues the fight off the shared COP">Node loss</option>
+          <option value="degrade" id="optDegrade" title="DDIL inject: bus latency makes the COP go stale and engagement orders lag">Degrade comms</option>
+        </select>
       </div>
       <span class="ctl-div"></span>
       <div class="ctl-grp">
         <span class="glabel">Audio</span>
-        <button class="sbtn" id="btnSound" aria-pressed="false" title="Synthesized alert tones for new contacts, engagements, kills, leakers, and comms status &mdash; off by default">&#128263; Sound: Off</button>
+        <button class="sbtn" id="btnSound" aria-pressed="false" title="Synthesized alert tones plus brief spoken radio callouts (hostile declared, weapons released, splash, leaker, denied) &mdash; off by default">&#128263; Sound: Off</button>
       </div>
       <span class="ctl-div"></span>
       <div class="ctl-grp">
@@ -988,7 +998,7 @@
           <div><b>Weather</b> &mdash; CLEAR / WIND / RAIN: wind slows small UAS, rain shortens EO/IR and directed-energy reach</div>
           <div><b>Time of day</b> &mdash; AUTO follows the scenario clock; NIGHT darkens the plot and cuts EO/IR to 55% (watch its ring shrink)</div>
           <div><b>Degrade comms</b> &mdash; DDIL inject: the COP goes stale (positions step every 2.5 s, TQ drops) and engagement orders add latency</div>
-          <div><b>Sound</b> &mdash; synthesized alert tones (new contact, weapons release, kill, leaker, grant/deny). Off by default; the toggle both enables it and starts audio (browsers require a click before sound can play)</div>
+          <div><b>Sound</b> &mdash; synthesized alert tones plus brief spoken radio callouts for the headline moments (hostile declared, weapons released, splash, leaker, denied). Off by default; the toggle both enables it and starts audio (browsers require a click before sound can play)</div>
           <div><b>Audit Log &middot; J-SERIES</b> &mdash; the same event feed restated as stylized Link-16 J-series lines (demo flavor, not certified TADIL-J); switch back with LOG</div>
           <div><b>Click a track</b> &mdash; see its detail, track quality, time-to-impact, and engage it</div>
         </div>
@@ -1223,7 +1233,7 @@
     wx: "CLEAR",                             // CLEAR | WIND | RAIN (seeded per run)
     tod: "AUTO",                             // AUTO (scenario clock) | DAY | NIGHT
     degraded: false,                         // DDIL inject: stale COP + order latency
-    logFormat: "TEXT",                       // TEXT | L16 (audit log rail display)
+    logFormat: "L16",                        // TEXT | L16 (audit log rail display) -- J-SERIES is the default view
     tdlSeq: 0,                                // Link-16-style message sequence counter
   };
 
@@ -1473,7 +1483,7 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "0c9fd8e9";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "7182c684";   // stamped by scripts/build_cop.py (content hash)
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
@@ -2843,11 +2853,54 @@
   function playAlert(decision) {
     if (AUDIO.muted || !AUDIO.ctx) return;
     const fn = ALERT_SOUND[decision];
-    if (!fn) return;
-    const now = AUDIO.ctx.currentTime;
-    if (AUDIO.last[decision] != null && now - AUDIO.last[decision] < 0.06) return; // debounce raid-scale bursts
-    AUDIO.last[decision] = now;
-    fn();
+    if (fn) {
+      const now = AUDIO.ctx.currentTime;
+      if (AUDIO.last[decision] == null || now - AUDIO.last[decision] >= 0.06) { // debounce raid-scale bursts
+        AUDIO.last[decision] = now;
+        fn();
+      }
+    }
+    speak(decision);
+  }
+
+  // ---- voice: brief spoken radio callouts, layered on the tones above (Web
+  // Speech API -- no assets). Reserved for the headline moments only (a
+  // hostile declared, weapons released, a kill, a leaker, a denial); routine
+  // grants and misses stay tone-only so the net doesn't talk over itself.
+  // Never lets more than one callout queue up, so a mass raid thins the
+  // chatter down to a trickle instead of minutes of backlog.
+  const CALLOUT = {
+    DECLARE:  "Hostile declared",
+    PERMIT:   "Weapons released",
+    COMPLETE: "Splash, target destroyed",
+    LEAKER:   "Leaker, leaker, threat through the wire",
+    DENY:     "Engagement denied",
+  };
+  const VOICE = { voice: null, cooldown: {} };
+  function pickVoice() {
+    if (!window.speechSynthesis) return null;
+    const vs = speechSynthesis.getVoices();
+    return vs.find((v) => /en[-_]US/i.test(v.lang || "")) || vs[0] || null;
+  }
+  if (window.speechSynthesis) {
+    VOICE.voice = pickVoice();
+    speechSynthesis.onvoiceschanged = () => { VOICE.voice = pickVoice(); };
+  }
+  function speak(decision) {
+    const phrase = CALLOUT[decision];
+    if (!phrase || AUDIO.muted || !window.speechSynthesis) return;
+    const now = perf();
+    if (VOICE.cooldown[decision] != null && now - VOICE.cooldown[decision] < 1200) return;
+    if (speechSynthesis.pending) return; // one already queued -- drop rather than pile up
+    VOICE.cooldown[decision] = now;
+    try {
+      const u = new SpeechSynthesisUtterance(phrase);
+      u.voice = VOICE.voice;
+      u.rate = 1.15;
+      u.pitch = 0.85;
+      u.volume = 0.85;
+      speechSynthesis.speak(u);
+    } catch (e) { /* no TTS engine available -- tones still carry the alert */ }
   }
 
   // ---- log + toast ----
@@ -3225,14 +3278,14 @@
     }
   }
 
-  $("btnSwarm").onclick = () => {
+  function launchSwarm() {
     if (S.live) { toast("ok", "swarm is driven by the scenario engine in LIVE mode"); return; }
     const n = randi(6, 11);
     for (let i = 0; i < n; i++) spawnThreat(rand() < 0.25 ? 0.95 : rand() * 0.5, { bearing: threatBearing(), r: 4700 + rand() * 700, tq: 4 });
-    logEvent("INFO", "INFO", `SWARM inbound \u00B7 ${n} contacts \u00B7 mixed profiles, decoys likely`);
-    toast("ok", `Swarm launched \u00B7 ${n} inbound`);
-  };
-  $("btnRaid").onclick = () => {
+    logEvent("INFO", "INFO", `SWARM inbound \u00b7 ${n} contacts \u00b7 mixed profiles, decoys likely`);
+    toast("ok", `Swarm launched \u00b7 ${n} inbound`);
+  }
+  function launchMassRaid() {
     if (S.live) { toast("ok", "scale is driven by the scenario engine in LIVE mode"); return; }
     const N = randi(90, 150);
     const perWave = Math.ceil(N / 3);
@@ -3245,23 +3298,15 @@
         const r = 4200 + rand() * 2200;
         if (spawnThreat(rand() < 0.2 ? 0.95 : rand() * 0.72, { bearing: b, r, tq: 4 })) n++;
       }
-      logEvent("INFO", "INFO", `MASS RAID wave ${w}/3 \u00B7 ${n} contacts (${S.tracks.size} total)`);
+      logEvent("INFO", "INFO", `MASS RAID wave ${w}/3 \u00b7 ${n} contacts (${S.tracks.size} total)`);
       if (w < 3) setTimeout(() => pulse(w + 1), 2500);
     };
     pulse(1);
-    toast("ok", `Mass raid \u00B7 ${N} inbound across 3 waves`);
-  };
-  $("btnAuto").onclick = autoplay;
-  $("btnSwap").onclick = swapVendor;
-  $("btnEchelon").onclick = integrateEchelon;
-  document.querySelectorAll("#scnSeg button").forEach((b) => b.addEventListener("click", () => {
-    if (S.autoplay.running) stopAutoplay();
-    applyScenario(b.dataset.v);
-  }));
-  $("btnNode").onclick = () => toggleNode();
-  $("btnDegrade").onclick = () => {
+    toast("ok", `Mass raid \u00b7 ${N} inbound across 3 waves`);
+  }
+  function degradeComms() {
     S.degraded = !S.degraded;
-    $("btnDegrade").textContent = S.degraded ? "Restore comms" : "Degrade comms";
+    $("optDegrade").textContent = S.degraded ? "Restore comms" : "Degrade comms";
     if (S.degraded) {
       logEvent("DENY", "DENY", "COMMS DEGRADED \u00b7 bus latency injected \u00b7 COP stale (positions step, TQ -3, orders +1.5 s)");
       toast("deny", "Comms degraded \u00b7 COP is stale");
@@ -3269,7 +3314,24 @@
       logEvent("INFO", "INFO", "Comms restored \u00b7 COP current");
       toast("ok", "Comms restored");
     }
-  };
+  }
+  $("injectSel").addEventListener("change", () => {
+    const v = $("injectSel").value; $("injectSel").value = "";
+    if (v === "swarm") launchSwarm();
+    else if (v === "raid") launchMassRaid();
+  });
+  $("operateSel").addEventListener("change", () => {
+    const v = $("operateSel").value; $("operateSel").value = "";
+    if (v === "swap") swapVendor();
+    else if (v === "echelon") integrateEchelon();
+    else if (v === "node") toggleNode();
+    else if (v === "degrade") degradeComms();
+  });
+  $("btnAuto").onclick = autoplay;
+  document.querySelectorAll("#scnSeg button").forEach((b) => b.addEventListener("click", () => {
+    if (S.autoplay.running) stopAutoplay();
+    applyScenario(b.dataset.v);
+  }));
   $("btnSound").onclick = () => {
     AUDIO.muted = !AUDIO.muted;
     if (!AUDIO.muted) { audioInit(); if (AUDIO.ctx && AUDIO.ctx.state === "suspended") AUDIO.ctx.resume(); }
@@ -3361,19 +3423,23 @@
     const pct = eng ? Math.round((100 * xv) / eng) : 0;
     const integ = S.assetIntegrity;
     const integColor = integ > 66 ? "var(--neutral)" : integ > 33 ? "var(--suspect)" : "var(--hostile)";
+    const killRatio = S.live ? "\u2014" : (S.stats.leakers === 0 ? (S.stats.defeated > 0 ? S.stats.defeated + ":0" : "\u2014") : (S.stats.defeated / S.stats.leakers).toFixed(1) + ":1");
+    const tile = (cls, n, l) => `<div class="sb-tile ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
     $("scoreboard").innerHTML =
-      '<h4>Engagement Outcomes</h4>' +
-      `<div class="sb-row defeated"><span class="l">Threats defeated</span><span class="n">${S.stats.defeated}</span></div>` +
-      `<div class="sb-row leak"><span class="l">Leakers (through)</span><span class="n">${S.live ? "\u2014" : S.stats.leakers}</span></div>` +
-      `<div class="sb-row"><span class="l">Asset integrity</span><span class="n" style="color:${integColor}">${S.live ? "\u2014" : integ + "%"}</span></div>` +
-      `<div class="sb-row defeated"><span class="l">Kill ratio</span><span class="n">${S.live ? "\u2014" : (S.stats.leakers === 0 ? (S.stats.defeated > 0 ? S.stats.defeated + ":0" : "\u2014") : (S.stats.defeated / S.stats.leakers).toFixed(1) + ":1")}</span></div>` +
-      `<div class="sb-row"><span class="l">In-flight</span><span class="n">${inflight}</span></div>` +
-      `<div class="sb-row"><span class="l">Avg time-to-defeat</span><span class="n">${avg ? avg.toFixed(0) + "s" : "\u2014"}</span></div>` +
-      `<div class="sb-row"><span class="l">Shots / misses</span><span class="n">${eng} / ${S.stats.misses || 0}</span></div>` +
-      `<div class="sb-row defeated"><span class="l">Air intercepts</span><span class="n">${S.stats.airKills || 0}</span></div>` +
+      '<h3>Engagement Outcomes</h3>' +
+      '<div class="sb-grid">' +
+      tile(S.stats.defeated > 0 ? "good" : "", S.stats.defeated, "Defeated") +
+      tile(!S.live && S.stats.leakers > 0 ? "bad" : "", S.live ? "\u2014" : S.stats.leakers, "Leakers") +
+      `<div class="sb-tile"><div class="n" style="color:${integColor}">${S.live ? "\u2014" : integ + "%"}</div><div class="l">Integrity</div></div>` +
+      tile(!S.live && S.stats.defeated > 0 && S.stats.leakers === 0 ? "good" : "", killRatio, "Kill ratio") +
+      tile("", inflight, "In-flight") +
+      tile("", avg ? avg.toFixed(0) + "s" : "\u2014", "Avg TTD") +
+      tile("", `${eng}/${S.stats.misses || 0}`, "Shots/miss") +
+      tile(S.stats.airKills ? "good" : "", S.stats.airKills || 0, "Air kills") +
+      '</div>' +
       `<div class="sb-row"><span class="l">Engageable area (net/hub)</span><span class="n"><span style="color:var(--neutral)">${(S.coverage || {}).netPct ?? 0}%</span> / <span style="color:var(--hostile)">${(S.coverage || {}).hubPct ?? 0}%</span></span></div>` +
       `<div class="sb-row"><span class="l">Effectors usable (net/hub)</span><span class="n"><span style="color:var(--neutral)">${S.effectors.length}</span> / <span style="color:var(--hostile)">${HUB_EFFECTORS.size}</span></span></div>` +
-      `<div class="sb-row"><span class="l">Cost: spent / threats (notional)</span><span class="n">${fmtCost(S.stats.costSpent || 0)} / <span style="color:${(S.stats.threatValue || 0) >= (S.stats.costSpent || 0) ? "var(--neutral)" : "var(--hostile)"}">${fmtCost(S.stats.threatValue || 0)}</span></span></div>` +
+      `<div class="sb-row"><span class="l">Cost: spent / threats</span><span class="n">${fmtCost(S.stats.costSpent || 0)} / <span style="color:${(S.stats.threatValue || 0) >= (S.stats.costSpent || 0) ? "var(--neutral)" : "var(--hostile)"}">${fmtCost(S.stats.threatValue || 0)}</span></span></div>` +
       '<div class="sb-xv"><div class="l">Cross-vendor pairings</div>' +
       `<div class="big">${pct}%</div>` +
       `<div class="sub">${xv} of ${eng} shots crossed a vendor boundary</div></div>`;
@@ -3543,7 +3609,7 @@
     S.echelon = { bn: false, rgt: false };
     S.view = "ALL"; applySeg("viewSeg", "view", "ALL");
     S.nodeLost = false; S.node = "C2-NODE-01"; $("nodeLost").classList.remove("on");
-    S.degraded = false; $("btnDegrade").textContent = "Degrade comms";
+    S.degraded = false; $("optDegrade").textContent = "Degrade comms";
     for (const s of SENSORS) { s.dwellUntil = 0; s.dwellTrack = null; }
     S.replay = [];
     if (!S.live) {
