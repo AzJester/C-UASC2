@@ -1393,12 +1393,14 @@
     const t = spawnHostile({ identity: "NEUTRAL", cls: "SURFACE", intent: "transit", speed: 3.5 + rand() * 6, alt: 0, emitting: true, tq: 12 });
     if (t) {
       const north = rand() < 0.5;
-      // lanes sit in the open Pacific WEST of the Point Loma peninsula (which
-      // runs to ~-117.256 on real imagery), so boats stay wet on both basemaps
+      // shipping lanes in the open Pacific, >=500 m clear of the Point Loma
+      // shoreline on real imagery. laneX anchors a lane-keeping clamp in the
+      // movement model so slow boats cannot drift ashore over a long transit.
       const outer = rand() < 0.5;
-      t.x = (outer ? -5100 : -4500) + (rand() - 0.5) * 500;
-      t.y = (north ? -1 : 1) * ((outer ? 3000 : 3600) * rand());
-      t.heading = (north ? Math.PI / 2 : -Math.PI / 2) + (rand() - 0.5) * 0.1;
+      t.laneX = (outer ? -5400 : -4900) + (rand() - 0.5) * 400;
+      t.x = t.laneX;
+      t.y = (north ? -1 : 1) * ((outer ? 2400 : 3400) * rand());
+      t.heading = (north ? Math.PI / 2 : -Math.PI / 2) + (rand() - 0.5) * 0.04;
       t.platform = CIV_BOAT[(rand() * CIV_BOAT.length) | 0];
       t.civil = true; t.surface = true;
     }
@@ -1452,7 +1454,7 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "274c14bb";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "fced748f";   // stamped by scripts/build_cop.py (content hash)
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
@@ -1619,9 +1621,11 @@
         t.y = (t.oy || 0) + Math.sin(t.orbit) * (t.orad || 700);
       } else if (t.intent === "transit") {
         // crossing traffic holds course and exits the AO
-        const weave = Math.sin(perf() / 900 + t.jitter) * (t.clutter ? 0.5 : 0.08);
+        const weave = Math.sin(perf() / 900 + t.jitter) * (t.clutter ? 0.5 : t.surface ? 0.02 : 0.08);
         t.x += Math.cos(t.heading + weave) * t.speed * dt;
         t.y += Math.sin(t.heading + weave) * t.speed * dt;
+        // boats hold their shipping lane (stays water on real imagery)
+        if (t.laneX != null) t.x = clamp(t.x, t.laneX - 300, t.laneX + 300);
         if (dist(t.x, t.y, 0, 0) > AO_RADIUS + 600) {
           S.tracks.delete(t.trackId);
           if (S.selected === t.trackId) selectTrack(null);

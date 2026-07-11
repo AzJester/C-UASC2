@@ -170,7 +170,19 @@ def test_civilians_present_and_protected(page):
     xs = page.evaluate(
         "Array.from({length: 12}, () => window.__CUAS__.spawnCivBoat().x)"
     )
-    assert max(xs) <= -4200, f"boat lane crosses land: {max(xs):.0f}"
+    assert max(xs) <= -4650, f"boat lane too close to shore: {max(xs):.0f}"
+    # and the lane-keeping clamp must pull a drifted boat back over water
+    drifted = page.evaluate(
+        """() => {
+      const C = window.__CUAS__;
+      const b = C.spawnCivBoat();
+      b.x = b.laneX + 5000;   // force it ashore
+      return new Promise(res => setTimeout(() => {
+        res({x: b.x, laneX: b.laneX});
+      }, 400));
+    }"""
+    )
+    assert drifted["x"] <= drifted["laneX"] + 301, f"lane keeping failed: {drifted}"
     assert out["denied"], "civilian traffic must never be engageable"
 
 
