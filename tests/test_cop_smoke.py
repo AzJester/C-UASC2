@@ -49,14 +49,14 @@ def test_cop_boots_clean(page):
     assert COP.exists(), "cop.html missing"
     # debug hook is exposed and the core controls are present
     assert page.eval_on_selector("#cuas", "el => !!el")
-    for ctrl in ("#btnAuto", "#btnPause", "#btnHelp", "#spdSeg", "#btnRaid", "#scoreboard", "#log"):
+    for ctrl in ("#btnAuto", "#btnPause", "#btnHelp", "#spdSeg", "#injectSel", "#operateSel", "#scoreboard", "#log"):
         assert page.query_selector(ctrl) is not None, f"missing {ctrl}"
     api = page.evaluate("() => Object.keys(window.__CUAS__ || {})")
     assert "S" in api and "resetScenario" in api, f"debug hook incomplete: {api}"
 
 
 def test_raid_runs_and_defeats_threats(page):
-    page.click("#btnRaid")
+    page.select_option("#injectSel", "raid")
     page.wait_for_timeout(9000)
     stats = page.evaluate(
         "() => ({ tracks: window.__CUAS__.S.tracks.size,"
