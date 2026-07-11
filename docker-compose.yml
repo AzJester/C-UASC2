@@ -9,7 +9,12 @@
 services:
   nats:
     image: nats:2.10
-    command: ["-js", "-m", "8222"]
+    command: ["-c", "/etc/nats/nats-server.conf"]
+    environment:
+      NATS_C2_PASSWORD: ${NATS_C2_PASSWORD:-c2-local-demo-only}
+      NATS_SIM_PASSWORD: ${NATS_SIM_PASSWORD:-sim-local-demo-only}
+    volumes:
+      - ./deploy/nats/nats-server.conf:/etc/nats/nats-server.conf:ro
     ports:
       - "4222:4222"   # client
       - "8222:8222"   # monitoring
@@ -22,8 +27,12 @@ services:
   c2-core:
     build: ./services/c2-core
     environment:
-      NATS_URL: nats://nats:4222
+      NATS_URL: nats://c2:${NATS_C2_PASSWORD:-c2-local-demo-only}@nats:4222
       C2_NODE_ID: C2-NODE-01
+      # Local interoperability key only. Override for every non-demo deployment;
+      # production authority tokens require an accredited key service / HSM.
+      C2_AUTHORITY_SIGNING_KEY: ${C2_AUTHORITY_SIGNING_KEY:-cuas-local-reference-key-not-for-production}
+      CUAS_BUS_SIGNING_KEY: ${CUAS_BUS_SIGNING_KEY:-cuas-local-reference-key-not-for-production}
     ports:
       - "8000:8000"
     depends_on:
@@ -33,10 +42,15 @@ services:
   sensor-sim:
     build: ./services/sensor-sim
     environment:
-      NATS_URL: nats://nats:4222
+      NATS_URL: nats://sim:${NATS_SIM_PASSWORD:-sim-local-demo-only}@nats:4222
       SIM_REGION: region-1
       SIM_SENSOR_ID: SEN-RAD-01
       SIM_EFFECTOR_ID: EFF-EW-01
+      C2_SCENARIO_URL: http://c2-core:8000/scenario
+      C2_AUTHORITY_SIGNING_KEY: ${C2_AUTHORITY_SIGNING_KEY:-cuas-local-reference-key-not-for-production}
+      CUAS_BUS_SIGNING_KEY: ${CUAS_BUS_SIGNING_KEY:-cuas-local-reference-key-not-for-production}
     depends_on:
       nats:
         condition: service_healthy
+      c2-core:
+        condition: service_started

@@ -16,7 +16,9 @@
       "properties": {
         "lat": { "type": "number", "minimum": -90, "maximum": 90 },
         "lon": { "type": "number", "minimum": -180, "maximum": 180 },
-        "altMeters": { "type": "number" }
+        "altMeters": { "type": "number" },
+        "frame": { "type": "string", "enum": ["WGS84"], "default": "WGS84" },
+        "altitudeReference": { "type": "string", "enum": ["WGS84_ELLIPSOID", "MSL", "AGL", "UNKNOWN"], "default": "UNKNOWN" }
       }
     },
     "measuredVelocity": {
@@ -24,7 +26,7 @@
       "additionalProperties": false,
       "properties": {
         "speedMps": { "type": "number", "minimum": 0 },
-        "courseDeg": { "type": "number", "minimum": 0, "maximum": 360 },
+        "courseDeg": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 },
         "verticalRateMps": { "type": "number" }
       }
     },
@@ -32,6 +34,22 @@
     "snrDb": { "type": "number", "description": "Signal-to-noise where applicable." },
     "rfSignature": { "type": "string", "description": "RF/protocol signature where applicable (informs CID)." },
     "modality": { "type": "string", "enum": ["RADAR", "RF", "EO", "IR", "ACOUSTIC", "OTHER"] },
-    "timeObserved": { "type": "string", "format": "date-time" }
+    "measurementUncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "referenceFrame": { "type": "string", "enum": ["LOCAL_ENU"] },
+        "confidenceLevel": { "type": "string", "enum": ["ONE_SIGMA", "NINETY_FIVE_PERCENT"] },
+        "eastVarianceM2": { "type": "number", "minimum": 0 },
+        "northVarianceM2": { "type": "number", "minimum": 0 },
+        "upVarianceM2": { "type": "number", "minimum": 0 },
+        "eastNorthCovarianceM2": { "type": "number" }
+      }
+    },
+    "observationSequence": { "type": "integer", "minimum": 0 },
+    "measurementLatencyMilliseconds": { "type": "integer", "minimum": 0 },
+    "timeObserved": { "type": "string", "format": "date-time" },
+    "timePublished": { "type": "string", "format": "date-time" },
+    "modelProvenance": { "type": "string", "maxLength": 256 }
   }
 }

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuas.mil/schemas/engagement-control.schema.json",
+  "title": "EngagementControlDirective",
+  "description": "Safety-priority control of an in-progress engagement. The reference contract currently defines ABORT only. The effector independently verifies a new, single-use authority token scoped to this directive.",
+  "type": "object",
+  "required": ["engagementId", "requestId", "trackId", "effectorId", "action", "reason", "orderedBy", "authorityToken", "authorityTokenExpiresAt", "timeOrdered", "directiveSequence"],
+  "additionalProperties": false,
+  "properties": {
+    "engagementId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "trackId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "effectorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9_:@/-]{0,127}$" },
+    "action": { "type": "string", "const": "ABORT" },
+    "reason": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "orderedBy": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "authorityToken": { "type": "string", "minLength": 20, "maxLength": 4096 },
+    "authorityTokenExpiresAt": { "type": "string", "format": "date-time" },
+    "timeOrdered": { "type": "string", "format": "date-time" },
+    "directiveSequence": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Sequence allocated by C2. The effector's ABORTED status must use a strictly greater sequence."
+    }
+  }
+}

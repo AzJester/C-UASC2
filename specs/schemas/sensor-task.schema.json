@@ -8,11 +8,11 @@
   "additionalProperties": false,
   "properties": {
     "taskId": { "type": "string" },
-    "sensorId": { "type": "string", "description": "Target sensor." },
+    "sensorId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_:@/-]{0,127}$", "description": "Target sensor; one bus-subject-safe token." },
     "taskType": {
       "type": "string",
       "enum": ["SEARCH", "CUE", "SLEW", "DWELL", "HANDOFF"],
-      "description": "CUE/SLEW/DWELL raise track quality on a specific track; HANDOFF transfers custody."
+      "description": "CUE/SLEW/DWELL request future observations on a specific track; fusion may then change uncertainty and TQ. HANDOFF transfers custody."
     },
     "trackId": { "type": "string", "description": "Track to cue/slew/dwell/handoff on (required for those task types)." },
     "bearingDeg": { "type": "number", "minimum": 0, "maximum": 360, "description": "Bearing for SLEW/SEARCH when no track is referenced." },
@@ -26,7 +26,7 @@
         "maxAltMeters": { "type": "number" }
       }
     },
-    "handoffToSensorId": { "type": "string", "description": "Destination sensor for HANDOFF." },
+    "handoffToSensorId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_:@/-]{0,127}$", "description": "Destination sensor for HANDOFF; one bus-subject-safe token." },
     "priority": { "type": "integer", "minimum": 0, "maximum": 9, "description": "Higher wins arbitration when sensors contend." },
     "requestedBy": { "type": "string", "description": "Requesting principal (for authority check + audit)." },
     "expiresAt": { "type": "string", "format": "date-time", "description": "Task auto-expires; prevents stale tasking holding a sensor." }

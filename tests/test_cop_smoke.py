@@ -49,14 +49,20 @@ def test_cop_boots_clean(page):
     assert COP.exists(), "cop.html missing"
     # debug hook is exposed and the core controls are present
     assert page.eval_on_selector("#cuas", "el => !!el")
-    for ctrl in ("#btnAuto", "#btnPause", "#btnHelp", "#spdSeg", "#injectSel", "#operateSel", "#scoreboard", "#log"):
+    for ctrl in ("#btnAuto", "#btnPause", "#btnHelpTop", "#btnHoldAbort", "#workspaceNav", "#trackList", "#spdSeg", "#injectSel", "#operateSel", "#scoreboard", "#log"):
         assert page.query_selector(ctrl) is not None, f"missing {ctrl}"
     api = page.evaluate("() => Object.keys(window.__CUAS__ || {})")
     assert "S" in api and "resetScenario" in api, f"debug hook incomplete: {api}"
 
 
 def test_raid_runs_and_defeats_threats(page):
+    # Autonomous air/naval release now defaults OFF. This raid test deliberately
+    # arms auto-release through the debug seam; normal operators use the visible
+    # two-step WEAPONS FREE confirmation.
+    page.evaluate("() => { window.__CUAS__.S.wcs='WEAPONS_FREE'; window.__CUAS__.S.autoReleaseArmed=true; }")
+    page.click("#btnExercise")
     page.select_option("#injectSel", "raid")
+    page.click("#btnExercise")
     page.wait_for_timeout(9000)
     stats = page.evaluate(
         "() => ({ tracks: window.__CUAS__.S.tracks.size,"
@@ -68,6 +74,37 @@ def test_raid_runs_and_defeats_threats(page):
     assert stats["engagements"] > 0, "no engagements ran"
     assert stats["defeated"] > 0, "nothing defeated"
     assert 0 <= stats["integrity"] <= 100
+
+
+def test_role_workspaces_and_exercise_controls_are_separated(page):
+    page.evaluate("window.__CUAS__.setWorkspace('FIRES')")
+    assert page.locator("#queueCard").is_visible()
+    assert page.locator("#authorityCard").is_visible()
+    assert not page.locator("#scoreboard").is_visible()
+    assert page.locator("#tray").is_hidden()
+    page.click("#btnExercise")
+    assert page.locator("#tray").is_visible()
+    assert page.get_attribute("#btnExercise", "aria-expanded") == "true"
+    page.click("#btnExercise")
+
+
+def test_modal_focus_moves_and_returns(page):
+    page.focus("#btnHelpTop")
+    page.click("#btnHelpTop")
+    page.wait_for_timeout(50)
+    assert page.evaluate("document.activeElement.id") == "helpClose"
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(50)
+    assert page.evaluate("document.activeElement.id") == "btnHelpTop"
+
+
+def test_space_on_button_does_not_toggle_pause(page):
+    page.evaluate("window.__CUAS__.setPaused(false)")
+    page.focus("#btnHelpTop")
+    page.keyboard.press("Space")
+    assert page.evaluate("window.__CUAS__.S.paused") is False
+    if page.locator("#helpBack").is_visible():
+        page.keyboard.press("Escape")
 
 
 def test_pause_freezes_motion(page):
@@ -84,6 +121,30 @@ def test_pause_freezes_motion(page):
     page.evaluate("() => window.__CUAS__.setPaused(false)")
     if p1 and p2:
         assert abs(p1["x"] - p2["x"]) < 1 and abs(p1["y"] - p2["y"]) < 1, "motion not frozen while paused"
+
+
+@pytest.mark.parametrize("width,height", [(1280, 720), (1920, 1080), (2560, 1440)])
+def test_fixed_site_desktop_layout_matrix(page, width, height):
+    desktop = page.context.new_page()
+    errors: list[str] = []
+    desktop.on("pageerror", lambda error: errors.append(str(error)))
+    desktop.set_viewport_size({"width": width, "height": height})
+    desktop.goto(f"file://{COP}?debug=1&basemap=tac&seed=11")
+    desktop.wait_for_timeout(500)
+    metrics = desktop.evaluate(
+        "() => ({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,"
+        "sh:document.documentElement.scrollHeight,ch:document.documentElement.clientHeight,"
+        "rootSw:document.querySelector('#cuas').scrollWidth,rootCw:document.querySelector('#cuas').clientWidth,"
+        "gate:!!document.querySelector('.workstation-gate'),command:!!document.querySelector('.commandbar'),"
+        "trackList:!!document.querySelector('#trackList')})"
+    )
+    assert metrics["sw"] <= metrics["cw"] + 1
+    assert metrics["sh"] <= metrics["ch"] + 1
+    assert metrics["rootSw"] <= metrics["rootCw"] + 1
+    assert metrics["gate"] is False
+    assert metrics["command"] and metrics["trackList"]
+    assert not errors
+    desktop.close()
 
 
 def test_no_page_scroll_and_no_console_errors(page):

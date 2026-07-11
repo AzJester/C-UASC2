@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuas.mil/schemas/audit-record.schema.json",
+  "title": "AuditRecord",
+  "description": "Tamper-evident, hash-chained command and lifecycle evidence for operator review and AAR.",
+  "type": "object",
+  "required": ["recordId", "timeRecorded", "principal", "action", "decision", "reasonCode", "recordHash"],
+  "additionalProperties": false,
+  "properties": {
+    "recordId": { "type": "string", "minLength": 1 },
+    "timeRecorded": { "type": "string", "format": "date-time" },
+    "principal": { "type": "string", "minLength": 1 },
+    "action": { "type": "string", "minLength": 1 },
+    "trackId": { "type": "string" },
+    "engagementId": { "type": "string" },
+    "requestId": { "type": "string" },
+    "effectorId": { "type": "string" },
+    "lifecycleState": { "type": "string" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "deliveryState": { "type": "string" },
+    "assessmentOutcome": { "type": "string" },
+    "decision": { "type": "string", "enum": ["PERMIT", "DENY", "GRANTED", "INFO"] },
+    "reasonCode": { "type": "string" },
+    "detail": { "type": "string" },
+    "previousRecordHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "recordHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

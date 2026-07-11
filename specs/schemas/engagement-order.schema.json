@@ -4,16 +4,44 @@
   "title": "EngagementOrder",
   "description": "A fire order from an authorized C2 node to an effector (Imperative 5). Published to cuas.engagement.order.{effectorId} on the T0 (safety/fires) QoS tier. The effector trusts the authorityToken (issued by the PDP), not the requesting node's say-so, and applies a final hardware interlock.",
   "type": "object",
-  "required": ["engagementId", "trackId", "effectorId", "orderedBy", "authorityToken", "engagementType", "timeOrdered"],
+  "required": ["engagementId", "requestId", "trackId", "effectorId", "orderedBy", "authorityToken", "authorityTokenExpiresAt", "authorityTokenScope", "orderSequence", "engagementType", "constraints", "trackSnapshotTimeObserved", "timeOrdered"],
   "additionalProperties": false,
   "properties": {
-    "engagementId": { "type": "string", "description": "Correlates the order with its status lifecycle." },
-    "trackId": { "type": "string", "description": "Target track (any sufficient-quality track, from any sensor)." },
-    "effectorId": { "type": "string", "description": "Engaging effector (any available effector; no prior pairing)." },
-    "orderedBy": { "type": "string", "description": "Issuing principal (C2 node/operator identity)." },
+    "engagementId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "description": "Correlates the order with its status lifecycle." },
+    "requestId": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Idempotency/correlation id for the originating operator request." },
+    "trackId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "description": "Target track (any sufficient-quality track, from any sensor)." },
+    "effectorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9_:@/-]{0,127}$", "description": "Engaging effector (any available effector; no prior pairing); one bus-subject-safe token." },
+    "orderedBy": { "type": "string", "minLength": 1, "maxLength": 256, "description": "Authenticated issuing principal (C2 node/operator identity)." },
     "authorityToken": {
       "type": "string",
+      "minLength": 20,
+      "maxLength": 4096,
       "description": "Short-lived signed token from the Policy Decision Point authorizing THIS track+effector+window. Verified by the effector."
+    },
+    "authorityTokenExpiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Redundant, human-readable expiry that must exactly match the signed exp claim. The signed claim remains authoritative."
+    },
+    "authorityTokenScope": {
+      "type": "object",
+      "required": ["engagementId", "requestId", "trackId", "effectorId", "engagementType", "policyVersion", "weaponsControlStatus"],
+      "additionalProperties": false,
+      "properties": {
+        "engagementId": { "type": "string" },
+        "requestId": { "type": "string" },
+        "trackId": { "type": "string" },
+        "effectorId": { "type": "string" },
+        "engagementType": { "type": "string", "enum": ["EW_DEFEAT", "RF_TAKEOVER", "KINETIC", "DIRECTED_ENERGY", "NET_CAPTURE"] },
+        "policyVersion": { "type": "string", "minLength": 1 },
+        "weaponsControlStatus": { "type": "string", "enum": ["WEAPONS_FREE", "WEAPONS_TIGHT", "WEAPONS_HOLD"] }
+      },
+      "description": "Inspectable duplicate of safety-relevant signed claims. The effector verifies exact equality with the authority token."
+    },
+    "orderSequence": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "First monotonic lifecycle sequence for this engagement. Effector status events continue from this value."
     },
     "engagementType": {
       "type": "string",
@@ -25,8 +53,9 @@
       "additionalProperties": false,
       "properties": {
         "abortIfFriendlyWithinMeters": { "type": "number", "minimum": 0 },
-        "maxEngagementSeconds": { "type": "number", "minimum": 0 },
-        "requireHumanConfirmation": { "type": "boolean", "default": true }
+        "maxEngagementSeconds": { "type": "number", "exclusiveMinimum": 0, "maximum": 600 },
+        "requireHumanConfirmation": { "type": "boolean", "default": true },
+        "humanConfirmed": { "type": "boolean", "default": false, "description": "Signed fact that the current operator explicitly confirmed this order. Required when requireHumanConfirmation is true." }
       }
     },
     "trackSnapshotTimeObserved": {

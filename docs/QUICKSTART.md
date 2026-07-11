@@ -90,11 +90,13 @@ To drive it manually, in order:
    engagement runs to COMPLETE. (Imperative 5.)
 5. **Positive control.** Try to engage the **friendly**, switch the operator role to
    **OBS**, or set **WEAPONS HOLD** — each is denied with a reason. (docs/05.)
-6. **No vendor lock-in.** Hit **Swap radar vendor** — the radar's adapter changes
-   vendor mid-scenario with zero integration and no track loss (conformance to the
-   government-owned interface is the only requirement). (docs/02.)
-7. **Resilience.** Hit **Simulate node loss** — a second C2 node continues the fight
-   off the same shared COP. **Launch swarm** shows scale.
+6. **Open-interface target.** Hit **Swap radar vendor** — the displayed adapter
+   metadata changes without track loss. This is a UI inject, not proof of a
+   zero-effort hardware swap; a real adapter must pass conformance, cyber, timing,
+   and safety qualification. (docs/02.)
+7. **Resilience workflow.** Hit **Simulate node loss** — releases inhibit while a
+   second node synchronizes the COP and reconciles reservations, then authority is
+   explicitly transferred. **Launch swarm** shows scale.
 
 ## Option B — No Docker (local Python)
 
@@ -130,8 +132,10 @@ It exercises the sequence from
 5. **Authority is enforced.** Try an engagement on a `FRIEND`/low-TQ track or
    without the right role — it is **denied** with a reason code. This is the
    positive-control boundary from [§05](05-security-authority-safety.md).
-6. **Everything is audited.** `GET /audit` shows the immutable record linking
-   track → authority decision → order → outcome.
+6. **Operational decisions are evidenced.** `GET /audit` shows the local
+   hash-chained record linking track → request → authority decision → transport →
+   lifecycle → assessment. It is tamper-evident reference evidence, not an
+   externally anchored non-repudiation service.
 
 ## Useful endpoints
 
@@ -143,7 +147,7 @@ It exercises the sequence from
 | POST | `/sensors/{id}/tasks` | remote sensor tasking |
 | POST | `/engagements` | request an engagement (runs the four gates) |
 | GET | `/engagements` | engagement lifecycle states |
-| GET | `/audit` | non-repudiation record |
+| GET | `/audit` | local hash-chained operational evidence |
 
 ## What to look at next
 

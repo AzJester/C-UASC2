@@ -4,10 +4,10 @@
   "title": "EffectorStatus",
   "description": "Effector registration/health/readiness. Published to cuas.effector.status.{effectorId}. No pairing to any sensor is recorded; pairing is computed at decision time (Imperative 5).",
   "type": "object",
-  "required": ["effectorId", "effectorType", "readiness"],
+  "required": ["effectorId", "effectorType", "readiness", "timeReported"],
   "additionalProperties": false,
   "properties": {
-    "effectorId": { "type": "string" },
+    "effectorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9_:@/-]{0,127}$" },
     "effectorType": {
       "type": "string",
       "enum": ["EW_JAMMER", "RF_TAKEOVER", "KINETIC_GUN", "KINETIC_INTERCEPTOR", "DIRECTED_ENERGY", "NET_CAPTURE", "OTHER"],
@@ -19,6 +19,7 @@
       "type": "object",
       "description": "Remaining capacity (rounds, charge, etc.).",
       "additionalProperties": false,
+      "required": ["remaining", "capacity", "unit"],
       "properties": {
         "remaining": { "type": "number", "minimum": 0 },
         "capacity": { "type": "number", "minimum": 0 },
@@ -32,10 +33,14 @@
       "properties": {
         "location": {
           "type": "object",
+          "required": ["lat", "lon", "altMeters"],
           "additionalProperties": false,
           "properties": {
-            "lat": { "type": "number" },
-            "lon": { "type": "number" }
+            "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+            "lon": { "type": "number", "minimum": -180, "maximum": 180 },
+            "altMeters": { "type": "number" },
+            "frame": { "type": "string", "enum": ["WGS84"], "default": "WGS84" },
+            "altitudeReference": { "type": "string", "enum": ["WGS84_ELLIPSOID", "MSL", "AGL", "UNKNOWN"], "default": "UNKNOWN" }
           }
         },
         "minRangeMeters": { "type": "number", "minimum": 0 },
@@ -50,6 +55,11 @@
       "description": "Supported human-control mode; bounded by ROE/weapons control status (see docs/05)."
     },
     "softwareVersion": { "type": "string" },
-    "timeReported": { "type": "string", "format": "date-time" }
+    "timeReported": { "type": "string", "format": "date-time" },
+    "modelProvenance": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Identifies notional/synthetic model provenance and must not be interpreted as field performance evidence."
+    }
   }
 }

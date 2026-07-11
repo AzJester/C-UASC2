@@ -12,6 +12,12 @@ info:
     (e.g. cuas.track.fused.> for all fused tracks). The same contract runs at the
     edge tier and the echelon tier; the canonical payloads are transport-independent
     (see docs/decisions/0001-pubsub-backbone.md).
+
+    The checked-in reference adapter uses signed Core NATS messages and reports only
+    broker acceptance; it does not claim durable command delivery. QoS tier labels
+    describe the target deployment profile. A production binding must configure and
+    test durable streams, workload credentials, TLS, subject ACLs, prioritization,
+    acknowledgement, and reconciliation explicitly.
   contact:
     name: C-UAS C2 Interface Design Authority (illustrative)
 defaultContentType: application/json
@@ -19,7 +25,7 @@ servers:
   edge:
     host: localhost:4222
     protocol: nats
-    description: Edge leaf broker (site/battery). Survives isolated.
+    description: Local reference edge broker. Production edge survival requires a validated durable leaf deployment.
   echelon:
     host: nats-echelon:4222
     protocol: nats
@@ -41,7 +47,7 @@ channels:
       Track: { $ref: "#/components/messages/Track" }
   sensorTasks:
     address: cuas.sensor.task.{sensorId}
-    description: Remote tasking commands to a sensor (QoS tier T1, persisted).
+    description: Remote tasking commands to a sensor (target QoS tier T1; Core NATS reference transport is not persisted).
     parameters:
       sensorId: { description: Target sensor id }
     messages:
@@ -62,11 +68,18 @@ channels:
       EffectorStatus: { $ref: "#/components/messages/EffectorStatus" }
   engagementOrders:
     address: cuas.engagement.order.{effectorId}
-    description: Fire orders to an effector (QoS tier T0 safety/fires; persisted, prioritized, lowest latency).
+    description: Fire orders to an effector (target QoS tier T0; the reference reports broker acceptance and relies on lifecycle acknowledgement, not persistence).
     parameters:
       effectorId: { description: Engaging effector id }
     messages:
       EngagementOrder: { $ref: "#/components/messages/EngagementOrder" }
+  engagementControl:
+    address: cuas.engagement.control.{effectorId}
+    description: Safety-priority engagement control, currently ABORT (target QoS tier T0; isolated from release locking in the reference node, with deployment latency still subject to validation).
+    parameters:
+      effectorId: { description: Effector executing the engagement }
+    messages:
+      EngagementControlDirective: { $ref: "#/components/messages/EngagementControlDirective" }
   engagementStatus:
     address: cuas.engagement.status.{engagementId}
     description: Engagement lifecycle feedback (QoS tier T0).
@@ -76,7 +89,7 @@ channels:
       EngagementStatus: { $ref: "#/components/messages/EngagementStatus" }
   audit:
     address: cuas.audit.{domain}
-    description: Immutable non-repudiation record stream (QoS tier T4, persisted).
+    description: Best-effort publication of hash-chained audit evidence (target QoS tier T4). The optional fsync JSONL file is authoritative locally; Core NATS publication is not durable or non-repudiating.
     parameters:
       domain: { description: Audit domain (tasking | engagement | authority) }
     messages:
@@ -106,6 +119,10 @@ operations:
     action: send
     channel: { $ref: "#/channels/engagementOrders" }
     summary: An authorized C2 node publishes a fire order with an authorityToken.
+  controlEngagement:
+    action: send
+    channel: { $ref: "#/channels/engagementControl" }
+    summary: An authorized C2 node publishes a separately signed, one-use ABORT directive.
   reportEngagementStatus:
     action: send
     channel: { $ref: "#/channels/engagementStatus" }
@@ -134,6 +151,10 @@ components:
       payload: { $ref: "#/components/schemas/Envelope" }
     EngagementOrder:
       name: EngagementOrder
+      contentType: application/json
+      payload: { $ref: "#/components/schemas/Envelope" }
+    EngagementControlDirective:
+      name: EngagementControlDirective
       contentType: application/json
       payload: { $ref: "#/components/schemas/Envelope" }
     EngagementStatus:
