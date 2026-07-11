@@ -19,10 +19,12 @@ servers:
     description: Local reference scaffold
 tags:
   - name: health
+  - name: control
   - name: cop
   - name: materiel
   - name: tasking
   - name: engagement
+  - name: authority
   - name: audit
 paths:
   /health:
@@ -42,6 +44,53 @@ paths:
                   busConnected: { type: boolean }
                   nodeId: { type: string }
                   schemaVersion: { type: string }
+                  operationalMode: { type: string }
+                  scenarioId: { type: string }
+                  policyVersion: { type: string }
+                  authenticationMode: { type: string }
+                  authoritySigningKey: { type: string, enum: [CONFIGURED, DEMO_SHARED_INSECURE] }
+                  restMaterielRegistration: { type: string }
+                  busMessageAuthentication: { type: string, enum: [HMAC_SHARED_DEMO, UNSIGNED_DEMO_OVERRIDE] }
+                  staleMaterielCount: { type: integer, minimum: 0 }
+                  auditHealthy: { type: boolean }
+                  operationalStatePersistence: { type: string, enum: [IN_MEMORY_DEMO_ONLY] }
+  /scenario:
+    get:
+      tags: [control]
+      summary: Server-authoritative demonstration scenario and area of operations
+      operationId: getScenario
+      responses:
+        "200":
+          description: Scenario configuration shared by the UI and simulators
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScenarioConfig" }
+  /policy:
+    get:
+      tags: [control]
+      summary: Read-only server-authoritative WCS and policy state
+      operationId: getPolicy
+      responses:
+        "200":
+          description: Current policy state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PolicyState" }
+  /session:
+    get:
+      tags: [control]
+      summary: Current authenticated-session view
+      description: The reference node exposes explicitly untrusted demo headers; a fielded deployment replaces them with authenticated identity claims.
+      operationId: getSession
+      parameters:
+        - { name: X-Operator-Role, in: header, required: false, schema: { type: string, enum: [OBSERVER, SENSOR_MANAGER, ENGAGEMENT_OPERATOR, FIRE_CONTROL_AUTHORITY], default: OBSERVER } }
+        - { name: X-Operator-Id, in: header, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: Session identity, role, assurance, and permissions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionView" }
   /cop:
     get:
       tags: [cop]
@@ -82,6 +131,8 @@ paths:
       tags: [materiel]
       summary: Register a sensor (no pairing to any effector)
       operationId: registerSensor
+      parameters:
+        - { name: X-Component-Id, in: header, required: true, schema: { type: string }, description: Demo-only component identity; the endpoint is disabled unless demo registration is explicitly enabled. }
       requestBody:
         required: true
         content:
@@ -93,6 +144,8 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SensorStatus" }
+        "401": { $ref: "#/components/responses/Denied" }
+        "403": { $ref: "#/components/responses/Denied" }
   /effectors:
     get:
       tags: [materiel]
@@ -110,6 +163,8 @@ paths:
       tags: [materiel]
       summary: Register an effector (no pairing to any sensor)
       operationId: registerEffector
+      parameters:
+        - { name: X-Component-Id, in: header, required: true, schema: { type: string }, description: Demo-only component identity; the endpoint is disabled unless demo registration is explicitly enabled. }
       requestBody:
         required: true
         content:
@@ -121,19 +176,28 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EffectorStatus" }
+        "401": { $ref: "#/components/responses/Denied" }
+        "403": { $ref: "#/components/responses/Denied" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /sensors/{sensorId}/tasks:
     post:
       tags: [tasking]
       summary: Remotely task a sensor (Imperative 4)
       description: >
-        Submit a tasking request. The node runs the authority check and arbitration,
-        then publishes the SensorTask to the bus. Returns the granted/denied result.
+        Submit a tasking request. The node runs authority, expiry, coverage, and a
+        per-sensor priority/lease arbiter, then publishes SensorTask. BROKER_ACCEPTED
+        is not a sensor execution acknowledgement; the reference contract does not
+        yet provide a SensorTaskStatus channel.
       operationId: taskSensor
       parameters:
         - name: sensorId
           in: path
           required: true
           schema: { type: string }
+        - { name: X-Operator-Role, in: header, required: false, schema: { type: string, enum: [OBSERVER, SENSOR_MANAGER, ENGAGEMENT_OPERATOR, FIRE_CONTROL_AUTHORITY], default: OBSERVER } }
+        - { name: X-Operator-Id, in: header, required: false, schema: { type: string } }
+        - { name: X-Request-ID, in: header, required: false, schema: { type: string }, description: Idempotency and audit correlation identifier. }
+        - { name: Idempotency-Key, in: header, required: false, schema: { type: string }, description: Alias for X-Request-ID; X-Request-ID wins when both are supplied. }
       requestBody:
         required: true
         content:
@@ -144,14 +208,23 @@ paths:
           description: Task accepted/published
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  taskId: { type: string }
-                  granted: { type: boolean }
-                  reason: { type: string }
-        "403": { $ref: "#/components/responses/Denied" }
+              schema: { $ref: "#/components/schemas/SensorTaskResult" }
+        "403":
+          description: Task authority denied; command was not sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SensorTaskResult" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Idempotency/path conflict or an equal/higher-priority sensor lease
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/SensorTaskResult" }
+                  - type: object
+                    properties: { detail: { type: string } }
+        "503": { $ref: "#/components/responses/Unavailable" }
   /engagements:
     get:
       tags: [engagement]
@@ -182,6 +255,16 @@ paths:
             type: string
             enum: [OBSERVER, SENSOR_MANAGER, ENGAGEMENT_OPERATOR, FIRE_CONTROL_AUTHORITY]
           description: Requesting operator role (illustrative stand-in for the Zero Trust identity/PDP).
+        - name: X-Operator-Id
+          in: header
+          required: false
+          schema: { type: string }
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string }
+          description: Stable request identifier. Replays return the original engagement; reuse with a different request is rejected.
+        - { name: X-Request-ID, in: header, required: false, schema: { type: string }, description: Alias for Idempotency-Key; X-Request-ID wins when both are supplied. }
       requestBody:
         required: true
         content:
@@ -199,10 +282,94 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/EngagementStatus" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /engagements/{engagementId}:
+    get:
+      tags: [engagement]
+      summary: Current state of one engagement
+      operationId: getEngagement
+      parameters:
+        - { name: engagementId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Current lifecycle state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EngagementStatus" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /engagements/{engagementId}/history:
+    get:
+      tags: [engagement]
+      summary: Ordered lifecycle history for one engagement
+      operationId: getEngagementHistory
+      parameters:
+        - { name: engagementId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Monotonic lifecycle events
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/EngagementStatus" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /engagements/{engagementId}/abort:
+    post:
+      tags: [engagement]
+      summary: Publish a separately authorized safety-priority ABORT directive
+      description: A successful response means the broker accepted the directive; the lifecycle remains unchanged until the effector reports ABORTED.
+      operationId: abortEngagement
+      parameters:
+        - { name: engagementId, in: path, required: true, schema: { type: string } }
+        - { name: X-Operator-Role, in: header, required: true, schema: { type: string, enum: [OBSERVER, SENSOR_MANAGER, ENGAGEMENT_OPERATOR, FIRE_CONTROL_AUTHORITY] } }
+        - { name: X-Operator-Id, in: header, required: false, schema: { type: string } }
+        - { name: Idempotency-Key, in: header, required: false, schema: { type: string } }
+        - { name: X-Request-ID, in: header, required: false, schema: { type: string }, description: Alias for Idempotency-Key; X-Request-ID wins when both are supplied. }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EngagementAbortRequest" }
+      responses:
+        "202":
+          description: Abort accepted by transport and awaiting effector acknowledgement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EngagementControlReceipt" }
+        "403":
+          description: Token validation rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthorityTokenValidationResult" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /authority/tokens/consume:
+    post:
+      tags: [authority]
+      summary: Reference-only one-use authority-token verification
+      description: Demonstrates exact scope, expiry, signature, and replay checks. Fielded effectors verify locally with authenticated workload identity and trusted key material.
+      operationId: consumeAuthorityToken
+      parameters:
+        - { name: X-Effector-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AuthorityTokenValidationRequest" }
+      responses:
+        "200":
+          description: Token verified and consumed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthorityTokenValidationResult" }
+        "403": { $ref: "#/components/responses/Denied" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /audit:
     get:
       tags: [audit]
-      summary: Non-repudiation record (tasks, authority decisions, orders, outcomes)
+      summary: Local hash-chained operational evidence (production anchoring required for non-repudiation)
       operationId: getAudit
       responses:
         "200":
@@ -231,6 +398,23 @@ components:
             type: object
             properties:
               detail: { type: string }
+    Conflict:
+      description: Request conflicts with existing idempotency, reservation, lifecycle, or control state
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail: { type: string }
+    Unavailable:
+      description: Transport could not confirm the command outcome. NOT_SENT is safe to retry with the same request ID; DELIVERY_UNKNOWN requires reconciliation and must not be reissued under a new ID.
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - { $ref: "#/components/schemas/EngagementStatus" }
+              - { $ref: "#/components/schemas/EngagementControlReceipt" }
+              - { $ref: "#/components/schemas/SensorTaskResult" }
   schemas:
     # These mirror specs/schemas/*.json. The JSON Schema files are the source of
     # truth for the canonical data model; these are the OpenAPI-embedded copies.
@@ -242,8 +426,107 @@ components:
       $ref: "../schemas/effector.schema.json"
     SensorTask:
       $ref: "../schemas/sensor-task.schema.json"
+    SensorTaskResult:
+      type: object
+      additionalProperties: false
+      required: [taskId, requestId, granted, deliveryState, reason]
+      properties:
+        taskId: { type: string }
+        requestId: { type: string }
+        granted: { type: boolean }
+        deliveryState: { type: string, enum: [NOT_SENT, DELIVERY_UNKNOWN, BROKER_ACCEPTED] }
+        reason: { type: string }
     EngagementStatus:
       $ref: "../schemas/engagement-status.schema.json"
+    ScenarioConfig:
+      type: object
+      additionalProperties: false
+      required: [scenarioId, name, operationalMode, authoritativeNodeId, revision, areaOfOperations, noFireZones, timeReported]
+      properties:
+        scenarioId: { type: string }
+        name: { type: string }
+        operationalMode: { type: string, enum: [DEMONSTRATION] }
+        authoritativeNodeId: { type: string }
+        revision: { type: string }
+        areaOfOperations:
+          type: object
+          required: [center, radiusMeters, label]
+          properties:
+            center:
+              type: object
+              required: [lat, lon, altMeters]
+              properties:
+                lat: { type: number, minimum: -90, maximum: 90 }
+                lon: { type: number, minimum: -180, maximum: 180 }
+                altMeters: { type: number }
+                frame: { type: string }
+                altitudeReference: { type: string }
+            radiusMeters: { type: number, exclusiveMinimum: 0 }
+            label: { type: string }
+        noFireZones: { type: array, items: { type: object } }
+        timeReported: { type: string, format: date-time }
+    PolicyState:
+      type: object
+      required: [policyVersion, weaponsControlStatus, requireHumanInTheLoop, minTrackQuality, authoritySource, readOnly, timeReported]
+      properties:
+        policyVersion: { type: string }
+        weaponsControlStatus: { type: string, enum: [WEAPONS_FREE, WEAPONS_TIGHT, WEAPONS_HOLD] }
+        requireHumanInTheLoop: { type: boolean }
+        minTrackQuality: { type: object, additionalProperties: { type: integer, minimum: 0, maximum: 15 } }
+        authoritySource: { type: string }
+        readOnly: { type: boolean, const: true }
+        timeReported: { type: string, format: date-time }
+    SessionView:
+      type: object
+      required: [principal, role, authenticationMode, assurance, demoOnly, roleReadOnly, policyVersion, weaponsControlStatus, permissions]
+      properties:
+        principal: { type: string }
+        role: { type: string, enum: [OBSERVER, SENSOR_MANAGER, ENGAGEMENT_OPERATOR, FIRE_CONTROL_AUTHORITY] }
+        authenticationMode: { type: string }
+        assurance: { type: string }
+        demoOnly: { type: boolean, const: true }
+        roleReadOnly: { type: boolean, const: true }
+        policyVersion: { type: string }
+        weaponsControlStatus: { type: string }
+        permissions: { type: array, items: { type: string } }
+    EngagementAbortRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 256, default: operator requested abort }
+        humanConfirmation: { type: boolean, default: false }
+    EngagementControlReceipt:
+      type: object
+      additionalProperties: false
+      required: [engagementId, requestId, action, accepted, deliveryState, lifecycleState, detail, timeReported]
+      properties:
+        engagementId: { type: string }
+        requestId: { type: string }
+        action: { type: string, const: ABORT }
+        accepted: { type: boolean }
+        deliveryState: { type: string }
+        lifecycleState: { type: string }
+        detail: { type: string }
+        timeReported: { type: string, format: date-time }
+    AuthorityTokenValidationRequest:
+      type: object
+      additionalProperties: false
+      required: [token, engagementId, trackId, effectorId, engagementType]
+      properties:
+        token: { type: string, minLength: 20, maxLength: 4096 }
+        engagementId: { type: string }
+        trackId: { type: string }
+        effectorId: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_:@/-]{0,127}$' }
+        engagementType: { type: string, enum: [EW_DEFEAT, RF_TAKEOVER, KINETIC, DIRECTED_ENERGY, NET_CAPTURE] }
+    AuthorityTokenValidationResult:
+      type: object
+      additionalProperties: false
+      required: [valid, reasonCode]
+      properties:
+        valid: { type: boolean }
+        reasonCode: { type: string }
+        engagementId: { type: string }
+        expiresAt: { type: string, format: date-time }
     EngagementRequest:
       type: object
       description: Operator-facing engagement request; the node mints the EngagementOrder after the gates pass.
@@ -260,12 +543,23 @@ components:
           description: Operator confirmation for human-in-the-loop ROE states.
     AuditRecord:
       type: object
+      additionalProperties: false
+      required: [recordId, timeRecorded, principal, action, decision, reasonCode, recordHash]
       properties:
         recordId: { type: string }
         timeRecorded: { type: string, format: date-time }
         principal: { type: string }
         action: { type: string }
         trackId: { type: string }
+        engagementId: { type: string }
+        requestId: { type: string }
+        effectorId: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_:@/-]{0,127}$' }
+        lifecycleState: { type: string }
+        sequence: { type: integer, minimum: 1 }
+        deliveryState: { type: string }
+        assessmentOutcome: { type: string }
         decision: { type: string, enum: [PERMIT, DENY, GRANTED, INFO] }
         reasonCode: { type: string }
         detail: { type: string }
+        previousRecordHash: { type: string, pattern: '^[a-f0-9]{64}$' }
+        recordHash: { type: string, pattern: '^[a-f0-9]{64}$' }

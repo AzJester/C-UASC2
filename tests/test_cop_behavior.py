@@ -1,7 +1,7 @@
 """Behavioral tests for the web COP's simulation mechanics.
 
 Covers the realism systems that plain smoke can't see: threat profiles,
-modality-true sensing, no-fire zone feasibility, weather effects, the TEWA
+modality-aware notional sensing, no-fire zone feasibility, weather effects, the TEWA
 queue, BDA, terrain masking, civilians, presets, and the replay recorder.
 Driven through the ``?debug=1`` hook (window.__CUAS__); no network needed
 (``basemap=tac`` keeps the page fully offline).
@@ -123,6 +123,90 @@ def test_wind_slows_small_uas(page):
     assert mx <= 25 * 0.75 + 0.01
 
 
+def test_sensor_task_waits_for_observation(page):
+    page.evaluate("window.__CUAS__.resetScenario()")
+    out = page.evaluate(
+        """() => {
+      const C = window.__CUAS__;
+      const t = C.spawnHostile({r: 1800, tq: 4, alt: 200});
+      C.selectTrack(t.trackId);
+      const before = t.tq;
+      C.taskSensor();
+      return {before, after: t.tq, contributors: t.contributingSensors.length,
+              pending: t.taskObservationPending === true};
+    }"""
+    )
+    assert out["after"] == out["before"], "task acceptance must not mutate TQ immediately"
+    assert out["pending"], "task must remain pending until a sensing tick returns an observation"
+
+
+def test_identity_timer_only_prompts_review(page):
+    page.evaluate("window.__CUAS__.resetScenario()")
+    identity = page.evaluate(
+        """() => {
+      const C = window.__CUAS__;
+      const t = C.spawnHostile({identity:'SUSPECT', r:9000, tq:3, speed:1, emitting:false});
+      t.declareAt = 1;
+      return new Promise(res => setTimeout(() => res(t.identity), 250));
+    }"""
+    )
+    assert identity == "SUSPECT", "elapsed time alone must never declare HOSTILE"
+
+
+def test_sim_pause_freezes_engagement_lifecycle(page):
+    page.evaluate("window.__CUAS__.resetScenario()")
+    state = page.evaluate(
+        """() => {
+      const C = window.__CUAS__;
+      const t = C.spawnHostile({r:900, tq:15, alt:250});
+      C.engageTrack(t, false);
+      C.setPaused(true);
+      return new Promise(res => setTimeout(() => res({id:t.trackId, state:t.state}), 2200));
+    }"""
+    )
+    assert state["state"] == "ENGAGING", "outcome/BDA advanced while mission time was paused"
+    page.evaluate("window.__CUAS__.setPaused(false)")
+
+
+def test_delegated_self_defense_defaults_off(page):
+    page.evaluate("window.__CUAS__.resetScenario()")
+    out = page.evaluate(
+        """() => {
+      const C = window.__CUAS__;
+      C.spawnHostile({r:700, tq:15, alt:200});
+      return new Promise(res => setTimeout(() => res({armed:C.S.delegatedDefense.armed,
+        engagements:C.S.stats.engagements}), 700));
+    }"""
+    )
+    assert out == {"armed": False, "engagements": 0}, "hidden autonomous fires occurred"
+
+
+def test_weapons_free_requires_two_step_confirmation(page):
+    page.evaluate("window.__CUAS__.resetScenario(); window.__CUAS__.setWorkspace('FIRES')")
+    free = page.locator("#wcsSeg button[data-v='WEAPONS_FREE']")
+    free.click()
+    assert page.evaluate("window.__CUAS__.S.wcs") == "WEAPONS_TIGHT"
+    assert free.text_content() == "CONFIRM FREE"
+    free.click()
+    assert page.evaluate("window.__CUAS__.S.wcs") == "WEAPONS_FREE"
+    assert page.evaluate("window.__CUAS__.S.autoReleaseArmed") is True
+    page.locator("#wcsSeg button[data-v='WEAPONS_TIGHT']").click()
+
+
+def test_dense_track_list_is_keyboard_pageable(page):
+    page.evaluate(
+        """() => {
+      const C = window.__CUAS__; C.resetScenario(); C.setWorkspace('COP');
+      for (let i=0; i<26; i++) C.spawnHostile({r:3000+i*20, tq:5});
+    }"""
+    )
+    page.wait_for_timeout(850)
+    assert page.locator("#trackList button[data-track-select]").count() == 18
+    assert page.locator("#trackList button[data-page-delta='1']").is_enabled()
+    page.locator("#trackList button[data-page-delta='1']").click()
+    assert "page 2/" in page.locator("#trackList .track-pager span").text_content().lower()
+
+
 def test_tewa_queue_ranks_and_approves(page):
     page.evaluate("window.__CUAS__.resetScenario()")
     out = page.evaluate(
@@ -206,6 +290,10 @@ def test_replay_recorder_and_scrubber(page):
     page.evaluate("window.__CUAS__.showAAR()")
     assert page.evaluate("!document.getElementById('aarBack').hidden")
     assert page.evaluate("+document.getElementById('repSlider').max >= 1")
+    aar_text = page.locator("#aarBack").text_content()
+    assert "Observed defeats / engagement" in aar_text
+    assert "Pending effect / BDA" in aar_text
+    assert "Hit rate (Pk)" not in aar_text
     page.evaluate("document.getElementById('aarClose').click()")
 
 
@@ -223,6 +311,213 @@ def test_cost_exchange_accrues(page):
     assert spent > 0
     sb = page.evaluate("document.getElementById('scoreboard').textContent")
     assert "$" in sb
+
+
+def test_live_engagement_reconcile_reuses_request_key(page):
+    out = page.evaluate(
+        """async () => {
+      const C = window.__CUAS__;
+      C.S.live = false; C.resetScenario();
+      const t = C.spawnHostile({r: 900, tq: 15, alt: 250});
+      C.S.live = true;
+      C.S.effectors.forEach(e => { e.readiness = "READY"; e.geometryUnknown = false; });
+      const originalFetch = window.fetch;
+      const keys = [];
+      let call = 0;
+      window.fetch = async (_url, options) => {
+        keys.push(options.headers["Idempotency-Key"]);
+        call += 1;
+        if (call === 1) throw new Error("response lost after send");
+        return {
+          ok: false,
+          status: 503,
+          json: async () => ({
+            engagementId: "ENG-DELIVERY-UNKNOWN",
+            trackId: t.trackId,
+            effectorId: t.engagementRequest.effectorId,
+            state: "AUTHORIZED",
+            terminal: false,
+            detail: "transport delivery unknown",
+          }),
+        };
+      };
+      try {
+        await C.liveEngage(t);
+        const afterLoss = {state: t.state, key: t.engagementRequest.requestKey};
+        await C.liveEngage(t);
+        return {
+          keys,
+          afterLoss,
+          state: t.state,
+          lifecycle: t.engagementState,
+          pending: C.S.pendingEng.has("ENG-DELIVERY-UNKNOWN"),
+        };
+      } finally {
+        window.fetch = originalFetch;
+        C.S.live = false;
+        C.resetScenario();
+      }
+    }"""
+    )
+    assert out["afterLoss"]["state"] == "AUTHORIZING"
+    assert out["keys"][0] == out["keys"][1] == out["afterLoss"]["key"]
+    assert out["pending"] is True and out["state"] == "ENGAGING"
+    assert "DELIVERY UNKNOWN" in out["lifecycle"]
+
+
+def test_live_abort_delivery_unknown_reuses_request_key(page):
+    out = page.evaluate(
+        """async () => {
+      const C = window.__CUAS__;
+      C.S.live = false; C.resetScenario();
+      const t = C.spawnHostile({r: 900, tq: 15, alt: 250});
+      t.state = "ENGAGING";
+      C.S.live = true;
+      C.S.pendingEng.set("ENG-ABORT-UNKNOWN", {
+        trackId: t.trackId,
+        effectorId: "EFF-TEST",
+        firstSeen: t.firstSeen,
+        logicalKey: "logical-engage-key",
+      });
+      const originalFetch = window.fetch;
+      const keys = [];
+      window.fetch = async (_url, options) => {
+        keys.push(options.headers["Idempotency-Key"]);
+        return {
+          ok: false,
+          status: 503,
+          json: async () => ({
+            engagementId: "ENG-ABORT-UNKNOWN",
+            accepted: false,
+            deliveryState: "DELIVERY_UNKNOWN",
+            lifecycleState: "AUTHORIZED",
+            detail: "abort delivery unknown",
+          }),
+        };
+      };
+      try {
+        await C.liveAbortEngagement(t);
+        await C.liveAbortEngagement(t);
+        return {
+          keys,
+          pending: t.abortRequestPending,
+          lifecycle: t.engagementState,
+          retained: C.S.requestKeys.abort.get("ENG-ABORT-UNKNOWN"),
+          log: C.S.events.map(event => String(event.msg)).join(" | "),
+        };
+      } finally {
+        window.fetch = originalFetch;
+        C.S.live = false;
+        C.resetScenario();
+      }
+    }"""
+    )
+    assert out["keys"][0] == out["keys"][1] == out["retained"]
+    assert out["pending"] is True
+    assert "DELIVERY UNKNOWN" in out["lifecycle"]
+    assert "not delivered" not in out["log"].lower()
+
+
+def test_live_terminal_states_clear_pending_and_pending_bda(page):
+    out = page.evaluate(
+        """() => {
+      const C = window.__CUAS__;
+      C.S.live = false; C.resetScenario();
+      C.S.live = true;
+
+      const failed = C.spawnHostile({r: 1000, tq: 15});
+      failed.state = "ENGAGING";
+      C.S.requestKeys.engage.set("failed-logical", "failed-request");
+      C.S.pendingEng.set("ENG-FAILED", {
+        trackId: failed.trackId, effectorId: "EFF-A", firstSeen: failed.firstSeen,
+        logicalKey: "failed-logical", requestKey: "failed-request",
+      });
+      C.processLiveEngagementStatus({
+        engagementId: "ENG-FAILED", state: "FAILED", terminal: true,
+        detail: "definitive non-delivery",
+      });
+
+      const bda = C.spawnHostile({r: 1100, tq: 15});
+      bda.state = "ASSESSING";
+      C.S.requestKeys.engage.set("bda-logical", "bda-request");
+      C.S.pendingEng.set("ENG-BDA", {
+        trackId: bda.trackId, effectorId: "EFF-B", firstSeen: bda.firstSeen,
+        logicalKey: "bda-logical", requestKey: "bda-request",
+      });
+      const defeatedBefore = C.S.stats.defeated;
+      const unconfirmedBefore = C.S.stats.unconfirmedEffects || 0;
+      C.processLiveEngagementStatus({
+        engagementId: "ENG-BDA", state: "COMPLETE", terminal: true,
+        effectAssessment: {outcome: "PENDING"},
+      });
+      const result = {
+        failedState: failed.state,
+        failedPending: C.S.pendingEng.has("ENG-FAILED"),
+        failedKey: C.S.requestKeys.engage.has("failed-logical"),
+        bdaState: bda.state,
+        bdaLifecycle: bda.engagementState,
+        bdaPending: C.S.pendingEng.has("ENG-BDA"),
+        bdaKey: C.S.requestKeys.engage.has("bda-logical"),
+        defeatsAdded: C.S.stats.defeated - defeatedBefore,
+        unconfirmedAdded: (C.S.stats.unconfirmedEffects || 0) - unconfirmedBefore,
+      };
+      C.S.live = false; C.resetScenario();
+      return result;
+    }"""
+    )
+    assert out["failedState"] == "ACTIVE"
+    assert out["failedPending"] is False and out["failedKey"] is False
+    assert out["bdaState"] == "ACTIVE" and out["bdaLifecycle"] == "INDETERMINATE"
+    assert out["bdaPending"] is False and out["bdaKey"] is False
+    assert out["defeatsAdded"] == 0 and out["unconfirmedAdded"] == 1
+
+
+def test_node_failover_inhibits_release_until_reconciliation_completes(page):
+    initial = page.evaluate(
+        """() => {
+      const C = window.__CUAS__;
+      C.S.live = false; C.resetScenario();
+      const t = C.spawnHostile({r: 1000, tq: 15, identity: "HOSTILE"});
+      t.identity = "HOSTILE"; t.tq = 15;
+      C.toggleNode(true);
+      const auth = C.authorize(t);
+      return {
+        trackId: t.trackId,
+        node: C.S.node,
+        handover: C.S.handoverState,
+        inhibited: C.S.releasesInhibited,
+        code: auth.code,
+      };
+    }"""
+    )
+    assert initial == {
+        "trackId": initial["trackId"],
+        "node": "NO AUTHORITY",
+        "handover": "LOSS_DETECTED",
+        "inhibited": True,
+        "code": "C2_HANDOVER_IN_PROGRESS",
+    }
+
+    page.wait_for_timeout(2300)
+    final = page.evaluate(
+        """trackId => {
+      const C = window.__CUAS__, t = C.S.tracks.get(trackId);
+      const auth = C.authorize(t);
+      const out = {
+        node: C.S.node,
+        handover: C.S.handoverState,
+        inhibited: C.S.releasesInhibited,
+        authorized: auth.ok,
+      };
+      C.toggleNode(false);
+      return out;
+    }""",
+        initial["trackId"],
+    )
+    assert final["node"] == "C2-NODE-02"
+    assert final["handover"] == "AUTHORITY_TRANSFERRED"
+    assert final["inhibited"] is False
+    assert final["authorized"] is True
 
 
 def test_presets_and_no_errors(page):

@@ -1,32 +1,37 @@
-"""Edge materiel + scenario simulator.
+"""NATS adapter for the deterministic edge-materiel reference simulator.
 
-Drives the live demo against the government-owned bus interface so the whole flow
-is exercisable without real hardware:
-
-  * SCENARIO  flies moving UAS tracks (singles + a swarm) inbound toward a defended
-              asset, fused from multiple sensors, plus a friendly that must never be
-              engageable. Track quality rises with sensor coverage.
-  * SENSOR    on a CUE/DWELL/SLEW SensorTask, raises the referenced track's quality
-              (Imperative 4: remote tasking improves the picture on demand).
-  * EFFECTOR  on an EngagementOrder, performs a (simulated) hardware-interlock check,
-              reports ACCEPTED -> ACTIVE -> COMPLETE, and removes the defeated track
-              (Imperative 5).
-
-Reference fixture only. The "interlock" stands in for real weapons-safety hardware
-(docs/05 §4): the last gate lives in the effector, below the network.
+The simulation is intentionally notional and non-fielded.  It exercises the
+government-owned message contracts, independently verifies scoped authority,
+models finite inventory, and reports an explicit engagement/BDA lifecycle.
 """
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import math
 import os
-import random
+import time
+import urllib.request
 from datetime import datetime, timezone
 from uuid import uuid4
 
 import nats
+
+from simulation import (
+    DEFAULT_SENSORS,
+    NOTIONAL_MODEL_NOTICE,
+    AssetConfig,
+    AuthorityTokenVerifier,
+    BusEnvelopeVerifier,
+    EffectorModel,
+    EngagementSimulator,
+    Scenario,
+    parse_utc,
+)
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s sensor-sim %(levelname)s %(message)s")
 log = logging.getLogger("sim")
@@ -35,318 +40,345 @@ NATS_URL = os.environ.get("NATS_URL", "nats://localhost:4222")
 REGION = os.environ.get("SIM_REGION", "region-1")
 SENSOR_ID = os.environ.get("SIM_SENSOR_ID", "SEN-RAD-01")
 EFFECTOR_ID = os.environ.get("SIM_EFFECTOR_ID", "EFF-EW-01")
-TICK = 0.5            # seconds between scenario updates
-TTL = 6.0            # track time-to-live; defeated tracks age out this fast
-
-# Defended asset; tracks are positioned in a local meters frame around it and
-# converted to WGS84 on publish so the web COP can render them (matches the UI).
-ASSET = {"lat": 34.20, "lon": -118.20}
-M_PER_DEG_LAT = 111320.0
-M_PER_DEG_LON = 111320.0 * math.cos(math.radians(ASSET["lat"]))
-
-# Sensor coverage (local meters), mirrors the web COP layout (joint laydown).
-SENSORS = [
-    {"id": "SEN-RAD-01", "x": 0, "y": -150, "range": 6000},
-    {"id": "SEN-RF-02", "x": 1700, "y": 1300, "range": 5200},
-    {"id": "SEN-EO-03", "x": -1800, "y": 1000, "range": 3600},
-    {"id": "SEN-SHIP-04", "x": 4800, "y": -1200, "range": 6500},
-    {"id": "SEN-MADIS-05", "x": -200, "y": -2600, "range": 4500},
-]
-
-TYPES = ["MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "FIXED_WING"]
-BLUE_IDS = {"FRIEND", "ASSUMED_FRIEND", "NEUTRAL"}   # friendly force (Blue) picture
+TICK_SECONDS = float(os.environ.get("SIM_TICK_SECONDS", "0.5"))
+TRACK_TTL_SECONDS = float(os.environ.get("SIM_TRACK_TTL_SECONDS", "6.0"))
+SEED = int(os.environ.get("SIM_SEED", "4242"))
+TIME_SCALE = float(os.environ.get("SIM_EFFECT_TIME_SCALE", "1.0"))
+AUTHORITY_SIGNING_KEY = os.environ.get(
+    "C2_AUTHORITY_SIGNING_KEY", "cuas-local-reference-key-not-for-production"
+)
+BUS_SIGNING_KEY = os.environ.get("CUAS_BUS_SIGNING_KEY", AUTHORITY_SIGNING_KEY)
 
 
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def _load_authoritative_asset() -> tuple[AssetConfig, str]:
+    fallback = AssetConfig.from_env(os.environ)
+    fallback_node = os.environ.get("SIM_AUTHORITY_ISSUER", "C2-NODE-01")
+    url = os.environ.get("C2_SCENARIO_URL")
+    if not url:
+        return fallback, fallback_node
+    attempts = max(1, int(os.environ.get("C2_SCENARIO_ATTEMPTS", "30")))
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=2) as response:  # noqa: S310 - configured local C2 URL
+                scenario = json.load(response)
+            area = scenario["areaOfOperations"]
+            center = area["center"]
+            discovered = AssetConfig(
+                lat=float(center["lat"]),
+                lon=float(center["lon"]),
+                label=str(area.get("label") or fallback.label),
+            )
+            if not -90 <= discovered.lat <= 90 or not -180 <= discovered.lon <= 180:
+                raise ValueError("authoritative scenario returned invalid coordinates")
+            discovered_node = str(scenario["authoritativeNodeId"])
+            if not discovered_node:
+                raise ValueError("authoritative scenario omitted authoritativeNodeId")
+            log.info(
+                "discovered authoritative scenario AO and node %s from %s",
+                discovered_node,
+                url,
+            )
+            return discovered, discovered_node
+        except Exception as exc:  # noqa: BLE001
+            if attempt == attempts:
+                raise RuntimeError(
+                    f"unable to discover authoritative scenario from {url}"
+                ) from exc
+            time.sleep(1)
+    return fallback, fallback_node  # pragma: no cover
 
 
-def _latlon(x: float, y: float, alt: float = 120.0) -> dict:
+ASSET, DISCOVERED_AUTHORITY_ISSUER = _load_authoritative_asset()
+AUTHORITY_ISSUER = os.environ.get(
+    "SIM_AUTHORITY_ISSUER", DISCOVERED_AUTHORITY_ISSUER
+)
+START_TIME = (
+    parse_utc(os.environ["SIM_START_TIME"])
+    if os.environ.get("SIM_START_TIME")
+    else datetime.now(timezone.utc)
+)
+
+if TICK_SECONDS <= 0 or TRACK_TTL_SECONDS <= 0:
+    raise RuntimeError("SIM_TICK_SECONDS and SIM_TRACK_TTL_SECONDS must be positive")
+
+SCENARIO = Scenario(
+    seed=SEED,
+    start_time=START_TIME,
+    asset=ASSET,
+    ttl_seconds=TRACK_TTL_SECONDS,
+    enable_organic_air_defense=os.environ.get("SIM_ORGANIC_AIR_DEFENSE", "false").lower() == "true",
+)
+EFFECTOR = EffectorModel(
+    effector_id=EFFECTOR_ID,
+    effector_type=os.environ.get("SIM_EFFECTOR_TYPE", "EW_JAMMER"),
+    capacity=int(os.environ.get("SIM_EFFECTOR_CAPACITY", "12")),
+    remaining=int(
+        os.environ.get("SIM_EFFECTOR_REMAINING", os.environ.get("SIM_EFFECTOR_CAPACITY", "12"))
+    ),
+)
+TOKEN_VERIFIER = AuthorityTokenVerifier(AUTHORITY_SIGNING_KEY, issuer=AUTHORITY_ISSUER)
+BUS_VERIFIER = BusEnvelopeVerifier(BUS_SIGNING_KEY, AUTHORITY_ISSUER)
+ENGAGEMENTS = EngagementSimulator(
+    EFFECTOR,
+    TOKEN_VERIFIER,
+    seed=SEED,
+    time_scale=TIME_SCALE,
+    max_track_age_seconds=TRACK_TTL_SECONDS,
+)
+
+
+def _envelope(
+    message_type: str,
+    component: str,
+    node_id: str,
+    payload: dict,
+    *,
+    time_created: datetime | None = None,
+) -> bytes:
+    raw = {
+        "messageId": str(uuid4()),
+        "schemaVersion": "1.0.0",
+        "messageType": message_type,
+        "source": {"nodeId": node_id, "componentType": component},
+        "classification": "UNCLASSIFIED",
+        "timeCreated": (time_created or SCENARIO.clock.now).isoformat(),
+        "payload": payload,
+    }
+    canonical = json.dumps(
+        raw,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode()
+    raw["signature"] = (
+        "hmac-sha256:"
+        + hmac.new(BUS_SIGNING_KEY.encode(), canonical, hashlib.sha256).hexdigest()
+    )
+    return json.dumps(raw, separators=(",", ":")).encode()
+
+
+def _sensor_status(sensor) -> dict:
+    meters_per_degree_latitude = 111_320.0
+    meters_per_degree_longitude = 111_320.0 * math.cos(math.radians(ASSET.lat))
+    search_volume = SCENARIO._search_volumes.get(sensor.sensor_id)  # reference status view
+    mode = "SEARCH/TRACK"
+    if search_volume is not None:
+        mode = (
+            f"SEARCH {search_volume['centerBearingDeg']:.0f}deg/"
+            f"{search_volume['widthDeg']:.0f}deg"
+        )
     return {
-        "lat": ASSET["lat"] + y / M_PER_DEG_LAT,
-        "lon": ASSET["lon"] + x / M_PER_DEG_LON,
-        "altMeters": alt,
-        "frame": "WGS84",
+        "sensorId": sensor.sensor_id,
+        "sensorType": "EO_IR" if sensor.modality == "EO_IR" else sensor.modality,
+        "vendor": "REFERENCE-SIM",
+        "readiness": "READY",
+        "mode": mode,
+        "taskable": True,
+        "coverage": {
+            "center": {
+                "lat": ASSET.lat + sensor.y / meters_per_degree_latitude,
+                "lon": ASSET.lon + sensor.x / meters_per_degree_longitude,
+            },
+            "rangeMeters": sensor.range_meters,
+            "minAltMeters": 0,
+            "maxAltMeters": 2000,
+        },
+        "softwareVersion": "reference-sim-2",
+        "timeReported": SCENARIO.clock.now.isoformat(),
     }
 
 
-def _envelope(message_type: str, component: str, node_id: str, payload: dict) -> bytes:
-    return json.dumps(
-        {
-            "messageId": str(uuid4()),
-            "schemaVersion": "1.0.0",
-            "messageType": message_type,
-            "source": {"nodeId": node_id, "componentType": component},
-            "classification": "UNCLASSIFIED",
-            "timeCreated": _now(),
-            "payload": payload,
-        }
-    ).encode()
+async def _publish_tracks(nc) -> None:
+    while True:
+        for payload in SCENARIO.track_payloads():
+            await nc.publish(
+                f"cuas.track.fused.{REGION}",
+                _envelope("Track", "fusion", SENSOR_ID, payload),
+            )
+        await asyncio.sleep(TICK_SECONDS)
 
 
-class Track:
-    _seq = 1000
-
-    def __init__(self, identity: str, x: float, y: float, speed: float, tq: float, cls: str,
-                 ox: float = 0.0, oy: float = 0.0, orad: float = 700.0, ospeed: float = 0.25,
-                 platform: str = None, service: str = None, alt: float = 120.0,
-                 armed: bool = False, weapon_range: float = 0.0, weapon: str = None):
-        Track._seq += 1
-        self.id = f"TRK-{Track._seq}"
-        self.identity = identity
-        self.cls = cls
-        self.platform = platform
-        self.service = service
-        self.altMeters = alt
-        self.armed = armed
-        self.weapon_range = weapon_range
-        self.weapon = weapon
-        self.cool = 0.0
-        self.x, self.y = x, y
-        self.speed = speed
-        self.heading = math.atan2(-y, -x)  # toward asset
-        self.tq = tq
-        self.contrib: list[str] = []
-        # ~25% of red contacts fly comms-silent (inertial / fiber): RF-blind
-        self.emitterState = "EMITTING" if identity in BLUE_IDS else (
-            "SILENT" if random.random() < 0.25 else "EMITTING")
-        self.ox, self.oy, self.orad, self.ospeed = ox, oy, orad, ospeed
-        self.orbit = 0.0
-        self.alive = True
-
-    def is_blue(self) -> bool:
-        return self.identity in BLUE_IDS
-
-    def step(self, dt: float) -> None:
-        if self.is_blue():
-            # Blue force air: loiter on a patrol box, never dive the asset.
-            self.orbit += dt * self.ospeed
-            self.x = self.ox + math.cos(self.orbit) * self.orad
-            self.y = self.oy + math.sin(self.orbit) * self.orad
-        else:
-            desired = math.atan2(-self.y, -self.x)
-            err = ((desired - self.heading + math.pi * 3) % (math.tau)) - math.pi
-            self.heading += max(-0.5 * dt, min(0.5 * dt, err))
-            self.x += math.cos(self.heading) * self.speed * dt
-            self.y += math.sin(self.heading) * self.speed * dt
-        # fusion: track quality from sensor coverage
-        contrib = [s["id"] for s in SENSORS if math.hypot(self.x - s["x"], self.y - s["y"]) <= s["range"]]
-        self.contrib = contrib
-        if not self.is_blue():
-            target = min(11 if len(contrib) >= 2 else 7, 3 + len(contrib) * 3)
-            if self.tq < target:
-                self.tq = min(target, self.tq + dt * 1.2)
-            elif not contrib and self.tq > 2:
-                self.tq -= dt * 0.5
-
-    def range_to_asset(self) -> float:
-        return math.hypot(self.x, self.y)
-
-    def payload(self) -> dict:
-        p = {
-            "trackId": self.id,
-            "kinematics": {
-                "position": _latlon(self.x, self.y, self.altMeters),
-                "velocity": {
-                    "speedMps": round(self.speed, 1),
-                    "courseDeg": round((math.degrees(self.heading) + 360) % 360, 1),
-                    "verticalRateMps": 0.0,
-                },
-            },
-            "covariance": {"horizontalMeters": 40.0 if self.tq < 9 else 10.0, "verticalMeters": 25.0},
-            "trackQuality": int(self.tq),
-            "identity": self.identity,
-            "emitterState": self.emitterState,
-            "classificationType": self.cls,
-            "contributingSensors": self.contrib or [SENSOR_ID],
-            "timeObserved": _now(),
-            "timeToLiveSeconds": TTL,
-        }
-        if self.platform:
-            p["platform"] = self.platform
-        if self.service:
-            p["service"] = self.service
-        return p
-
-
-class Scenario:
-    BLUE_ROSTER = [
-        # identity, ox, oy, orad, ospeed, cls, speed, platform, service, alt, armed, weapon_range, weapon
-        ("FRIEND", 3300, -900, 600, 0.28, "ROTARY", 70, "MH-60R", "USN", 300, True, 2600, "AGM-114"),
-        ("FRIEND", 1900, 2500, 1500, 0.20, "FIXED_WING", 180, "F/A-18E", "USN", 6000, True, 3200, "AIM-9X"),
-        ("FRIEND", -2600, -1500, 700, 0.22, "ROTARY", 120, "MV-22B", "USMC", 900, False, 0, None),
-        ("FRIEND", -1200, 1500, 500, 0.30, "ROTARY", 80, "AH-1Z", "USMC", 150, True, 2400, "AGM-114"),
-        ("ASSUMED_FRIEND", -2700, 2000, 900, 0.18, "UAS_GROUP_3", 40, "RQ-21A", "USMC", 1500, False, 0, None),
-        ("FRIEND", 300, 2800, 600, 0.30, "UAS_GROUP_3", 45, "RQ-7B", "USA", 2400, False, 0, None),
-        ("FRIEND", -2300, 300, 550, 0.26, "ROTARY", 75, "UH-60M", "USA", 250, False, 0, None),
-        ("FRIEND", 2700, -2500, 1300, 0.14, "FIXED_WING", 90, "MQ-9", "USAF", 7600, True, 2800, "AGM-114"),
-    ]
-
-    def __init__(self):
-        self.tracks: dict[str, Track] = {}
-        for r in self.BLUE_ROSTER:
-            self._spawn_blue(*r)
-        self._spawn_hostile(bearing=-0.6, r=4200, tq=5, cls="MULTIROTOR")
-        self._spawn_wave(6)
-        self._wave_timer = 0.0
-
-    def _spawn_blue(self, identity, ox, oy, orad, ospeed, cls, speed, platform=None, service="USA",
-                    alt=300, armed=False, weapon_range=0.0, weapon=None):
-        t = Track(identity, ox + orad, oy, speed, 13, cls, ox=ox, oy=oy, orad=orad, ospeed=ospeed,
-                  platform=platform, service=service, alt=alt,
-                  armed=armed, weapon_range=weapon_range, weapon=weapon)
-        self.tracks[t.id] = t
-
-    def _spawn_hostile(self, bearing=None, r=None, tq=4, cls=None, speed=None):
-        bearing = bearing if bearing is not None else random.uniform(0, math.tau)
-        r = r if r is not None else random.uniform(4600, 5200)
-        t = Track(
-            "HOSTILE",
-            math.cos(bearing) * r,
-            math.sin(bearing) * r,
-            speed if speed is not None else random.uniform(26, 38),
-            tq,
-            cls or random.choice(TYPES),
-            alt=random.uniform(60, 400),
+async def _publish_material_status(nc) -> None:
+    while True:
+        for sensor in DEFAULT_SENSORS:
+            await nc.publish(
+                f"cuas.sensor.status.{sensor.sensor_id}",
+                _envelope("SensorStatus", "sensor", sensor.sensor_id, _sensor_status(sensor)),
+            )
+        await nc.publish(
+            f"cuas.effector.status.{EFFECTOR_ID}",
+            _envelope(
+                "EffectorStatus",
+                "effector",
+                EFFECTOR_ID,
+                EFFECTOR.status_payload(ASSET, SCENARIO.clock.now),
+            ),
         )
-        self.tracks[t.id] = t
-        return t
-
-    def _spawn_wave(self, n: int):
-        b = random.uniform(0, math.tau)
-        for i in range(n):
-            self._spawn_hostile(bearing=b + (i - n / 2) * 0.09, r=4900 + (i % 3) * 160, tq=4, cls="UAS_GROUP_1")
-        log.info("SWARM inbound: %d contacts", n)
-
-    def tick(self, dt: float):
-        self._wave_timer += dt
-        # periodic re-seed so the live demo always has activity
-        hostiles = [t for t in self.tracks.values() if t.identity == "HOSTILE"]
-        if self._wave_timer > 30 and len(hostiles) < 10:
-            self._wave_timer = 0.0
-            self._spawn_wave(random.randint(2, 4))
-        for t in list(self.tracks.values()):
-            t.step(dt)
-            if not t.is_blue() and t.range_to_asset() < 250:
-                log.info("LEAKER: %s reached defended asset", t.id)
-                self.tracks.pop(t.id, None)
-        self._air_defense(dt)
-
-    def _air_defense(self, dt: float):
-        """Organic Blue-air engagement: an armed friendly autonomously defeats the
-        nearest hostile inside its weapon envelope (cooldown-gated). Mirrors the web
-        COP's any-shooter picture where air assets are shooters too, not just sensors.
-        Authority/ROE for C2-ordered fires still live in c2-core; this is the
-        platform's own close-in defense, simulated."""
-        hostiles = [t for t in self.tracks.values() if t.identity == "HOSTILE" and t.alive]
-        if not hostiles:
-            return
-        for a in self.tracks.values():
-            if not (a.is_blue() and a.armed):
-                continue
-            if a.cool > 0:
-                a.cool -= dt
-                continue
-            best, best_d = None, a.weapon_range
-            for h in hostiles:
-                d = math.hypot(a.x - h.x, a.y - h.y)
-                if d < best_d:
-                    best, best_d = h, d
-            if best is not None and best.alive:
-                best.alive = False
-                a.cool = 4.0
-                log.info("AIR INTERCEPT: %s (%s %s) defeated %s with %s at %dm",
-                         a.id, a.platform, a.service, best.id, a.weapon, int(best_d))
-                self.tracks.pop(best.id, None)
-
-    def task(self, track_id: str) -> tuple[int, int] | None:
-        t = self.tracks.get(track_id)
-        if not t:
-            return None
-        before = int(t.tq)
-        t.tq = min(15, t.tq + 6)
-        return before, int(t.tq)
-
-    def neutralize(self, track_id: str):
-        self.tracks.pop(track_id, None)
+        await asyncio.sleep(2.0)
 
 
-SCN = Scenario()
-
-
-async def _publish_tracks(nc):
+async def _run_scenario() -> None:
+    observed_leakers = 0
     while True:
-        for t in SCN.tracks.values():
-            await nc.publish(f"cuas.track.fused.{REGION}", _envelope("Track", "fusion", SENSOR_ID, t.payload()))
-        await asyncio.sleep(TICK)
+        SCENARIO.tick(TICK_SECONDS)
+        if len(SCENARIO.leakers) > observed_leakers:
+            for track_id in SCENARIO.leakers[observed_leakers:]:
+                log.info("LEAKER: %s reached the defended asset", track_id)
+            observed_leakers = len(SCENARIO.leakers)
+        await asyncio.sleep(TICK_SECONDS)
 
 
-async def _run_scenario():
-    while True:
-        SCN.tick(TICK)
-        await asyncio.sleep(TICK)
-
-
-async def _handle_task(msg):
+async def _handle_task(msg) -> None:
     try:
-        task = json.loads(msg.data).get("payload", {})
+        task = BUS_VERIFIER.verify(
+            msg.data,
+            expected_message_type="SensorTask",
+            subject=msg.subject,
+            subject_prefix="cuas.sensor.task",
+            target_field="sensorId",
+        )
     except Exception as exc:  # noqa: BLE001
         log.warning("bad task message: %s", exc)
         return
-    if task.get("taskType") in ("CUE", "DWELL", "SLEW"):
-        res = SCN.task(task.get("trackId"))
-        if res:
-            log.info("%s on %s: TQ %d -> %d", task.get("taskType"), task.get("trackId"), res[0], res[1])
+    expires_at = task.get("expiresAt")
+    if expires_at is not None and parse_utc(expires_at) <= datetime.now(timezone.utc):
+        log.warning("expired sensor task rejected: %s", task.get("taskId"))
+        return
+    task_type = task.get("taskType")
+    if task_type == "SEARCH":
+        volume = task.get("searchVolume") or {
+            "centerBearingDeg": task.get("bearingDeg", 0.0),
+            "widthDeg": 360.0,
+        }
+        if SCENARIO.set_search_volume(task.get("sensorId", ""), volume):
+            log.info(
+                "SEARCH accepted by %s at priority %s: %s",
+                task.get("sensorId"),
+                task.get("priority"),
+                volume,
+            )
+        else:
+            log.warning("SEARCH rejected: invalid sensor or volume")
+        return
+    if task_type not in {"CUE", "DWELL", "SLEW", "HANDOFF"}:
+        log.warning("unsupported sensor task type rejected: %s", task_type)
+        return
+    sensor_id = task.get("sensorId", SENSOR_ID)
+    if task_type == "HANDOFF":
+        destination = task.get("handoffToSensorId", "")
+        result = (
+            (0, 0)
+            if SCENARIO.handoff(task.get("trackId", ""), sensor_id, destination)
+            else None
+        )
+        sensor_id = destination
+    else:
+        result = SCENARIO.task(task.get("trackId", ""), sensor_id)
+    if result:
+        log.info(
+            "%s accepted on %s by %s: TQ remains %d until the next observation",
+            task.get("taskType"),
+            task.get("trackId"),
+            sensor_id,
+            result[0],
+        )
+    else:
+        log.warning(
+            "%s rejected for %s by %s: track/sensor unavailable or outside coverage",
+            task.get("taskType"),
+            task.get("trackId"),
+            sensor_id,
+        )
 
 
-async def _handle_order(nc, msg):
+async def _handle_order(nc, msg) -> None:
     try:
-        order = json.loads(msg.data).get("payload", {})
+        order = BUS_VERIFIER.verify(
+            msg.data,
+            expected_message_type="EngagementOrder",
+            subject=msg.subject,
+            subject_prefix="cuas.engagement.order",
+            target_field="effectorId",
+        )
     except Exception as exc:  # noqa: BLE001
         log.warning("bad order message: %s", exc)
         return
-    engagement_id = order.get("engagementId", "UNKNOWN")
-    track_id = order.get("trackId")
-    eff_id = order.get("effectorId", EFFECTOR_ID)
 
-    async def report(state, reason="OK", detail=""):
-        payload = {
-            "engagementId": engagement_id,
-            "effectorId": eff_id,
-            "trackId": track_id,
-            "state": state,
-            "reasonCode": reason,
-            "detail": detail,
-            "timeReported": _now(),
-        }
-        await nc.publish(f"cuas.engagement.status.{engagement_id}", _envelope("EngagementStatus", "effector", eff_id, payload))
-        log.info("engagement %s -> %s (%s)", engagement_id, state, reason)
+    async def report(payload: dict) -> None:
+        await nc.publish(
+            f"cuas.engagement.status.{payload['engagementId']}",
+            _envelope("EngagementStatus", "effector", EFFECTOR_ID, payload),
+        )
+        await nc.publish(
+            f"cuas.effector.status.{EFFECTOR_ID}",
+            _envelope(
+                "EffectorStatus",
+                "effector",
+                EFFECTOR_ID,
+                EFFECTOR.status_payload(ASSET, SCENARIO.clock.now),
+            ),
+        )
+        log.info(
+            "engagement %s -> %s sequence=%s terminal=%s (%s)",
+            payload["engagementId"],
+            payload["state"],
+            payload["sequence"],
+            payload["terminal"],
+            payload["reasonCode"],
+        )
 
-    # Gate 4: hardware interlock. No authority token => a real effector refuses.
-    if not order.get("authorityToken"):
-        await report("FAILED", "INTERLOCK_BLOCKED", "no authority token")
+    await ENGAGEMENTS.execute(order, SCENARIO, report, asyncio.sleep)
+
+
+async def _handle_control(msg) -> None:
+    try:
+        directive = BUS_VERIFIER.verify(
+            msg.data,
+            expected_message_type="EngagementControlDirective",
+            subject=msg.subject,
+            subject_prefix="cuas.engagement.control",
+            target_field="effectorId",
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("bad engagement-control message: %s", exc)
         return
-    await report("ACCEPTED")
-    await asyncio.sleep(0.4)
-    await report("ACTIVE")
-    await asyncio.sleep(0.9)
-    await report("COMPLETE")
-    SCN.neutralize(track_id)   # battle damage: drop the defeated track from the COP
+    result = ENGAGEMENTS.request_abort(directive, SCENARIO.clock.now)
+    if result.valid:
+        log.warning(
+            "engagement %s abort accepted for local effector processing",
+            directive.get("engagementId"),
+        )
+    else:
+        log.warning(
+            "engagement %s abort rejected: %s",
+            directive.get("engagementId"),
+            result.reason,
+        )
 
 
-async def main():
+async def main() -> None:
+    if AUTHORITY_SIGNING_KEY == "cuas-local-reference-key-not-for-production":
+        log.warning("using DEMO-ONLY shared authority key; configure C2_AUTHORITY_SIGNING_KEY outside local reference use")
+    log.warning(NOTIONAL_MODEL_NOTICE)
     nc = await nats.connect(NATS_URL, max_reconnect_attempts=-1, reconnect_time_wait=2)
-    log.info("connected to %s; sensor=%s effector=%s region=%s", NATS_URL, SENSOR_ID, EFFECTOR_ID, REGION)
+    log.info(
+        "connected to %s; sensor=%s effector=%s region=%s asset=(%.6f, %.6f) seed=%d",
+        NATS_URL,
+        SENSOR_ID,
+        EFFECTOR_ID,
+        REGION,
+        ASSET.lat,
+        ASSET.lon,
+        SEED,
+    )
 
-    async def _order_cb(msg):
+    async def order_callback(msg) -> None:
         await _handle_order(nc, msg)
 
-    # Subscribe to all sensor tasks / engagement orders so the simulator responds
-    # for any sensor or effector the C2 node tasks or pairs (distributed pairing).
     await nc.subscribe("cuas.sensor.task.>", cb=_handle_task)
-    await nc.subscribe("cuas.engagement.order.>", cb=_order_cb)
-
-    await asyncio.gather(_publish_tracks(nc), _run_scenario())
+    await nc.subscribe(f"cuas.engagement.order.{EFFECTOR_ID}", cb=order_callback)
+    await nc.subscribe(f"cuas.engagement.control.{EFFECTOR_ID}", cb=_handle_control)
+    await asyncio.gather(_publish_tracks(nc), _publish_material_status(nc), _run_scenario())
 
 
 if __name__ == "__main__":

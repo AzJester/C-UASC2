@@ -53,7 +53,9 @@ at a gateway — the canonical schemas are transport-independent.
 
 ## 3. Quality of Service tiers
 
-Not all messages are equal. The topic taxonomy assigns each class a QoS tier.
+Not all messages are equal. The topic taxonomy assigns each class a target
+production QoS tier. These delivery profiles are requirements, not claims about the
+checked-in Core NATS reference adapter.
 
 | Tier | Use | Delivery | Example topics |
 |---|---|---|---|
@@ -63,8 +65,9 @@ Not all messages are equal. The topic taxonomy assigns each class a QoS tier.
 | **T3 Status/Health** | Sensor/effector/node health | Periodic, latest-value | `cuas.*.status.*` |
 | **T4 Bulk/Recording** | Replay, analytics, audit | Persisted stream, not latency-sensitive | `cuas.audit.*` |
 
-Across a constrained WAN, T0/T1 preempt T2/T3/T4. Losing bandwidth must never delay
-a fire order or its safety feedback.
+Across a constrained WAN, a validated production deployment must ensure T0/T1
+preempt T2/T3/T4. The reference adapter does not implement or certify WAN priority,
+durable delivery, or latency bounds.
 
 ## 4. Topic taxonomy (subjects)
 
@@ -80,7 +83,7 @@ cuas.effector.status.{effectorId}   # effector availability/ammo/mode
 cuas.engagement.order.{effectorId}  # fire orders (T0)
 cuas.engagement.status.{engagementId} # engagement lifecycle feedback (T0)
 cuas.c2.directive.{nodeId}          # C2-to-C2 directives, handover
-cuas.audit.{domain}                 # immutable audit/record stream (T4)
+cuas.audit.{domain}                 # target durable audit stream; best effort in reference
 ```
 
 `{regionId}` lets fusion shard the COP geographically; a node subscribes only to

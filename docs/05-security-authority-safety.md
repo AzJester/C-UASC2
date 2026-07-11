@@ -110,13 +110,19 @@ are independent on purpose.
   airspace deconfliction are PDP inputs; the COP shows friendly tracks so operators
   and auto-pairing avoid them.
 
-## 5. Auditability (non-repudiation)
+## 5. Auditability and production non-repudiation target
 
-Every task, authority decision, order, and status is written immutably to
-`cuas.audit.*` (T4). Each record links the **track**, the **authority decision and
-its reason**, the **issuing identity**, and the **outcome**. This is required for
-after-action review, safety investigation, and accountability — and it is a
-first-class output, not a log file afterthought.
+The production target writes every task, authority decision, order, and status to
+a durable, identity-backed `cuas.audit.*` stream, with external signing/anchoring
+for non-repudiation. Each record links the **track**, **request**, **engagement**,
+**effector**, **authority decision and reason**, issuing identity, lifecycle state,
+transport outcome, and assessment.
+
+The checked-in reference node exposes those structured fields through `GET /audit`
+and maintains a SHA-256 hash chain. With `C2_AUDIT_FILE`, it atomically persists and
+fsyncs the local chain; selected transport evidence is also published best-effort.
+This detects local tampering but is not externally anchored, durable-bus evidence or
+cryptographic non-repudiation. A non-demo deployment must supply those controls.
 
 ## 6. Supply-chain & update integrity
 

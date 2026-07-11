@@ -7,7 +7,7 @@
   "required": ["trackId", "kinematics", "trackQuality", "identity", "timeObserved"],
   "additionalProperties": false,
   "properties": {
-    "trackId": { "type": "string", "description": "Stable id for this system track across updates." },
+    "trackId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "description": "Stable id for this system track across updates." },
     "kinematics": {
       "type": "object",
       "required": ["position"],
@@ -20,8 +20,14 @@
           "properties": {
             "lat": { "type": "number", "minimum": -90, "maximum": 90 },
             "lon": { "type": "number", "minimum": -180, "maximum": 180 },
-            "altMeters": { "type": "number", "description": "Height above WGS84 ellipsoid in meters." },
-            "frame": { "type": "string", "enum": ["WGS84"], "default": "WGS84" }
+            "altMeters": { "type": "number", "description": "Altitude in meters using altitudeReference; never infer the datum from frame." },
+            "frame": { "type": "string", "enum": ["WGS84"], "default": "WGS84" },
+            "altitudeReference": {
+              "type": "string",
+              "enum": ["WGS84_ELLIPSOID", "MSL", "AGL", "UNKNOWN"],
+              "default": "UNKNOWN",
+              "description": "Vertical datum/reference for altMeters. MSL and AGL require a deployment-approved terrain/geoid source before conversion."
+            }
           }
         },
         "velocity": {
@@ -29,7 +35,7 @@
           "additionalProperties": false,
           "properties": {
             "speedMps": { "type": "number", "minimum": 0 },
-            "courseDeg": { "type": "number", "minimum": 0, "maximum": 360 },
+            "courseDeg": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 },
             "verticalRateMps": { "type": "number" }
           }
         }
@@ -37,11 +43,17 @@
     },
     "covariance": {
       "type": "object",
-      "description": "Positional uncertainty; tighter covariance (more/better sensors) raises trackQuality.",
+      "description": "Positional uncertainty in a local East-North-Up tangent plane. Legacy *Meters fields and variance fields are one-sigma unless confidenceLevel states otherwise.",
       "additionalProperties": false,
       "properties": {
         "horizontalMeters": { "type": "number", "minimum": 0 },
-        "verticalMeters": { "type": "number", "minimum": 0 }
+        "verticalMeters": { "type": "number", "minimum": 0 },
+        "referenceFrame": { "type": "string", "enum": ["LOCAL_ENU"] },
+        "confidenceLevel": { "type": "string", "enum": ["ONE_SIGMA", "NINETY_FIVE_PERCENT"] },
+        "eastVarianceM2": { "type": "number", "minimum": 0 },
+        "northVarianceM2": { "type": "number", "minimum": 0 },
+        "upVarianceM2": { "type": "number", "minimum": 0 },
+        "eastNorthCovarianceM2": { "type": "number" }
       }
     },
     "trackQuality": {
@@ -77,18 +89,49 @@
     },
     "contributingSensors": {
       "type": "array",
-      "items": { "type": "string" },
-      "description": "Provenance: sensors whose detections built this track. Enables cross-cue tasking to raise TQ."
+      "items": { "type": "string", "minLength": 1, "maxLength": 128 },
+      "uniqueItems": true,
+      "description": "Provenance: sensors whose current detections support this track. Cross-cue tasking may improve later observations; it never directly changes TQ."
     },
     "timeObserved": {
       "type": "string",
       "format": "date-time",
       "description": "RFC3339 time of the latest contributing observation. Effectors reject orders on stale tracks."
     },
-    "timeToLiveSeconds": {
+    "timeUpdated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC3339 fusion/update time. This can be newer than timeObserved while a track is coasting."
+    },
+    "dataAgeSeconds": {
       "type": "number",
       "minimum": 0,
+      "description": "Producer-computed age of the newest contributing observation at timeUpdated. Consumers should recompute age as time advances."
+    },
+    "measurementLatencyMilliseconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Notional or measured latency represented between the newest source observation and fusion processing."
+    },
+    "observationSequence": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic per-track sequence incremented only when a new observation contributes."
+    },
+    "fusionState": {
+      "type": "string",
+      "enum": ["TENTATIVE", "CONFIRMED", "COASTING", "STALE"],
+      "description": "Fusion lifecycle; STALE tracks remain visible only until their TTL expires."
+    },
+    "timeToLiveSeconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
       "description": "Track ages out of the COP after this many seconds without update."
+    },
+    "modelProvenance": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Identifies notional/synthetic model provenance. It must not be interpreted as field performance evidence."
     }
   }
 }

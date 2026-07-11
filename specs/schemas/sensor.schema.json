@@ -4,10 +4,10 @@
   "title": "SensorStatus",
   "description": "Sensor registration/health/coverage. Published periodically to cuas.sensor.status.{sensorId} and returned by the C2 registry.",
   "type": "object",
-  "required": ["sensorId", "sensorType", "readiness"],
+  "required": ["sensorId", "sensorType", "readiness", "timeReported"],
   "additionalProperties": false,
   "properties": {
-    "sensorId": { "type": "string" },
+    "sensorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9_:@/-]{0,127}$" },
     "sensorType": { "type": "string", "enum": ["RADAR", "RF", "EO_IR", "ACOUSTIC", "FUSION_INPUT", "OTHER"] },
     "vendor": { "type": "string", "description": "Informational; the sensor is interchangeable behind the government interface." },
     "readiness": { "type": "string", "enum": ["READY", "DEGRADED", "OFFLINE", "MAINTENANCE"] },
@@ -20,6 +20,7 @@
       "properties": {
         "center": {
           "type": "object",
+          "required": ["lat", "lon"],
           "additionalProperties": false,
           "properties": {
             "lat": { "type": "number" },

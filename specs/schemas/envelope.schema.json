@@ -4,7 +4,7 @@
   "title": "Message Envelope",
   "description": "Common wrapper for every message on the C-UAS C2 bus. The payload is one canonical type, discriminated by messageType. Government-owned interface (Imperative 2).",
   "type": "object",
-  "required": ["messageId", "schemaVersion", "messageType", "source", "classification", "timeCreated", "payload"],
+  "required": ["messageId", "schemaVersion", "messageType", "source", "classification", "timeCreated", "signature", "payload"],
   "additionalProperties": false,
   "properties": {
     "messageId": {
@@ -19,7 +19,7 @@
     },
     "messageType": {
       "type": "string",
-      "enum": ["Track", "Detection", "SensorTask", "SensorStatus", "EffectorStatus", "EngagementOrder", "EngagementStatus", "C2Directive"],
+      "enum": ["Track", "Detection", "SensorTask", "SensorStatus", "EffectorStatus", "EngagementOrder", "EngagementStatus", "EngagementControlDirective", "AuditRecord", "C2Directive"],
       "description": "Discriminator selecting the payload schema."
     },
     "source": {
@@ -43,7 +43,7 @@
     },
     "signature": {
       "type": "string",
-      "description": "Detached signature over the canonical message bytes (Zero Trust). Optional in the reference scaffold; required in production."
+      "description": "Authentication over the canonical envelope with signature omitted. The reference uses hmac-sha256:<hex> with a demo shared key; a fielded profile must use approved per-workload keying and broker identity."
     },
     "payload": {
       "type": "object",

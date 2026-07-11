@@ -107,8 +107,10 @@ OTA is required for all three classes, with increasing safety rigor.
 
 - Every node exports health/metrics to `cuas.*.status.*` and a metrics endpoint;
   the echelon COP shows node/sensor/effector readiness at a glance.
-- The audit stream (`cuas.audit.*`) is the forensic record (see
-  [§05](05-security-authority-safety.md#5-auditability-non-repudiation)).
+- A production, durable, externally anchored audit stream (`cuas.audit.*`) is the
+  forensic record. The reference node provides only local hash-chained evidence and
+  best-effort stream publication (see
+  [§05](05-security-authority-safety.md#5-auditability-and-production-non-repudiation-target)).
 - Update state (version, partition, last successful self-test) is itself a reported
   status, so the fleet's patch posture is visible from echelon.
 

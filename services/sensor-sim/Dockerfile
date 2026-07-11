@@ -5,7 +5,7 @@ WORKDIR /srv
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY sim.py .
+COPY sim.py simulation.py ./
 
 RUN useradd --create-home --uid 10002 simuser
 USER simuser

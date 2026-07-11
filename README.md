@@ -35,6 +35,7 @@ descend for the engineering reference.
 | Edge topology, DevSecOps & OTA | [`docs/06-edge-topology-devsecops-ota.md`](docs/06-edge-topology-devsecops-ota.md) | Platform / DevSecOps engineers |
 | Roadmap | [`docs/07-roadmap.md`](docs/07-roadmap.md) | Program managers |
 | Standards crosswalk | [`docs/08-standards-crosswalk.md`](docs/08-standards-crosswalk.md) | Standards / interoperability leads |
+| Command-center UX & validation | [`docs/09-command-center-ux-and-validation.md`](docs/09-command-center-ux-and-validation.md) | Operators, human-factors engineers, testers |
 | Decisions (ADRs) | [`docs/decisions/`](docs/decisions/) | All |
 
 ## Public COP demo
@@ -53,15 +54,23 @@ labeled for demonstration only.
 The same page runs in LIVE mode against the real c2-core REST API and bus
 when c2-core serves it (`make up`, then <http://localhost:8000/>).
 
-The COP models the fight with modality-true sensing (radar clutter floor,
-RF-blind comms-silent threats, EO/IR cueing and night/rain degradation),
-per-class engagement physics (flight times, directed-energy dwell, EW
-soft-kill outcomes, magazine rearm), a TEWA engagement queue with human-in
-/on-the-loop consent, battle damage assessment, no-fire collateral zones,
+The COP uses **modality-inspired, illustrative sensing behavior** (radar clutter
+floor, RF-blind comms-silent threats, EO/IR cueing and night/rain degradation)
+and **notional engagement timing and outcomes** (flight times,
+directed-energy dwell, EW soft-kill outcomes, magazine rearm). These values are
+unvalidated and must not be used for operational decisions or comparative
+effectiveness claims. The demonstration includes a TEWA engagement queue with
+human-in/on-the-loop consent, battle damage assessment, no-fire collateral zones,
 threat profiles (low ingress, OWA cruise, ISR orbiters, decoys), civilian
 air and boat traffic, seeded weather and time of day, a degraded-comms
 inject, a notional cost-exchange ledger, and an AAR replay scrubber.
 Preset links: `?scn=elpaso&arch=HUB&wx=RAIN&tod=NIGHT&seed=N`.
+
+The COP is designed for a fixed command-center workstation, not a phone. The
+supported target is 1280x720 or larger (1920x1080 or 2560x1440 recommended),
+including common Windows display-scaling settings. Operator, sensor-management,
+supervisor, shared-COP, AAR, and exercise-control responsibilities are separated
+as described in [`docs/09-command-center-ux-and-validation.md`](docs/09-command-center-ux-and-validation.md).
 
 `site/index.html` is the single source; `make build-cop` regenerates the
 served and demo copies and stamps `COP_BUILD` (drift is CI-checked).
@@ -102,11 +111,16 @@ any-sensor/any-shooter engagement, and positive-control denials, plus an audit l
 Stand the whole thing up locally (broker + C2 node + a simulated sensor) with one command:
 
 ```bash
-make up        # docker compose: NATS (JetStream) + c2-core + sensor-sim
+make up        # docker compose: ACL-scoped NATS + c2-core + sensor-sim
 make demo      # walk the any-sensor/any-shooter flow end to end
 make test      # run the data-model and engagement-authority tests
 make down
 ```
+
+JetStream is enabled in the local broker for extension work, but the checked-in
+command adapter intentionally uses signed Core NATS and distinguishes NOT_SENT,
+DELIVERY_UNKNOWN, and broker acceptance. It does not claim durable delivery or
+effector action without an application-level lifecycle acknowledgement.
 
 See [`docs/QUICKSTART.md`](docs/QUICKSTART.md) for the guided walkthrough.
 
