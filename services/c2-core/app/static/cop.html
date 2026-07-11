@@ -506,10 +506,12 @@
   .log-row .d.LEAKER { color: var(--suspect); }
   .log-row .m { color: var(--muted); }
 
-  /* toast */
+  /* toast: docked to the map's own bottom edge (not the full viewport) so it
+     never drifts into the rail and never climbs into the mid-map engagement
+     area the way a large fixed offset would. */
   .toast-wrap {
-    position: fixed;
-    bottom: 210px;
+    position: absolute;
+    bottom: 44px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -528,6 +530,8 @@
     background: #11161f;
     box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     animation: toastin 0.18s ease-out;
+    max-width: 480px;
+    text-align: center;
   }
   .toast.deny { border-color: #6b1e2a; color: #ffc6cd; background: #1c0f12; }
   .toast.ok { border-color: #14401f; color: #b6f0c8; background: #0c160f; }
@@ -718,6 +722,7 @@
       <div class="fedhud" id="fedhud"></div>
       <div class="legend" id="legend"></div>
       <div class="hint">click a track to select &middot; sensors &#9634; &middot; effectors &#9670;</div>
+      <div class="toast-wrap" id="toasts"></div>
     </div>
 
     <aside class="rail">
@@ -810,7 +815,12 @@
       <div class="rail-pinned">
         <div class="card">
           <h3>Audit Log</h3>
+          <div class="seg" id="logFmtSeg" style="margin-bottom:8px" title="Same event feed, two formats">
+            <button data-v="TEXT" aria-pressed="true">LOG</button>
+            <button data-v="L16" title="Stylized Link-16 J-series message format &mdash; for demonstration flavor, not certified TADIL-J">J-SERIES</button>
+          </div>
           <div class="log" id="log"></div>
+          <div class="log" id="logL16" hidden></div>
         </div>
       </div>
     </aside>
@@ -852,6 +862,11 @@
       </div>
       <span class="ctl-div"></span>
       <div class="ctl-grp">
+        <span class="glabel">Audio</span>
+        <button class="sbtn" id="btnSound" aria-pressed="false" title="Synthesized alert tones for new contacts, engagements, kills, leakers, and comms status &mdash; off by default">&#128263; Sound: Off</button>
+      </div>
+      <span class="ctl-div"></span>
+      <div class="ctl-grp">
         <span class="glabel">Review</span>
         <button class="sbtn" id="btnRegional" title="Open the operational (theater) rollup: USNORTHCOM alert view with per-base weapons/sustainment and autonomous-launcher tasking">Regional view</button>
         <button class="sbtn" id="btnAAR" title="Open the After Action Review: outcomes, timeline, and assessment for the current run">After action review</button>
@@ -864,8 +879,6 @@
 
   <div class="classbar">UNCLASSIFIED // FOR DEMONSTRATION ONLY</div>
 </div>
-
-<div class="toast-wrap" id="toasts"></div>
 
 <div class="aar-back" id="aarBack" hidden>
   <div class="aar" role="dialog" aria-modal="true" aria-labelledby="aarTitle">
@@ -974,6 +987,8 @@
           <div><b>Weather</b> &mdash; CLEAR / WIND / RAIN: wind slows small UAS, rain shortens EO/IR and directed-energy reach</div>
           <div><b>Time of day</b> &mdash; AUTO follows the scenario clock; NIGHT darkens the plot and cuts EO/IR to 55% (watch its ring shrink)</div>
           <div><b>Degrade comms</b> &mdash; DDIL inject: the COP goes stale (positions step every 2.5 s, TQ drops) and engagement orders add latency</div>
+          <div><b>Sound</b> &mdash; synthesized alert tones (new contact, weapons release, kill, leaker, grant/deny). Off by default; the toggle both enables it and starts audio (browsers require a click before sound can play)</div>
+          <div><b>Audit Log &middot; J-SERIES</b> &mdash; the same event feed restated as stylized Link-16 J-series lines (demo flavor, not certified TADIL-J); switch back with LOG</div>
           <div><b>Click a track</b> &mdash; see its detail, track quality, time-to-impact, and engage it</div>
         </div>
       </div>
@@ -1207,6 +1222,8 @@
     wx: "CLEAR",                             // CLEAR | WIND | RAIN (seeded per run)
     tod: "AUTO",                             // AUTO (scenario clock) | DAY | NIGHT
     degraded: false,                         // DDIL inject: stale COP + order latency
+    logFormat: "TEXT",                       // TEXT | L16 (audit log rail display)
+    tdlSeq: 0,                                // Link-16-style message sequence counter
   };
 
   function isCrossVendor(track, eff) {
@@ -1455,7 +1472,7 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "c98f8807";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "0c9fd8e9";   // stamped by scripts/build_cop.py (content hash)
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
@@ -2782,7 +2799,60 @@
     selectTrack(best);
   });
 
+  // ---- audio: synthesized alert tones (Web Audio, no assets) ----
+  // Off by default (browsers block autoplay before a gesture anyway); #btnSound
+  // both unmutes and lazily creates the AudioContext on the click that enables it.
+  const AUDIO = { ctx: null, master: null, muted: true, last: {} };
+  function audioInit() {
+    if (AUDIO.ctx) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    AUDIO.ctx = new Ctx();
+    AUDIO.master = AUDIO.ctx.createGain();
+    AUDIO.master.gain.value = 0.35;
+    AUDIO.master.connect(AUDIO.ctx.destination);
+  }
+  function tone(freq, dur, opts) {
+    opts = opts || {};
+    const t0 = AUDIO.ctx.currentTime + (opts.delay || 0);
+    const osc = AUDIO.ctx.createOscillator();
+    const g = AUDIO.ctx.createGain();
+    osc.type = opts.type || "sine";
+    osc.frequency.setValueAtTime(freq, t0);
+    if (opts.slideTo) osc.frequency.linearRampToValueAtTime(opts.slideTo, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(opts.peak ?? 0.5, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(AUDIO.master);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
+  }
+  // one alert signature per logEvent() decision code -- an RWR-style vocabulary
+  // (new-contact chirp, weapons-release click, kill chime, leaker alarm, ...).
+  // INFO is intentionally silent: it fires on routine narration and would swamp
+  // the other cues.
+  const ALERT_SOUND = {
+    DECLARE:  () => tone(950, 0.09, { type: "sine", peak: 0.45, slideTo: 1350 }),
+    LEAKER:   () => { tone(880, 0.14, { type: "square", peak: 0.55 }); tone(660, 0.14, { type: "square", peak: 0.55, delay: 0.16 }); tone(880, 0.14, { type: "square", peak: 0.55, delay: 0.32 }); },
+    PERMIT:   () => tone(700, 0.05, { type: "square", peak: 0.3 }),
+    COMPLETE: () => { tone(660, 0.08, { type: "sine", peak: 0.4 }); tone(990, 0.12, { type: "sine", peak: 0.4, delay: 0.09 }); },
+    MISS:     () => tone(220, 0.14, { type: "sawtooth", peak: 0.28, slideTo: 150 }),
+    GRANTED:  () => tone(520, 0.05, { type: "sine", peak: 0.16 }),
+    DENY:     () => tone(180, 0.12, { type: "square", peak: 0.22 }),
+  };
+  function playAlert(decision) {
+    if (AUDIO.muted || !AUDIO.ctx) return;
+    const fn = ALERT_SOUND[decision];
+    if (!fn) return;
+    const now = AUDIO.ctx.currentTime;
+    if (AUDIO.last[decision] != null && now - AUDIO.last[decision] < 0.06) return; // debounce raid-scale bursts
+    AUDIO.last[decision] = now;
+    fn();
+  }
+
   // ---- log + toast ----
+  // Stylized Link-16 J-series code per decision, purely for the "J-SERIES" audit
+  // log view -- flavor for the demo, not a certified TADIL-J mapping.
+  const J_CODE = { INFO: "J28.2", DECLARE: "J3.2", LEAKER: "J3.2", PERMIT: "J12.6", GRANTED: "J12.6", COMPLETE: "J7.1", MISS: "J7.1", DENY: "J28.2" };
   function logEvent(decision, cls, msg) {
     const clock = nowClock();
     const row = document.createElement("div");
@@ -2792,6 +2862,17 @@
     log.appendChild(row);
     log.scrollTop = log.scrollHeight;
     while (log.children.length > 200) log.removeChild(log.firstChild);
+
+    const trow = document.createElement("div");
+    trow.className = "log-row";
+    trow.innerHTML = `<span class="t">${clock}</span><span class="d ${cls}">${J_CODE[decision] || "J28.2"}</span><span class="m">#${String(++S.tdlSeq).padStart(4, "0")} · ${String(msg).toUpperCase()}</span>`;
+    const logL16 = $("logL16");
+    logL16.appendChild(trow);
+    logL16.scrollTop = logL16.scrollHeight;
+    while (logL16.children.length > 200) logL16.removeChild(logL16.firstChild);
+
+    playAlert(decision);
+
     // mirror into the structured timeline that feeds the After Action Review
     if (S.events) {
       S.events.push({ clock, t: perf(), decision, cls, msg });
@@ -3188,6 +3269,20 @@
       toast("ok", "Comms restored");
     }
   };
+  $("btnSound").onclick = () => {
+    AUDIO.muted = !AUDIO.muted;
+    if (!AUDIO.muted) { audioInit(); if (AUDIO.ctx && AUDIO.ctx.state === "suspended") AUDIO.ctx.resume(); }
+    $("btnSound").textContent = AUDIO.muted ? "\u{1F507} Sound: Off" : "\u{1F50A} Sound: On";
+    $("btnSound").setAttribute("aria-pressed", AUDIO.muted ? "false" : "true");
+    if (!AUDIO.muted) playAlert("GRANTED");
+  };
+  document.querySelectorAll("#logFmtSeg button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#logFmtSeg button").forEach((x) => x.setAttribute("aria-pressed", "false"));
+    b.setAttribute("aria-pressed", "true");
+    S.logFormat = b.dataset.v;
+    $("log").hidden = S.logFormat !== "TEXT";
+    $("logL16").hidden = S.logFormat !== "L16";
+  }));
   $("btnAAR").onclick = showAAR;
   $("btnRegional").onclick = showRegional;
   $("btnReset").onclick = () => { if (S.autoplay.running) stopAutoplay(); resetScenario(); };
@@ -3441,7 +3536,7 @@
     S.effectors = JSON.parse(JSON.stringify(EFFECTORS));
     computeCoverage();
     S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, misses: 0, defeatTimes: [], costSpent: 0, threatValue: 0, softKills: 0, cheapKills: 0 };
-    S.events = []; S.runStart = perf();
+    S.events = []; S.runStart = perf(); S.tdlSeq = 0;
     S.assetIntegrity = 100; S.paused = false; setPaused(false);
     S.pendingEng.clear();
     S.echelon = { bn: false, rgt: false };
@@ -3470,6 +3565,7 @@
       S.ambT = 6 + rand() * 10;   // first ambient arrival
     }
     $("log").innerHTML = "";
+    $("logL16").innerHTML = "";
     logEvent("INFO", "INFO", "Scenario reset");
     renderRail();
   }
