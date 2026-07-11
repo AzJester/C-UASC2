@@ -1,0 +1,4 @@
+site/index.html text eol=lf
+cuas-cop-demo.html text eol=lf
+services/c2-core/app/static/cop.html text eol=lf
+scripts/build_cop.py text eol=lf

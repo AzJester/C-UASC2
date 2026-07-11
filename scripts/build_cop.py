@@ -30,8 +30,18 @@ STAMP_RE = re.compile(r'(const COP_BUILD = ")[0-9a-f]{8}(";)')
 FAVICON = '<link rel="icon" href="data:,"></head><body>'
 
 
+def read_lf(path: Path) -> str:
+    """Read UTF-8 text with deterministic newlines on every platform."""
+    return path.read_bytes().decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
+
+
+def write_lf(path: Path, content: str) -> None:
+    """Write canonical UTF-8/LF bytes without host newline translation."""
+    path.write_bytes(content.encode("utf-8"))
+
+
 def stamped_source() -> str:
-    src = SOURCE.read_text()
+    src = read_lf(SOURCE)
     if not STAMP_RE.search(src):
         sys.exit("build_cop: COP_BUILD stamp line not found in site/index.html")
     normalized = STAMP_RE.sub(r"\g<1>00000000\g<2>", src)
@@ -59,7 +69,7 @@ def main() -> int:
     drift = [
         str(p.relative_to(ROOT))
         for p, want in outputs.items()
-        if not p.exists() or p.read_text() != want
+        if not p.exists() or read_lf(p) != want
     ]
     if check:
         if drift:
@@ -69,7 +79,7 @@ def main() -> int:
         print("COP copies in sync (build " + STAMP_RE.search(full).group(0)[19:27] + ")")
         return 0
     for p, want in outputs.items():
-        p.write_text(want)
+        write_lf(p, want)
     print("built COP " + STAMP_RE.search(full).group(0)[19:27] + " -> " +
           ", ".join(str(p.relative_to(ROOT)) for p in outputs))
     return 0
