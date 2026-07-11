@@ -958,6 +958,7 @@
           <div><b style="color:#39a0c4">cyan / amber / violet beam</b> &mdash; air intercept / kinetic / directed-energy shot</div>
           <div><b>dashed coastline / border</b> &mdash; terrain; naval assets sit offshore in blue water</div>
           <div><b style="color:#ff6b78">red dashed circle</b> &mdash; no-fire zone: kinetic fires prohibited over it; soft-kill (EW / RF takeover / net) only</div>
+          <div><b style="color:#8296ab">hatched dark wedge</b> &mdash; terrain mask: the ridge line (Point Loma, Franklin Mountains) blinds that sensor to LOW targets beyond it; elevated sensors and other angles cover the gap</div>
         </div>
       </div>
       <div class="aar-col">
@@ -1454,7 +1455,7 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "fced748f";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "c98f8807";   // stamped by scripts/build_cop.py (content hash)
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
@@ -2135,13 +2136,35 @@
       ctx.strokeStyle = "rgba(57,160,196,0.20)"; ctx.setLineDash([4, 6]); ctx.lineWidth = 1; ctx.stroke();
       ctx.setLineDash([]);
       if (s.mask) {
-        // terrain shadow: coverage lost to the ridge line for low targets
+        // terrain shadow: coverage lost to the ridge line for low targets.
+        // Hatched + labeled so it reads as an annotation, not a render bug.
         for (const m of s.mask) {
-          ctx.beginPath();
-          ctx.arc(sx(s.x), sy(s.y), s.range * scale, -m.to, -m.from);
-          ctx.arc(sx(s.x), sy(s.y), (m.beyond || 0) * scale, -m.from, -m.to, true);
-          ctx.closePath();
-          ctx.fillStyle = "rgba(2,4,8,0.45)"; ctx.fill();
+          const cx0 = sx(s.x), cy0 = sy(s.y), rOut = s.range * scale, rIn = (m.beyond || 0) * scale;
+          const wedge = () => {
+            ctx.beginPath();
+            ctx.arc(cx0, cy0, rOut, -m.to, -m.from);
+            ctx.arc(cx0, cy0, rIn, -m.from, -m.to, true);
+            ctx.closePath();
+          };
+          // on real imagery the mountains are visible, so the annotation is
+          // line-work; on the synthetic map a slightly stronger tint carries it
+          ctx.save();
+          wedge();
+          ctx.fillStyle = S._satOn ? "rgba(4,7,12,0.10)" : "rgba(4,7,12,0.22)";
+          ctx.fill();
+          ctx.clip();
+          ctx.strokeStyle = "rgba(110,130,155,0.08)"; ctx.lineWidth = 1;
+          for (let k = -2 * rOut; k < 2 * rOut; k += 12) {
+            ctx.beginPath(); ctx.moveTo(cx0 + k - rOut, cy0 - rOut); ctx.lineTo(cx0 + k + rOut, cy0 + rOut); ctx.stroke();
+          }
+          ctx.restore();
+          wedge();
+          ctx.strokeStyle = "rgba(110,130,155,0.30)"; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+          ctx.stroke(); ctx.setLineDash([]);
+          if (rOut - rIn > 55) {
+            const mid = (m.from + m.to) / 2, midR = (rIn + rOut) / 2;
+            placeLabel("TERRAIN MASK \u00b7 LOW-ALT GAP", cx0 + Math.cos(mid) * midR, cy0 - Math.sin(mid) * midR, "rgba(150,168,190,0.6)", "8px " + MONO, "center");
+          }
         }
       }
       drawSensor(s);
@@ -2342,6 +2365,7 @@
     if (S.basemap === "SAT" && !satDead) {
       ctx.fillStyle = "#0a0d12"; ctx.fillRect(0, 0, w, h);
       if (drawSatellite() > 0) {
+        S._satOn = true;
         // dim to console luminance so glyphs, coverage, and labels stay readable
         ctx.fillStyle = "rgba(5,9,15,0.45)"; ctx.fillRect(0, 0, w, h);
         if (SCN.terrain === "border") {
@@ -2364,6 +2388,7 @@
       }
       // tiles still loading: draw the synthetic terrain underneath meanwhile
     }
+    S._satOn = false;
     if (SCN.terrain === "border") {
       // desert land; US-Mexico border (anchored in the meters frame) with Mexico south
       ctx.fillStyle = "#100f0a"; ctx.fillRect(0, 0, w, h);
@@ -3466,6 +3491,7 @@
     `<span><i style="background:#78c8ff;border-radius:1px"></i>MANET</span>` +
     `<span><i style="background:#b08cff;border-radius:1px"></i>5G</span>` +
     `<span><i style="background:#ff425622;border:1px dashed #ff4256aa;border-radius:1px"></i>No-fire</span>` +
+    `<span><i style="background:repeating-linear-gradient(45deg,#6e829b33,#6e829b33 2px,transparent 2px,transparent 5px);border-radius:1px"></i>Terrain mask</span>` +
     `<span style="opacity:.85">Joint: USA \u00B7 USN \u00B7 USMC \u00B7 USAF</span>`;
 
   // ---- guided tour: six spotlight steps for first-time viewers ----
