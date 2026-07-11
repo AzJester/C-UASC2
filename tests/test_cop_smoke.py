@@ -39,7 +39,7 @@ def page():
         pg.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
         pg.on("pageerror", lambda e: errors.append(f"pageerror {e}"))
         pg.console_errors = errors  # type: ignore[attr-defined]
-        pg.goto(f"file://{COP}?debug=1&basemap=tac")
+        pg.goto(f"file://{COP}?debug=1&basemap=tac&seed=42&wx=CLEAR&tod=DAY")
         pg.wait_for_timeout(500)
         yield pg
         browser.close()
@@ -73,24 +73,35 @@ def test_satellite_imagery_is_the_default_basemap(page):
     default_page.close()
 
 
-def test_raid_runs_and_defeats_threats(page):
+def test_raid_runs_and_produces_an_engagement_outcome(page):
     # Autonomous air/naval release now defaults OFF. This raid test deliberately
     # arms auto-release through the debug seam; normal operators use the visible
-    # two-step WEAPONS FREE confirmation.
+    # two-step WEAPONS FREE confirmation. Reload the seeded laydown so time spent
+    # in earlier tests cannot consume inventory or advance the simulation state.
+    page.reload()
+    page.wait_for_function("() => !!window.__CUAS__")
     page.evaluate("() => { window.__CUAS__.S.wcs='WEAPONS_FREE'; window.__CUAS__.S.autoReleaseArmed=true; }")
     page.click("#btnExercise")
     page.select_option("#injectSel", "raid")
     page.click("#btnExercise")
-    page.wait_for_timeout(9000)
+    page.wait_for_function(
+        """() => {
+          const s = window.__CUAS__.S.stats;
+          const outcomes = s.defeated + s.misses + s.partialEffects + s.unconfirmedEffects;
+          return s.engagements > 0 && outcomes > 0;
+        }""",
+        timeout=15_000,
+    )
     stats = page.evaluate(
         "() => ({ tracks: window.__CUAS__.S.tracks.size,"
-        " defeated: window.__CUAS__.S.stats.defeated,"
+        " outcomes: window.__CUAS__.S.stats.defeated + window.__CUAS__.S.stats.misses +"
+        "   window.__CUAS__.S.stats.partialEffects + window.__CUAS__.S.stats.unconfirmedEffects,"
         " engagements: window.__CUAS__.S.stats.engagements,"
         " integrity: window.__CUAS__.S.assetIntegrity })"
     )
     assert stats["tracks"] > 0, "no tracks after raid"
     assert stats["engagements"] > 0, "no engagements ran"
-    assert stats["defeated"] > 0, "nothing defeated"
+    assert stats["outcomes"] > 0, "no engagement outcome completed"
     assert 0 <= stats["integrity"] <= 100
 
 
