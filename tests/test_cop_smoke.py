@@ -55,6 +55,24 @@ def test_cop_boots_clean(page):
     assert "S" in api and "resetScenario" in api, f"debug hook incomplete: {api}"
 
 
+def test_satellite_imagery_is_the_default_basemap(page):
+    default_page = page.context.new_page()
+    default_page.route("https://server.arcgisonline.com/**", lambda route: route.abort())
+    default_page.goto(f"file://{COP}?debug=1&seed=17")
+    default_page.wait_for_function("() => !!window.__CUAS__")
+
+    assert default_page.evaluate("window.__CUAS__.S.basemap") == "SAT"
+    assert (
+        default_page.get_attribute('#baseSeg button[data-v="SAT"]', "aria-pressed")
+        == "true"
+    )
+    assert (
+        default_page.get_attribute('#baseSeg button[data-v="TAC"]', "aria-pressed")
+        == "false"
+    )
+    default_page.close()
+
+
 def test_raid_runs_and_defeats_threats(page):
     # Autonomous air/naval release now defaults OFF. This raid test deliberately
     # arms auto-release through the debug seam; normal operators use the visible
