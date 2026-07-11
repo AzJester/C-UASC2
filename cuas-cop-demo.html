@@ -874,7 +874,7 @@
       <span class="ctl-div"></span>
       <div class="ctl-grp">
         <span class="glabel">Audio</span>
-        <button class="sbtn" id="btnSound" aria-pressed="false" title="Synthesized alert tones plus brief spoken radio callouts (hostile declared, weapons released, splash, leaker, denied) &mdash; off by default">&#128263; Sound: Off</button>
+        <button class="sbtn" id="btnSound" aria-pressed="false" title="Synthesized alert tones, spoken callouts for the headline moments, and routine blue-force radio chatter in between &mdash; off by default">&#128263; Sound: Off</button>
       </div>
       <span class="ctl-div"></span>
       <div class="ctl-grp">
@@ -998,7 +998,7 @@
           <div><b>Weather</b> &mdash; CLEAR / WIND / RAIN: wind slows small UAS, rain shortens EO/IR and directed-energy reach</div>
           <div><b>Time of day</b> &mdash; AUTO follows the scenario clock; NIGHT darkens the plot and cuts EO/IR to 55% (watch its ring shrink)</div>
           <div><b>Degrade comms</b> &mdash; DDIL inject: the COP goes stale (positions step every 2.5 s, TQ drops) and engagement orders add latency</div>
-          <div><b>Sound</b> &mdash; synthesized alert tones plus brief spoken radio callouts for the headline moments (hostile declared, weapons released, splash, leaker, denied). Off by default; the toggle both enables it and starts audio (browsers require a click before sound can play)</div>
+          <div><b>Sound</b> &mdash; synthesized alert tones, spoken callouts for the headline moments (hostile declared, weapons released, splash, leaker, denied), and routine blue-force check-ins between the shooting so the net sounds live. Off by default; the toggle both enables it and starts audio (browsers require a click before sound can play)</div>
           <div><b>Audit Log &middot; J-SERIES</b> &mdash; the same event feed restated as stylized Link-16 J-series lines (demo flavor, not certified TADIL-J); switch back with LOG</div>
           <div><b>Click a track</b> &mdash; see its detail, track quality, time-to-impact, and engage it</div>
         </div>
@@ -1235,6 +1235,7 @@
     degraded: false,                         // DDIL inject: stale COP + order latency
     logFormat: "L16",                        // TEXT | L16 (audit log rail display) -- J-SERIES is the default view
     tdlSeq: 0,                                // Link-16-style message sequence counter
+    chatT: null,                             // countdown to next routine radio-chatter line
   };
 
   function isCrossVendor(track, eff) {
@@ -1483,7 +1484,7 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "7182c684";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "afac57cf";   // stamped by scripts/build_cop.py (content hash)
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
@@ -1575,6 +1576,13 @@
 
   // ---- SIM physics + fusion tick ----
   function simTick(dt) {
+    // routine radio chatter: blue-force check-ins between the shooting, so the
+    // net sounds live rather than only ever keying up for an alert.
+    S.chatT = (S.chatT == null ? 8 + rand() * 12 : S.chatT) - dt;
+    if (S.chatT <= 0) {
+      S.chatT = 14 + rand() * 18;
+      speakRoutineChatter();
+    }
     // ambient traffic: contacts keep arriving so the picture stays alive and no
     // two runs look alike (SIM only; parked during the scripted auto-play brief)
     if (!S.live && !S.autoplay.running) {
@@ -2863,44 +2871,85 @@
     speak(decision);
   }
 
-  // ---- voice: brief spoken radio callouts, layered on the tones above (Web
-  // Speech API -- no assets). Reserved for the headline moments only (a
-  // hostile declared, weapons released, a kill, a leaker, a denial); routine
-  // grants and misses stay tone-only so the net doesn't talk over itself.
-  // Never lets more than one callout queue up, so a mass raid thins the
-  // chatter down to a trickle instead of minutes of backlog.
+  // ---- voice: a live tactical net, layered on the tones above (Web Speech
+  // API -- no assets). Two channels share one speaker queue:
+  //   - alert callouts: the headline moments (hostile declared, weapons
+  //     released, a kill, a leaker, a denial) -- several phrasings each, so
+  //     the net doesn't repeat itself verbatim every time.
+  //   - routine chatter: blue-force platforms checking in periodically, the
+  //     way a real net has traffic between the shooting.
+  // Never lets more than one line queue up, so a mass raid thins the chatter
+  // down to a trickle instead of minutes of backlog.
   const CALLOUT = {
-    DECLARE:  "Hostile declared",
-    PERMIT:   "Weapons released",
-    COMPLETE: "Splash, target destroyed",
-    LEAKER:   "Leaker, leaker, threat through the wire",
-    DENY:     "Engagement denied",
+    DECLARE:  ["Hostile declared", "New track, hostile", "Contact declared hostile", "Hostile confirmed, tracking"],
+    PERMIT:   ["Weapons released", "Shot, shot, shot", "Engaging now", "Weapons free, engaging"],
+    COMPLETE: ["Splash, target destroyed", "Splash one", "Target destroyed, B-D-A confirmed", "Kill confirmed"],
+    LEAKER:   ["Leaker, leaker, threat through the wire", "Leaker, leaker, leaker"],
+    DENY:     ["Engagement denied", "Negative, weapons hold", "Denied, stand by"],
   };
+  const ROUTINE = [
+    (cs) => `${cs}, on station`,
+    (cs) => `${cs}, holding`,
+    (cs) => `${cs}, negative contact`,
+    (cs) => `${cs}, checking in`,
+    (cs) => `${cs}, visual, no factor`,
+    (cs) => `${cs}, standing by`,
+    (cs) => `${cs}, contact, marking`,
+    (cs) => `${cs}, RTB, bingo fuel`,
+  ];
+  const ROUTINE_COAST = [(cs) => `${cs}, feet wet`, (cs) => `${cs}, feet dry`];
   const VOICE = { voice: null, cooldown: {} };
   function pickVoice() {
     if (!window.speechSynthesis) return null;
     const vs = speechSynthesis.getVoices();
-    return vs.find((v) => /en[-_]US/i.test(v.lang || "")) || vs[0] || null;
+    if (!vs.length) return null;
+    const en = vs.filter((v) => /^en([-_]|$)/i.test(v.lang || ""));
+    const pool = en.length ? en : vs;
+    // prefer higher-fidelity engines when the browser/OS exposes them
+    // (Chrome/Edge often ship "Natural"/"Online"/"Neural" cloud voices
+    // alongside a flat offline default) over just taking voices[0].
+    let best = pool[0];
+    let bestScore = -1;
+    for (const v of pool) {
+      const score = (/natural|neural|online|enhanced|premium/i.test(v.name) ? 2 : 0) + (/en[-_]US/i.test(v.lang || "") ? 1 : 0);
+      if (score > bestScore) { best = v; bestScore = score; }
+    }
+    return best;
   }
   if (window.speechSynthesis) {
     VOICE.voice = pickVoice();
     speechSynthesis.onvoiceschanged = () => { VOICE.voice = pickVoice(); };
   }
-  function speak(decision) {
-    const phrase = CALLOUT[decision];
+  function speakPhrase(phrase) {
     if (!phrase || AUDIO.muted || !window.speechSynthesis) return;
-    const now = perf();
-    if (VOICE.cooldown[decision] != null && now - VOICE.cooldown[decision] < 1200) return;
     if (speechSynthesis.pending) return; // one already queued -- drop rather than pile up
-    VOICE.cooldown[decision] = now;
     try {
       const u = new SpeechSynthesisUtterance(phrase);
       u.voice = VOICE.voice;
-      u.rate = 1.15;
-      u.pitch = 0.85;
+      // small per-line jitter (seeded, so a run replays identically) so
+      // back-to-back lines don't sound like the same clip on a loop.
+      u.rate = 1.06 + (rand() - 0.5) * 0.14;
+      u.pitch = 0.94 + (rand() - 0.5) * 0.12;
       u.volume = 0.85;
       speechSynthesis.speak(u);
     } catch (e) { /* no TTS engine available -- tones still carry the alert */ }
+  }
+  function speak(decision) {
+    const pool = CALLOUT[decision];
+    if (!pool) return;
+    const now = perf();
+    if (VOICE.cooldown[decision] != null && now - VOICE.cooldown[decision] < 1200) return;
+    VOICE.cooldown[decision] = now;
+    speakPhrase(pool[Math.floor(rand() * pool.length)]);
+  }
+  function speakRoutineChatter() {
+    if (AUDIO.muted || !window.speechSynthesis) return;
+    const blues = [...S.tracks.values()].filter((t) => isBlue(t) && !t.civil && t.state === "ACTIVE" && t.platform);
+    if (!blues.length) return;
+    const t = blues[Math.floor(rand() * blues.length)];
+    const cs = `${t.platform} ${t.trackId.slice(-2)}`;
+    const pool = SCN.terrain === "coast" ? ROUTINE.concat(ROUTINE_COAST) : ROUTINE;
+    speakPhrase(pool[Math.floor(rand() * pool.length)](cs));
   }
 
   // ---- log + toast ----
@@ -3631,6 +3680,7 @@
       if (S.scenario === "sandiego") { spawnCivBoat(); spawnCivBoat(); }
       S.ambT = 6 + rand() * 10;   // first ambient arrival
     }
+    S.chatT = 8 + rand() * 12;   // first routine chatter line
     $("log").innerHTML = "";
     $("logL16").innerHTML = "";
     logEvent("INFO", "INFO", "Scenario reset");
