@@ -43,7 +43,7 @@ descend for the engineering reference.
 The **Web COP** — the leadership-demo Common Operating Picture — is published
 to GitHub Pages so anyone can view it with no install:
 
-**<https://azjester.github.io/C-UASC2/>**
+**<https://cuas.insightfuldefense.com/>**
 
 The published page is the standalone build ([`site/index.html`](site/index.html)):
 it runs an embedded, seeded-random simulation entirely in the browser (no
@@ -80,7 +80,9 @@ Deployment is automated by
 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml):
 every push to `main` that touches `site/` (or on-demand dispatch) snapshots
 the `site/` tree onto the `gh-pages` branch, which GitHub Pages serves. The
-`gh-pages` branch is a deployment artifact, not a development branch.
+`site/CNAME` file preserves the custom domain across those force-pushed
+deployments. The `gh-pages` branch is a deployment artifact, not a development
+branch.
 
 ## The runnable scaffold
 
