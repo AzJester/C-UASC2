@@ -10,10 +10,10 @@
 The COP is a fixed-site, role-based Counter-UAS command-center application. It
 does not target phones. Supported workstation targets are:
 
-- 1280x720 minimum;
-- 1920x1080 or 2560x1440 recommended;
+- 1280x720 effective display resolution minimum;
+- 1920x1080, 2560x1440, 4K, 5K, and wall displays;
 - ultrawide and multi-display layouts where available; and
-- 100%, 125%, and 150% Windows display scaling.
+- high-DPI Windows display scaling with desktop scale-to-fit behavior.
 
 Unsupported sizes must receive an explicit workstation requirement instead of
 a partially functional compact layout. Desktop zoom, keyboard access, focus,
@@ -115,7 +115,7 @@ checks pass:
 
 - keyboard-only selection, tasking, proposal, authorization, abort, and AAR;
 - focus retention across dynamic updates and modal focus trap/restore;
-- 1280x720, 1920x1080, 2560x1440, and common display-scaling checks;
+- 1280x720, 1920x1080, 2560x1440, 3840x2160, and high-DPI display-scaling checks;
 - one backend-published track visible inside the configured AO;
 - server enforcement of WCS HOLD regardless of browser state;
 - explicit disconnect, expiry, replay, stale-track, and duplicate-order failures;
