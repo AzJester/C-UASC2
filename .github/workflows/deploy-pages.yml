@@ -1,7 +1,7 @@
 name: Deploy COP to GitHub Pages
 
 # Publishes the standalone Web COP (site/) to the public URL
-#   https://azjester.github.io/C-UASC2/
+#   https://cuas.insightfuldefense.com/
 # by snapshotting the site/ tree onto the gh-pages branch, which GitHub Pages
 # serves ("deploy from a branch"). The published page is the embedded-simulation
 # build: it makes no backend calls (LIVE mode only activates when c2-core serves
