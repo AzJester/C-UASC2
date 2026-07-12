@@ -152,13 +152,16 @@ def test_pause_freezes_motion(page):
         assert abs(p1["x"] - p2["x"]) < 1 and abs(p1["y"] - p2["y"]) < 1, "motion not frozen while paused"
 
 
-@pytest.mark.parametrize("width,height", [(1280, 720), (1920, 1080), (2560, 1440)])
+@pytest.mark.parametrize(
+    "width,height",
+    [(1280, 720), (1920, 1080), (2560, 1440), (3840, 2160)],
+)
 def test_fixed_site_desktop_layout_matrix(page, width, height):
     desktop = page.context.new_page()
     errors: list[str] = []
     desktop.on("pageerror", lambda error: errors.append(str(error)))
     desktop.set_viewport_size({"width": width, "height": height})
-    desktop.goto(f"file://{COP}?debug=1&basemap=tac&seed=11")
+    desktop.goto(f"file://{COP}?basemap=tac&seed=11")
     desktop.wait_for_timeout(500)
     metrics = desktop.evaluate(
         "() => ({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,"
@@ -174,6 +177,122 @@ def test_fixed_site_desktop_layout_matrix(page, width, height):
     assert metrics["command"] and metrics["trackList"]
     assert not errors
     desktop.close()
+
+
+def test_hidpi_4k_wall_display_scales_without_gate(page):
+    context = page.context.browser.new_context(
+        viewport={"width": 1280, "height": 630},
+        screen={"width": 1280, "height": 720},
+        device_scale_factor=3,
+    )
+    wall = context.new_page()
+    try:
+        wall.goto(f"file://{COP}?basemap=tac&seed=23")
+        wall.wait_for_timeout(500)
+        metrics = wall.evaluate(
+            """() => {
+              const root = document.querySelector('#cuas');
+              const rect = root.getBoundingClientRect();
+              return {
+                gate: !!document.querySelector('.workstation-gate'),
+                mode: root.dataset.displayMode,
+                scale: Number(root.dataset.displayScale),
+                display: root.dataset.displayEffective,
+                viewport: root.dataset.viewportCss,
+                rectWidth: rect.width,
+                rectHeight: rect.height,
+                scrollWidth: document.documentElement.scrollWidth,
+                clientWidth: document.documentElement.clientWidth,
+                scrollHeight: document.documentElement.scrollHeight,
+                clientHeight: document.documentElement.clientHeight,
+                bottom: [...document.querySelectorAll('.classbar')].at(-1).getBoundingClientRect().bottom,
+                innerWidth,
+                innerHeight,
+              };
+            }"""
+        )
+        assert metrics["gate"] is False
+        assert metrics["mode"] == "scaled"
+        assert metrics["display"] == "3840x2160"
+        assert metrics["viewport"] == "1280x630"
+        assert metrics["scale"] == pytest.approx(0.875, abs=0.001)
+        assert metrics["rectWidth"] == pytest.approx(metrics["innerWidth"], abs=1)
+        assert metrics["rectHeight"] == pytest.approx(metrics["innerHeight"], abs=1)
+        assert metrics["scrollWidth"] <= metrics["clientWidth"] + 1
+        assert metrics["scrollHeight"] <= metrics["clientHeight"] + 1
+        assert metrics["bottom"] == pytest.approx(metrics["innerHeight"], abs=1)
+
+        wall.set_viewport_size({"width": 600, "height": 340})
+        wall.locator("#workstationGate").wait_for(state="visible")
+        wall.set_viewport_size({"width": 1280, "height": 630})
+        wall.locator("#workstationGate").wait_for(state="detached")
+    finally:
+        context.close()
+
+
+def test_high_resolution_mobile_form_factor_remains_blocked(page):
+    context = page.context.browser.new_context(
+        viewport={"width": 480, "height": 800},
+        screen={"width": 480, "height": 900},
+        device_scale_factor=3,
+        has_touch=True,
+        is_mobile=True,
+        user_agent=(
+            "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/149.0 Mobile Safari/537.36"
+        ),
+    )
+    mobile = context.new_page()
+    try:
+        mobile.goto(f"file://{COP}?basemap=tac&seed=29")
+        gate = mobile.locator("#workstationGate")
+        gate.wait_for(state="visible")
+        assert "phone or mobile-tablet" in gate.inner_text()
+        effective = mobile.get_attribute("#cuas", "data-display-effective")
+        effective_width, effective_height = (int(value) for value in effective.split("x"))
+        assert effective_width >= 1280 and effective_height >= 720
+    finally:
+        context.close()
+
+
+def test_scaled_canvas_hit_testing_uses_layout_coordinates(page):
+    context = page.context.browser.new_context(
+        viewport={"width": 1280, "height": 630},
+        screen={"width": 1280, "height": 720},
+        device_scale_factor=3,
+    )
+    scaled = context.new_page()
+    try:
+        scaled.goto(
+            f"file://{COP}?debug=1&basemap=tac&seed=31&wx=CLEAR&tod=DAY"
+        )
+        scaled.wait_for_function("() => !!window.__CUAS__")
+        target = scaled.evaluate(
+            """() => {
+              const C = window.__CUAS__;
+              const canvas = document.querySelector('#plot');
+              const rect = canvas.getBoundingClientRect();
+              const tracks = [...C.S.tracks.values()]
+                .filter(track => track.state !== 'NEUTRALIZED')
+                .map(track => ({ id: track.trackId, ...C.plotPoint(track) }));
+              const chosen = tracks
+                .map(track => ({
+                  ...track,
+                  nearest: Math.min(...tracks.filter(other => other.id !== track.id)
+                    .map(other => Math.hypot(track.x - other.x, track.y - other.y))),
+                }))
+                .sort((a, b) => b.nearest - a.nearest)[0];
+              return {
+                id: chosen.id,
+                clientX: rect.left + chosen.x * (rect.width / canvas.clientWidth),
+                clientY: rect.top + chosen.y * (rect.height / canvas.clientHeight),
+              };
+            }"""
+        )
+        scaled.mouse.click(target["clientX"], target["clientY"])
+        assert scaled.evaluate("window.__CUAS__.S.selected") == target["id"]
+    finally:
+        context.close()
 
 
 def test_no_page_scroll_and_no_console_errors(page):

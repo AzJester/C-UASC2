@@ -25,7 +25,7 @@
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }
   :where(button, select, input, [tabindex]):focus-visible {
     outline: 2px solid #65c8eb;
     outline-offset: 2px;
@@ -37,9 +37,14 @@
 
   #cuas {
     --pad: 14px;
+    --workstation-scale: 1;
     position: fixed;
-    inset: 0;
-    height: 100%;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    transform: scale(var(--workstation-scale));
+    transform-origin: top left;
     display: grid;
     /* minmax(0,1fr) lets the plot row SHRINK to fit so the fixed header/tray rows
        always keep their height -- otherwise the canvas can force the plot row tall
@@ -56,6 +61,8 @@
     min-height: 720px;
     -webkit-font-smoothing: antialiased;
   }
+  #cuas > .tray { grid-row: 5; }
+  #cuas > .classbar:last-child { grid-row: 6; }
 
   /* classification banners */
   .classbar {
@@ -1768,7 +1775,7 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "08c3c854";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "385843b1";   // stamped by scripts/build_cop.py (content hash)
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
@@ -2736,6 +2743,86 @@
   const ctx = canvas.getContext("2d");
   let VIEW = { w: 0, h: 0, cx: 0, cy: 0, scale: 1, dpr: 1 };
 
+  const WORKSTATION_VIEW = Object.freeze({
+    layoutWidth: 1280,
+    layoutHeight: 720,
+    minimumViewportWidth: 640,
+    minimumViewportHeight: 360,
+  });
+
+  function isMobileClient() {
+    const ua = String(navigator.userAgent || "");
+    const mobileHint = !!(navigator.userAgentData && navigator.userAgentData.mobile);
+    const iPadDesktopMode = /Macintosh/i.test(ua) && Number(navigator.maxTouchPoints || 0) > 1;
+    return mobileHint || iPadDesktopMode || /Android|webOS|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile/i.test(ua);
+  }
+
+  function workstationMetrics() {
+    const viewportWidth = Math.max(1, window.innerWidth || 0);
+    const viewportHeight = Math.max(1, window.innerHeight || 0);
+    const dpr = Math.max(1, Number(window.devicePixelRatio) || 1);
+    const screenWidth = Math.max(viewportWidth, Number(window.screen && window.screen.width) || 0);
+    const screenHeight = Math.max(viewportHeight, Number(window.screen && window.screen.height) || 0);
+    return {
+      viewportWidth,
+      viewportHeight,
+      dpr,
+      displayWidth: Math.round(screenWidth * dpr),
+      displayHeight: Math.round(screenHeight * dpr),
+      mobileClient: isMobileClient(),
+    };
+  }
+
+  function setWorkstationGate(show, metrics) {
+    let gate = document.getElementById("workstationGate");
+    if (!show) {
+      if (gate) gate.remove();
+      return;
+    }
+    if (!gate) {
+      gate = document.createElement("div");
+      gate.id = "workstationGate";
+      gate.className = "workstation-gate";
+      gate.setAttribute("role", "alert");
+      gate.setAttribute("aria-live", "assertive");
+      document.body.appendChild(gate);
+    }
+    const displayReady = metrics.displayWidth >= WORKSTATION_VIEW.layoutWidth && metrics.displayHeight >= WORKSTATION_VIEW.layoutHeight;
+    const viewportReady = metrics.viewportWidth >= WORKSTATION_VIEW.minimumViewportWidth && metrics.viewportHeight >= WORKSTATION_VIEW.minimumViewportHeight;
+    const reason = metrics.mobileClient
+      ? "A phone or mobile-tablet form factor was detected."
+      : !displayReady
+        ? `The detected display is ${metrics.displayWidth} × ${metrics.displayHeight} effective pixels.`
+        : !viewportReady
+          ? `The browser workspace is only ${metrics.viewportWidth} × ${metrics.viewportHeight} CSS pixels.`
+          : "The browser does not currently expose a usable desktop workspace.";
+    gate.innerHTML = `<div class="gate-card">
+      <h1>Command-center workstation required</h1>
+      <p>${reason}</p>
+      <p>This fixed-site C-UAS operational picture needs a desktop-class display of at least <b>1280 × 720 effective pixels</b> and a browser workspace of at least <b>640 × 360</b>. Maximize the window or reduce browser zoom. High-DPI 4K, 5K, ultrawide, and wall displays are supported; phone operation is intentionally not supported.</p>
+    </div>`;
+  }
+
+  function fitWorkstationViewport(debugMode) {
+    const metrics = workstationMetrics();
+    const displayReady = metrics.displayWidth >= WORKSTATION_VIEW.layoutWidth && metrics.displayHeight >= WORKSTATION_VIEW.layoutHeight;
+    const viewportReady = metrics.viewportWidth >= WORKSTATION_VIEW.minimumViewportWidth && metrics.viewportHeight >= WORKSTATION_VIEW.minimumViewportHeight;
+    const allowed = !!debugMode || (!metrics.mobileClient && displayReady && viewportReady);
+    const scale = allowed
+      ? Math.max(0.1, Math.min(1, metrics.viewportWidth / WORKSTATION_VIEW.layoutWidth, metrics.viewportHeight / WORKSTATION_VIEW.layoutHeight))
+      : 1;
+    const root = $("cuas");
+    root.style.setProperty("--workstation-scale", scale.toFixed(4));
+    root.style.width = Math.max(WORKSTATION_VIEW.layoutWidth, Math.ceil(metrics.viewportWidth / scale)) + "px";
+    root.style.height = Math.max(WORKSTATION_VIEW.layoutHeight, Math.ceil(metrics.viewportHeight / scale)) + "px";
+    root.dataset.displayMode = scale < 0.9999 ? "scaled" : "native";
+    root.dataset.displayScale = scale.toFixed(4);
+    root.dataset.displayEffective = `${metrics.displayWidth}x${metrics.displayHeight}`;
+    root.dataset.viewportCss = `${metrics.viewportWidth}x${metrics.viewportHeight}`;
+    setWorkstationGate(!allowed, metrics);
+    return { ...metrics, allowed, scale };
+  }
+
   function resize() {
     const wrap = canvas.parentElement;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -3556,7 +3643,8 @@
   canvas.addEventListener("click", (ev) => {
     if (S.autoplay.running) stopAutoplay();   // manual takeover stops the brief
     const rect = canvas.getBoundingClientRect();
-    const px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+    const px = (ev.clientX - rect.left) * (canvas.clientWidth / rect.width);
+    const py = (ev.clientY - rect.top) * (canvas.clientHeight / rect.height);
     let best = null, bd = 22;
     for (const t of S.tracks.values()) {
       if (t.state === "NEUTRALIZED") continue;
@@ -4673,8 +4761,10 @@
     if (SCENARIOS[scnq] && scnq !== S.scenario) applyScenario(scnq);
     const archq = (qs.get("arch") || "").toUpperCase();
     if (archq === "HUB" || archq === "NETWORKED") applySeg("archSeg", "arch", archq);
-    resize();
-    window.addEventListener("resize", resize);
+    const debugMode = qs.has("debug");
+    const refit = () => { fitWorkstationViewport(debugMode); resize(); };
+    refit();
+    window.addEventListener("resize", refit);
     const live = detectBackend();
     setMode(live);
     if (live) {
@@ -4700,17 +4790,7 @@
     setInterval(renderRail, 750);   // preserve workstation focus while command state remains current
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
     if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
-      window.__CUAS__ = { S, selectTrack, setWorkspace, taskSensor, engage, abortEngagement, liveTask, liveEngage, liveAbortEngagement, livePollEngagements, processLiveEngagementStatus, persistentRequestKey, setDelegatedDefense, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, trackPrediction, engageTrack, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay, latchAlert, acknowledgeAlert, setConnectionState };
-    }
-    // Fixed-site command-center workstation: phone/tablet operation is intentionally unsupported.
-    if (!qs.has("debug") && (window.innerWidth < 1280 || window.innerHeight < 720)) {
-      const gate = document.createElement("div");
-      gate.className = "workstation-gate";
-      gate.setAttribute("role", "alert");
-      gate.innerHTML = `<div style="max-width:420px;font:14px system-ui;color:#c2cedd;line-height:1.6;text-align:center">
-        <div style="font:600 16px system-ui;color:#e7eef7;margin-bottom:10px">Command-center workstation required</div>
-        This fixed-site C-UAS operational picture requires at least <b>1280 \u00d7 720</b>; 1920 \u00d7 1080 or greater is recommended. Mobile and phone operation are intentionally not supported.</div>`;
-      document.body.appendChild(gate);
+      window.__CUAS__ = { S, selectTrack, setWorkspace, taskSensor, engage, abortEngagement, liveTask, liveEngage, liveAbortEngagement, livePollEngagements, processLiveEngagementStatus, persistentRequestKey, setDelegatedDefense, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, trackPrediction, engageTrack, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay, latchAlert, acknowledgeAlert, setConnectionState, plotPoint: (track) => ({ x: sx(track.dx != null ? track.dx : track.x), y: sy(track.dy != null ? track.dy : track.y) }) };
     }
     // first-visit tour (skipped in automated/debug runs; ?tour=1 forces it)
     let tourDone = true;

@@ -67,8 +67,10 @@ inject, a notional cost-exchange ledger, and an AAR replay scrubber.
 Preset links: `?scn=elpaso&arch=HUB&wx=RAIN&tod=NIGHT&seed=N`.
 
 The COP is designed for a fixed command-center workstation, not a phone. The
-supported target is 1280x720 or larger (1920x1080 or 2560x1440 recommended),
-including common Windows display-scaling settings. Operator, sensor-management,
+supported effective-display target is 1280x720 or larger (1920x1080, 4K, 5K,
+ultrawide, and wall displays are supported). A desktop scale-to-fit path accounts
+for Windows display scaling and browser chrome without misclassifying a high-DPI
+display as undersized. Operator, sensor-management,
 supervisor, shared-COP, AAR, and exercise-control responsibilities are separated
 as described in [`docs/09-command-center-ux-and-validation.md`](docs/09-command-center-ux-and-validation.md).
 
