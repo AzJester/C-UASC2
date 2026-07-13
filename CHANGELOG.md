@@ -6,6 +6,18 @@ changes are listed first. For the exact code-level history, see the
 
 ## 2026-07-13
 
+### Airport perimeter defense and contextual data paths
+
+- Moved airport-defense sensors and effectors out from the runway center and
+  distributed them around the perimeter of every scenario's primary airport.
+- Rebuilt the Washington regional-airport inset as five compact perimeter-ring
+  diagrams for Dulles, BWI, Manassas, College Park, and Montgomery County.
+- Kept sensor, effector, gateway, and airport boxes visible while hiding data
+  connection lines by default. Selecting a system now reveals only its bounded
+  route to the shared COP; selecting a 5G node reveals its terrestrial backhaul.
+- Removed open-ended off-map transport lines. D.C. 5G, fiber, and microwave
+  paths now terminate at a labeled on-map gateway or a bounded inset endpoint.
+
 ### Washington joint-defense and data-mesh expansion
 
 - Expanded the Washington / National Capital Region picture to 38 illustrative
