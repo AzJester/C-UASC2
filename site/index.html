@@ -108,6 +108,13 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
+  .brand .app-version {
+    font-size: 7px;
+    color: #65758a;
+    letter-spacing: .04em;
+    text-transform: none;
+    white-space: nowrap;
+  }
   .stat-group { display: flex; gap: 16px; margin-left: auto; align-items: center; }
   .stat {
     display: flex;
@@ -497,6 +504,15 @@
   .sensor-row { display: grid; grid-template-columns: 9px 1fr auto; gap: 7px; align-items: center; font: 10px var(--mono); }
   .sensor-row .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--neutral); }
   .sensor-row .meta { color: var(--faint); display: block; font-size: 9px; }
+  button.sensor-row, button.asset-eff-row {
+    width: 100%; border: 1px solid transparent; border-radius: 3px;
+    background: transparent; color: inherit; text-align: left; padding: 4px;
+    cursor: pointer;
+  }
+  button.sensor-row:hover, button.asset-eff-row:hover,
+  button.sensor-row[aria-current="true"], button.asset-eff-row[aria-current="true"] {
+    background: #1a2633; border-color: #35667a;
+  }
   .decision-glance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-top: 7px; }
   .decision-glance .g { border: 1px solid var(--hair); border-radius: 3px; background: #111822; padding: 5px 6px; }
   .decision-glance .k { color: var(--muted); font: 700 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
@@ -952,6 +968,7 @@
     <div class="brand">
       <b>JIATF&nbsp;C-UAS&nbsp;C2</b>
       <span>Common Operating Picture</span>
+      <span class="app-version" id="appVersion" title="Application release and content-build identifier">v1.0.0</span>
     </div>
     <div class="stat-group">
       <div class="stat hostile"><div class="v" id="sRed">0</div><div class="k">Red</div></div>
@@ -1002,8 +1019,8 @@
     </aside>
 
     <div class="plotwrap">
-      <canvas id="plot" role="img" aria-label="Tactical common operating picture. Use the keyboard-operable track list in the left wing to inspect contacts and the right wing for decision support." aria-describedby="plotAccessNote"></canvas>
-      <span class="sr-only" id="plotAccessNote">The map is a visual overview. All selectable tracks and their operational data are available in the track list.</span>
+      <canvas id="plot" role="img" aria-label="Tactical common operating picture. Tracks, sensors, effectors, and transport nodes can be selected for status details." aria-describedby="plotAccessNote"></canvas>
+      <span class="sr-only" id="plotAccessNote">The map is a visual overview. Tracks are available in the track list; sensors and effectors are also selectable on the map and from their status lists.</span>
       <button type="button" class="map-recenter" id="btnRecenterMap" title="Restore the default map center and zoom">Re-center &middot; <span id="mapZoom">100%</span></button>
       <div class="map-mode-badge" id="mapModeBadge">Satellite &middot; Esri World Imagery</div>
       <div class="topstack" id="topstack">
@@ -1013,7 +1030,7 @@
       </div>
       <div class="fedhud" id="fedhud"></div>
       <div class="legend" id="legend"></div>
-      <div class="hint">drag to pan &middot; wheel to zoom &middot; click a track to select &middot; sensors &#9634; &middot; effectors &#9670;</div>
+      <div class="hint">drag to pan &middot; wheel to zoom &middot; select tracks / sensors / effectors &middot; sensors &#9634; &middot; effectors &#9670;</div>
     </div>
 
     <aside class="rail rail-right" aria-label="Decision-support wing">
@@ -1793,6 +1810,19 @@
           { inbound: { x: 21000, y: 15000 }, outbound: { x: -23000, y: 12500 }, origin: "KBOS", destination: "KDCA" },
         ],
       },
+      regionalAirports: [
+        { name: "DULLES INTERNATIONAL", code: "KIAD", x: -36300, y: 6200, civilTrafficCount: 4,
+          sensorIds: ["SEN-IAD-RAD-40", "SEN-IAD-EO-41"], effectorIds: ["EFF-IAD-EW-40", "EFF-IAD-NET-41"],
+          routes: [
+            { inbound: { x: -23800, y: 11800 }, outbound: { x: -18500, y: 16400 }, origin: "KORD", destination: "KIAD" },
+            { inbound: { x: -28200, y: -13800 }, outbound: { x: -20500, y: -11200 }, origin: "KDEN", destination: "KIAD" },
+          ] },
+        { name: "BALTIMORE / WASHINGTON INTL", code: "KBWI", x: 31800, y: 30900, sensorIds: ["SEN-BWI-RAD-42", "SEN-BWI-EO-43"], effectorIds: ["EFF-BWI-EW-42", "EFF-BWI-NET-43"] },
+        { name: "MANASSAS REGIONAL", code: "KHEF", x: -41500, y: -19600, sensorIds: ["SEN-HEF-RAD-44", "SEN-HEF-EO-45"], effectorIds: ["EFF-HEF-EW-44", "EFF-HEF-NET-45"] },
+        { name: "COLLEGE PARK", code: "KCGS", x: 11100, y: 12900, sensorIds: ["SEN-CGS-RAD-46", "SEN-CGS-EO-47"], effectorIds: ["EFF-CGS-EW-46", "EFF-CGS-NET-47"] },
+        { name: "MONTGOMERY COUNTY AIRPARK", code: "KGAI", x: -19100, y: 27000, sensorIds: ["SEN-GAI-RAD-48", "SEN-GAI-EO-49"], effectorIds: ["EFF-GAI-EW-48", "EFF-GAI-NET-49"] },
+      ],
+      airportScreen: { label: "NCR REGIONAL AIRPORT SHIELD", note: "KDCA / KADW ON MAP · 5 ADDITIONAL DEFENDED AIRPORTS" },
       protectedSites: [
         { name: "WHITE HOUSE / EXECUTIVE COMPLEX", x: 0, y: 0, kind: "GOV", detailOnly: true },
         { name: "U.S. CAPITOL COMPLEX", x: 2400, y: -850, kind: "GOV", detailOnly: true },
@@ -1804,6 +1834,11 @@
         { name: "MARK CENTER / ALEXANDRIA", x: -6800, y: -7300, kind: "C2" },
       ],
       siteSummary: { x: 7600, y: 4000, anchorX: 0, anchorY: -1500, label: "FEDERAL CORE \u00B7 5 PROTECTED CENTERS", note: "ZOOM IN TO INSPECT LOCAL LAYERS" },
+      coastalScreen: {
+        label: "ATLANTIC / CHESAPEAKE COASTAL SCREEN",
+        distance: "~60–180 KM EAST · OFF-SCALE",
+        note: "6 SENSORS · 8 EFFECTORS · SELECT ANY NODE",
+      },
       threatRingFromCenter: true,
       threatTargets: [
         { name: "WHITE HOUSE / EXECUTIVE COMPLEX", x: 0, y: 0 },
@@ -1826,6 +1861,20 @@
         medium: "HARDENED METRO FIBER RING", description: "ON-LAND NCR CORE \u00B7 NO OFFSHORE ENDPOINT",
         path: [{ x: 800, y: -1000 }, { x: -1700, y: -2870 }, { x: -4200, y: -4300 }, { x: -6500, y: -6500 }],
       },
+      dataMesh: {
+        label: "NCR JOINT DATA MESH",
+        description: "SHARED 5G / MANET / HARDENED FIBER / MICROWAVE PICTURE",
+        gateways: [
+          { name: "FEDERAL CORE", x: 800, y: -1000, medium: "5G / MANET" },
+          { name: "PENTAGON", x: -1700, y: -2870, medium: "HARDENED FIBER" },
+          { name: "ALEXANDRIA", x: -6800, y: -7300, medium: "HARDENED FIBER" },
+          { name: "JBA", x: 14700, y: -9650, medium: "5G / MANET" },
+          { name: "FORT BELVOIR", x: -10200, y: -19900, medium: "MICROWAVE / FIBER" },
+        ],
+        localMedium: "5G / MANET",
+        airportMedium: "MICROWAVE / METRO FIBER",
+        coastalMedium: "MICROWAVE RELAY / HARDENED FIBER",
+      },
       transportInfo: {
         medium: "TACTICAL 5G ACCESS", label: "NATIONAL CAPITAL REGION 5G NODE",
         description: "NOTIONAL ON-LAND ACCESS \u00B7 HARDENED FIBER BACKHAUL",
@@ -1834,6 +1883,11 @@
         { x: 500, y: -1200, r: 4700, label: "FEDERAL CORE / DENSE CIVIL AREA" },
         { x: -320, y: -5200, r: 2600, label: "KDCA APPROACH / POTOMAC CORRIDOR" },
         { x: -6600, y: -7600, r: 2400, label: "ALEXANDRIA CIVIL AREA" },
+        { x: -36300, y: 6200, r: 3200, label: "KIAD CIVIL APPROACH" },
+        { x: 31800, y: 30900, r: 3200, label: "KBWI CIVIL APPROACH" },
+        { x: -41500, y: -19600, r: 2400, label: "KHEF CIVIL APPROACH" },
+        { x: 11100, y: 12900, r: 2000, label: "KCGS CIVIL APPROACH" },
+        { x: -19100, y: 27000, r: 2200, label: "KGAI CIVIL APPROACH" },
       ],
       sensors: [
         { sensorId: "SEN-NCR-RAD-01", sensorType: "RADAR", vendor: "Vendor A", service: "USA", x: 0, y: 0, range: 18000, protectedSite: true },
@@ -1858,6 +1912,22 @@
         { sensorId: "SEN-BEL-RF-20", sensorType: "RF", vendor: "Vendor U", service: "USA", x: -9600, y: -20200, range: 13000, protectedSite: true },
         { sensorId: "SEN-BEL-EO-21", sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: -11100, y: -19000, range: 7000, protectedSite: true },
         { sensorId: "SEN-BEL-GAP-22", sensorType: "RADAR", vendor: "Vendor W", service: "USA", x: -9400, y: -18800, range: 14000, protectedSite: true },
+        { sensorId: "SEN-ATL-RAD-31", sensorType: "RADAR", vendor: "Vendor AA", service: "USCG", x: 82000, y: 62000, range: 42000, coastalInset: true, coastalSlot: 0, coastalSector: "DELMARVA NORTH" },
+        { sensorId: "SEN-ATL-RAD-32", sensorType: "RADAR", vendor: "Vendor AB", service: "USN", x: 96000, y: 32000, range: 46000, coastalInset: true, coastalSlot: 1, coastalSector: "DELMARVA SOUTH" },
+        { sensorId: "SEN-ATL-RF-33", sensorType: "RF", vendor: "Vendor AC", service: "USCG", x: 76000, y: 5000, range: 38000, coastalInset: true, coastalSlot: 2, coastalSector: "CHESAPEAKE NORTH" },
+        { sensorId: "SEN-ATL-EO-34", sensorType: "EO_IR", vendor: "Vendor AD", service: "USN", x: 90000, y: -25000, range: 22000, coastalInset: true, coastalSlot: 3, coastalSector: "CHESAPEAKE MOUTH" },
+        { sensorId: "SEN-ATL-RAD-35", sensorType: "RADAR", vendor: "Vendor AE", service: "USAF", x: 108000, y: -52000, range: 48000, coastalInset: true, coastalSlot: 4, coastalSector: "VIRGINIA CAPES" },
+        { sensorId: "SEN-ATL-RF-36", sensorType: "RF", vendor: "Vendor AF", service: "USN", x: 122000, y: -76000, range: 40000, coastalInset: true, coastalSlot: 5, coastalSector: "ATLANTIC SOUTH" },
+        { sensorId: "SEN-IAD-RAD-40", sensorType: "RADAR", vendor: "Vendor AI", service: "USA", x: -36700, y: 6500, range: 16000, airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 0, airportCode: "KIAD" },
+        { sensorId: "SEN-IAD-EO-41", sensorType: "EO_IR", vendor: "Vendor AJ", service: "USA", x: -35900, y: 5900, range: 7000, airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 1, airportCode: "KIAD" },
+        { sensorId: "SEN-BWI-RAD-42", sensorType: "RADAR", vendor: "Vendor AK", service: "USA", x: 31400, y: 31200, range: 16000, airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 0, airportCode: "KBWI" },
+        { sensorId: "SEN-BWI-EO-43", sensorType: "EO_IR", vendor: "Vendor AL", service: "USA", x: 32200, y: 30600, range: 7000, airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 1, airportCode: "KBWI" },
+        { sensorId: "SEN-HEF-RAD-44", sensorType: "RADAR", vendor: "Vendor AM", service: "USA", x: -41900, y: -19300, range: 14000, airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 0, airportCode: "KHEF" },
+        { sensorId: "SEN-HEF-EO-45", sensorType: "EO_IR", vendor: "Vendor AN", service: "USA", x: -41100, y: -19900, range: 6500, airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 1, airportCode: "KHEF" },
+        { sensorId: "SEN-CGS-RAD-46", sensorType: "RADAR", vendor: "Vendor AP", service: "USA", x: 10700, y: 13200, range: 12000, airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 0, airportCode: "KCGS" },
+        { sensorId: "SEN-CGS-EO-47", sensorType: "EO_IR", vendor: "Vendor AQ", service: "USA", x: 11500, y: 12600, range: 6000, airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 1, airportCode: "KCGS" },
+        { sensorId: "SEN-GAI-RAD-48", sensorType: "RADAR", vendor: "Vendor AR", service: "USA", x: -19500, y: 27300, range: 13000, airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 0, airportCode: "KGAI" },
+        { sensorId: "SEN-GAI-EO-49", sensorType: "EO_IR", vendor: "Vendor AS", service: "USA", x: -18700, y: 26700, range: 6200, airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 1, airportCode: "KGAI" },
       ],
       effectors: [
         { effectorId: "EFF-NCR-EW-01", effectorType: "EW_JAMMER", vendor: "Vendor A", service: "USA", x: -100, y: 200, maxRange: 12000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
@@ -1890,16 +1960,47 @@
         { effectorId: "EFF-BEL-DE-28", effectorType: "DIRECTED_ENERGY", vendor: "Vendor W", service: "USA", x: -10100, y: -19000, maxRange: 6500, mag: 100, cap: 100, unit: "%", protectedSite: true },
         { effectorId: "EFF-BEL-GUN-29", effectorType: "KINETIC_GUN", vendor: "Vendor T", service: "USA", x: -9300, y: -19500, maxRange: 4500, mag: 360, cap: 360, unit: "rds", protectedSite: true },
         { effectorId: "EFF-BEL-NET-30", effectorType: "NET_CAPTURE", vendor: "Vendor U", service: "USA", x: -10800, y: -18700, maxRange: 2600, mag: 12, cap: 12, unit: "nets", protectedSite: true },
+        { effectorId: "EFF-ATL-EW-31", effectorType: "EW_JAMMER", vendor: "Vendor AA", service: "USCG", x: 82000, y: 62000, maxRange: 24000, mag: 100, cap: 100, unit: "sec", coastalInset: true, coastalSlot: 0, coastalSector: "DELMARVA NORTH" },
+        { effectorId: "EFF-ATL-RF-32", effectorType: "RF_TAKEOVER", vendor: "Vendor AB", service: "USN", x: 96000, y: 32000, maxRange: 21000, mag: 100, cap: 100, unit: "sec", coastalInset: true, coastalSlot: 1, coastalSector: "DELMARVA SOUTH" },
+        { effectorId: "EFF-ATL-INT-33", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor AC", service: "USCG", x: 76000, y: 5000, maxRange: 16000, mag: 16, cap: 16, unit: "rounds", coastalInset: true, coastalSlot: 2, coastalSector: "CHESAPEAKE NORTH" },
+        { effectorId: "EFF-ATL-DE-34", effectorType: "DIRECTED_ENERGY", vendor: "Vendor AD", service: "USN", x: 90000, y: -25000, maxRange: 9000, mag: 100, cap: 100, unit: "%", coastalInset: true, coastalSlot: 3, coastalSector: "CHESAPEAKE MOUTH" },
+        { effectorId: "EFF-ATL-GUN-35", effectorType: "KINETIC_GUN", vendor: "Vendor AE", service: "USAF", x: 108000, y: -52000, maxRange: 6500, mag: 420, cap: 420, unit: "rds", coastalInset: true, coastalSlot: 4, coastalSector: "VIRGINIA CAPES" },
+        { effectorId: "EFF-ATL-NET-36", effectorType: "NET_CAPTURE", vendor: "Vendor AF", service: "USN", x: 122000, y: -76000, maxRange: 3200, mag: 12, cap: 12, unit: "nets", coastalInset: true, coastalSlot: 5, coastalSector: "ATLANTIC SOUTH" },
+        { effectorId: "EFF-ATL-EW-37", effectorType: "EW_JAMMER", vendor: "Vendor AG", service: "USCG", x: 105000, y: 12000, maxRange: 26000, mag: 100, cap: 100, unit: "sec", coastalInset: true, coastalSlot: 6, coastalSector: "MID-COAST RESERVE" },
+        { effectorId: "EFF-ATL-INT-38", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor AH", service: "USN", x: 116000, y: -36000, maxRange: 17000, mag: 18, cap: 18, unit: "rounds", coastalInset: true, coastalSlot: 7, coastalSector: "COASTAL RESERVE" },
+        { effectorId: "EFF-IAD-EW-40", effectorType: "EW_JAMMER", vendor: "Vendor AI", service: "USA", x: -36600, y: 6400, maxRange: 9000, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 0, airportCode: "KIAD" },
+        { effectorId: "EFF-IAD-NET-41", effectorType: "NET_CAPTURE", vendor: "Vendor AJ", service: "USA", x: -35800, y: 6000, maxRange: 2600, mag: 10, cap: 10, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 1, airportCode: "KIAD" },
+        { effectorId: "EFF-BWI-EW-42", effectorType: "EW_JAMMER", vendor: "Vendor AK", service: "USA", x: 31500, y: 31100, maxRange: 9000, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 0, airportCode: "KBWI" },
+        { effectorId: "EFF-BWI-NET-43", effectorType: "NET_CAPTURE", vendor: "Vendor AL", service: "USA", x: 32100, y: 30700, maxRange: 2600, mag: 10, cap: 10, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 1, airportCode: "KBWI" },
+        { effectorId: "EFF-HEF-EW-44", effectorType: "EW_JAMMER", vendor: "Vendor AM", service: "USA", x: -41800, y: -19400, maxRange: 8200, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 0, airportCode: "KHEF" },
+        { effectorId: "EFF-HEF-NET-45", effectorType: "NET_CAPTURE", vendor: "Vendor AN", service: "USA", x: -41200, y: -19800, maxRange: 2400, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 1, airportCode: "KHEF" },
+        { effectorId: "EFF-CGS-EW-46", effectorType: "EW_JAMMER", vendor: "Vendor AP", service: "USA", x: 10800, y: 13100, maxRange: 7600, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 0, airportCode: "KCGS" },
+        { effectorId: "EFF-CGS-NET-47", effectorType: "NET_CAPTURE", vendor: "Vendor AQ", service: "USA", x: 11400, y: 12700, maxRange: 2200, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 1, airportCode: "KCGS" },
+        { effectorId: "EFF-GAI-EW-48", effectorType: "EW_JAMMER", vendor: "Vendor AR", service: "USA", x: -19400, y: 27200, maxRange: 7800, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 0, airportCode: "KGAI" },
+        { effectorId: "EFF-GAI-NET-49", effectorType: "NET_CAPTURE", vendor: "Vendor AS", service: "USA", x: -18800, y: 26800, maxRange: 2300, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 1, airportCode: "KGAI" },
       ],
       hubPair: { "SEN-NCR-RAD-01": "EFF-NCR-EW-01", "SEN-NCR-RF-02": "EFF-NCR-RF-02", "SEN-NCR-EO-03": "EFF-NCR-NET-03", "SEN-JBA-RAD-15": "EFF-JBA-INT-21", "SEN-BEL-RAD-19": "EFF-BEL-INT-27" },
       blue: [
         { identity: "FRIEND", platform: "F-16C", service: "USAF", cls: "FIXED_WING", alt: 8500, ox: 10000, oy: 5000, orad: 3200, ospeed: 0.18, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
         { identity: "FRIEND", platform: "F-16C", service: "USAF", cls: "FIXED_WING", alt: 9000, ox: -8000, oy: 8000, orad: 3400, ospeed: 0.17, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
         { identity: "FRIEND", platform: "F-16C", service: "USAF", cls: "FIXED_WING", alt: 8200, ox: 14500, oy: -6500, orad: 3000, ospeed: 0.19, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
-        { identity: "FRIEND", platform: "UH-60M", service: "USA", cls: "ROTARY", alt: 600, ox: -3800, oy: -3500, orad: 1100, ospeed: 0.22, speed: 82 },
-        { identity: "FRIEND", platform: "MH-65D", service: "USCG", cls: "ROTARY", alt: 450, ox: 1800, oy: -6000, orad: 1200, ospeed: 0.24, speed: 75, armed: true, weapon: "GUN", weaponRange: 2800, weaponMag: 120 },
+        { identity: "FRIEND", platform: "F-16C", service: "USAF", cls: "FIXED_WING", alt: 8800, ox: -14500, oy: 1500, orad: 2800, ospeed: 0.18, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
+        { identity: "FRIEND", platform: "F-16C", service: "USAF", cls: "FIXED_WING", alt: 8600, ox: 8500, oy: 15000, orad: 3000, ospeed: 0.17, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
+        { identity: "FRIEND", platform: "F-16C", service: "USAF", cls: "FIXED_WING", alt: 9200, ox: -6000, oy: -14500, orad: 3000, ospeed: 0.19, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
+        { identity: "FRIEND", platform: "F-35A", service: "USAF", cls: "FIXED_WING", alt: 9400, ox: 17500, oy: 4500, orad: 2600, ospeed: 0.18, speed: 210, armed: true, weapon: "AAM", weaponRange: 10000, weaponCooldown: 2.1, weaponMag: 6 },
+        { identity: "FRIEND", platform: "F-35A", service: "USAF", cls: "FIXED_WING", alt: 9000, ox: -15500, oy: -7000, orad: 2800, ospeed: 0.18, speed: 210, armed: true, weapon: "AAM", weaponRange: 10000, weaponCooldown: 2.1, weaponMag: 6 },
+        { identity: "FRIEND", platform: "MQ-9A", service: "USAF", cls: "FIXED_WING", alt: 7200, ox: 7200, oy: -11200, orad: 2600, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 9000, weaponCooldown: 2.8, weaponMag: 6 },
+        { identity: "FRIEND", platform: "MQ-9A", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: -9800, oy: 9400, orad: 2800, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 9000, weaponCooldown: 2.8, weaponMag: 6 },
+        { identity: "FRIEND", platform: "UH-60M", service: "USA", cls: "ROTARY", alt: 600, speed: 82, routeLabel: "JBMHH - FEDERAL CORE - FORT McNAIR", route: [{ x: -3700, y: -2000 }, { x: 0, y: 0 }, { x: 1700, y: -3400 }] },
+        { identity: "FRIEND", platform: "UH-60M", service: "USA", cls: "ROTARY", alt: 700, speed: 82, routeLabel: "FORT BELVOIR - PENTAGON - JBA", route: [{ x: -10200, y: -19900 }, { x: -1700, y: -2870 }, { x: 14700, y: -9650 }] },
+        { identity: "FRIEND", platform: "MH-65D", service: "USCG", cls: "ROTARY", alt: 450, speed: 75, routeLabel: "POTOMAC PROTECTED-AREA PATROL", route: [{ x: -6800, y: -7300 }, { x: -320, y: -5200 }, { x: 2400, y: -850 }], armed: true, weapon: "GUN", weaponRange: 2800, weaponMag: 120 },
         { identity: "ASSUMED_FRIEND", platform: "RQ-7B", service: "USA", cls: "UAS_GROUP_3", alt: 1800, ox: -5500, oy: -10500, orad: 1800, ospeed: 0.17, speed: 45 },
         { identity: "FRIEND", platform: "E-3", service: "USAF", cls: "FIXED_WING", alt: 9000, ox: 19000, oy: 11000, orad: 4500, ospeed: 0.11, speed: 155 },
+        { identity: "FRIEND", platform: "C-17A", service: "USAF", cls: "FIXED_WING", alt: 5600, speed: 155, routeLabel: "JBA - NCR - FORT BELVOIR", route: [{ x: 14700, y: -9650 }, { x: -1000, y: 8000 }, { x: -10200, y: -19900 }] },
+        { identity: "FRIEND", platform: "C-40C", service: "USAF", cls: "FIXED_WING", alt: 6200, speed: 165, routeLabel: "JBA - FEDERAL CORE - NORTH NCR", route: [{ x: 14700, y: -9650 }, { x: 0, y: 0 }, { x: -5000, y: 20000 }] },
+        { identity: "FRIEND", platform: "KC-135R", service: "USAF", cls: "FIXED_WING", alt: 8600, speed: 175, routeLabel: "WESTERN CAP - EASTERN CAP", route: [{ x: -20000, y: 12000 }, { x: 19000, y: 11000 }] },
+        { identity: "FRIEND", platform: "C-130J", service: "USAF", cls: "FIXED_WING", alt: 4800, speed: 145, routeLabel: "SOUTHWEST NCR - JBA", route: [{ x: -16000, y: -14000 }, { x: -1700, y: -2870 }, { x: 14700, y: -9650 }] },
+        { identity: "FRIEND", platform: "RC-135", service: "USAF", cls: "FIXED_WING", alt: 9800, ox: -18000, oy: 10500, orad: 3600, ospeed: 0.12, speed: 170 },
       ],
     },
     guam: {
@@ -2130,6 +2231,7 @@
   const S = {
     tracks: new Map(),
     selected: null,
+    selectedAsset: null,                       // {kind:"sensor"|"effector", id}
     role: "FIRE_CONTROL_AUTHORITY",
     wcs: "WEAPONS_TIGHT",
     nodeLost: false,
@@ -2370,11 +2472,12 @@
         callsign, icao24: civHex(), squawk: civSquawk(), mode: "MODE S / ADS-B",
         nacp: randi(9, 11), sil: randi(2, 3), source: "1090ES", status: "VALID",
       };
-      t.contributingSensors = SCN.civilAirport
-        ? [...new Set([...(SCN.civilAirport.sensorIds || []), "SEN-RAD-01"])]
+      const selectedAirport = opts.airport || SCN.civilAirport;
+      t.contributingSensors = selectedAirport
+        ? [...new Set([...(selectedAirport.sensorIds || []), "SEN-RAD-01"])]
         : ["SEN-RAD-01"];
-      if (SCN.civilAirport) {
-        const airport = SCN.civilAirport;
+      if (selectedAirport && selectedAirport.routes && selectedAirport.routes.length) {
+        const airport = selectedAirport;
         const route = airport.routes[(rand() * airport.routes.length) | 0];
         const arriving = opts.arriving != null ? !!opts.arriving : rand() < 0.5;
         const endpoint = arriving ? route.inbound : route.outbound;
@@ -2589,7 +2692,9 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "509c3804";   // stamped by scripts/build_cop.py (content hash)
+  const COP_VERSION = "1.0.0";    // human-readable application release
+  const COP_BUILD = "f5981bdb";   // stamped by scripts/build_cop.py (content hash)
+  $("appVersion").textContent = `v${COP_VERSION} · ${COP_BUILD}`;
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
@@ -2672,6 +2777,8 @@
     const oy = (opts.oy != null ? opts.oy : 1700) + (rand() - 0.5) * 700;
     const orad = (opts.orad || 700) * (0.85 + rand() * 0.35), orbit = rand() * Math.PI * 2;
     const alt0 = opts.alt != null ? opts.alt : 300, altScale = 0.85 + rand() * 0.3;
+    const blueRoute = Array.isArray(opts.route) ? opts.route.map((p) => ({ x: p.x, y: p.y })) : null;
+    const routeStart = blueRoute && blueRoute.length ? blueRoute[0] : null;
     const t = {
       trackId: id,
       identity: opts.identity || "FRIEND",
@@ -2687,8 +2794,13 @@
       cool: 0,
       ox, oy, orad, orbit, ox0: ox, oy0: oy,
       ospeed: (opts.ospeed || 0.25) * (0.8 + rand() * 0.4) * (rand() < 0.5 ? -1 : 1),
-      x: ox + Math.cos(orbit) * orad, y: oy + Math.sin(orbit) * orad,
-      speed: opts.speed || 22, heading: 0, tq: opts.tq || 13,
+      blueRoute, blueRouteIndex: blueRoute && blueRoute.length > 1 ? 1 : 0, blueRouteDirection: 1,
+      routeLabel: opts.routeLabel || null,
+      x: routeStart ? routeStart.x : ox + Math.cos(orbit) * orad,
+      y: routeStart ? routeStart.y : oy + Math.sin(orbit) * orad,
+      speed: opts.speed || 22,
+      heading: routeStart && blueRoute.length > 1 ? Math.atan2(blueRoute[1].y - routeStart.y, blueRoute[1].x - routeStart.x) : 0,
+      tq: opts.tq || 13,
       contributingSensors: ["SEN-RAD-01"], state: "ACTIVE", fade: 1, jitter: rand() * 6.28, firstSeen: missionNow(), lastUpdate: missionNow(),
     };
     S.tracks.set(id, t);
@@ -2718,8 +2830,10 @@
             nt.identity = rand() < 0.6 ? "SUSPECT" : "UNKNOWN";
             nt.declareAt = 7000 + rand() * 11000;
           }
-        } else if (roll < 0.8 && civCount() < 7) {
-          nt = ((SCN.terrain === "coast" || SCN.terrain === "island") && rand() < 0.45) ? spawnCivBoat() : spawnCivAir();
+        } else if (roll < 0.8 && civCount() < (SCN.id === "washington" ? 10 : 7)) {
+          const civilAirports = [SCN.civilAirport, ...(SCN.regionalAirports || []).filter((airport) => airport.routes && airport.routes.length)].filter(Boolean);
+          const airport = civilAirports.length ? civilAirports[(rand() * civilAirports.length) | 0] : null;
+          nt = ((SCN.terrain === "coast" || SCN.terrain === "island") && rand() < 0.45) ? spawnCivBoat() : spawnCivAir({ airport });
         } else if (roll < 0.92) {
           nt = spawnClutter();
         } else {
@@ -2772,7 +2886,34 @@
         if (S.selected === t.trackId) selectTrack(null);
         continue;
       }
-      if (isBlue(t) && t.intent !== "transit") {
+      const actionTarget = isBlue(t) && t.armed && t.actionTarget ? S.tracks.get(t.actionTarget) : null;
+      if (actionTarget && (actionTarget.state === "ACTIVE" || actionTarget.state === "ENGAGING")) {
+        // Armed air assets assigned by the joint mission leave their patrol or
+        // shuttle route and close the selected threat. Once inside their weapon
+        // envelope, airDefense() adds them to the coordinated volley.
+        const desired = Math.atan2(actionTarget.y - t.y, actionTarget.x - t.x);
+        t.heading += clamp(((desired - t.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI, -0.55 * dt, 0.55 * dt);
+        t.x += Math.cos(t.heading) * t.speed * dt;
+        t.y += Math.sin(t.heading) * t.speed * dt;
+        t.wt = (t.wt || 0) + dt;
+        if (t.alt0) t.altMeters = Math.round(t.alt0 * (t.altScale || 1) * (1 + 0.04 * Math.sin(t.wt / 9 + t.jitter)));
+      } else if (isBlue(t) && t.blueRoute && t.blueRoute.length > 1) {
+        // Persistent military shuttle traffic reverses at the ends of its
+        // protected-area route instead of leaving the AO. This keeps the NCR
+        // air picture active throughout long demonstrations.
+        const target = t.blueRoute[t.blueRouteIndex];
+        const desired = Math.atan2(target.y - t.y, target.x - t.x);
+        t.heading += clamp(((desired - t.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI, -0.42 * dt, 0.42 * dt);
+        t.x += Math.cos(t.heading) * t.speed * dt;
+        t.y += Math.sin(t.heading) * t.speed * dt;
+        t.wt = (t.wt || 0) + dt;
+        if (t.alt0) t.altMeters = Math.round(t.alt0 * (t.altScale || 1) * (1 + 0.04 * Math.sin(t.wt / 9 + t.jitter)));
+        if (dist(t.x, t.y, target.x, target.y) < Math.max(180, t.speed * 1.5)) {
+          if (t.blueRouteIndex >= t.blueRoute.length - 1) t.blueRouteDirection = -1;
+          else if (t.blueRouteIndex <= 0) t.blueRouteDirection = 1;
+          t.blueRouteIndex = clamp(t.blueRouteIndex + t.blueRouteDirection, 0, t.blueRoute.length - 1);
+        }
+      } else if (isBlue(t) && t.intent !== "transit") {
         // patrol wander (sim time, so pause freezes it): the station drifts in a
         // bounded box and altitude breathes around the aircraft's assigned band
         t.wt = (t.wt || 0) + dt;
@@ -2990,37 +3131,98 @@
   }
   const autonomousReleaseLabel = () => weaponsFreeActive() ? "WEAPONS FREE" : "DELEGATED SELF-DEFENSE";
 
-  // Armed Blue aircraft join the fight under either an explicit delegated
-  // self-defense envelope or deliberately confirmed WEAPONS FREE. Safety,
-  // identity, quality, range, and no-fire gates remain in force.
+  function clearAirAction(a) {
+    a.actionTarget = null;
+    a.actionRole = null;
+  }
+  function clearAirVolley(target) {
+    for (const shot of (target.airVolley || [])) {
+      const shooter = S.tracks.get(shot.shooterId);
+      if (shooter && shooter.actionTarget === target.trackId) clearAirAction(shooter);
+    }
+    target.airVolley = [];
+    target.airVolleyScheduled = false;
+  }
+
+  // Confirmed WEAPONS FREE is a joint mission: every armed Blue air asset is
+  // assigned to an active threat, closes the target when outside its envelope,
+  // and joins an existing ground or air engagement as a coordinated volley.
+  // Unarmed military aircraft receive explicit C2/ISR/reposition support tasks
+  // so the whole air picture takes action without pretending transports fire.
   function airDefense(dt) {
-    if ((!S.delegatedDefense.armed && !weaponsFreeActive()) || S.wcs === "WEAPONS_HOLD") return;
-    const hostiles = [...S.tracks.values()].filter((t) => t.identity === "HOSTILE" && t.state === "ACTIVE");
-    if (!hostiles.length) return;
+    if ((!S.delegatedDefense.armed && !weaponsFreeActive()) || S.wcs === "WEAPONS_HOLD") {
+      for (const a of S.tracks.values()) if (isBlue(a) && a.actionTarget) clearAirAction(a);
+      return;
+    }
+    const hostiles = [...S.tracks.values()].filter((t) => t.identity === "HOSTILE" && (t.state === "ACTIVE" || t.state === "ENGAGING"));
+    if (!hostiles.length) {
+      for (const a of S.tracks.values()) if (isBlue(a) && a.actionTarget) clearAirAction(a);
+      return;
+    }
     for (const a of S.tracks.values()) {
-      if (!a.armed || a.state === "NEUTRALIZED") continue;
+      if (!isBlue(a) || a.civil || a.surface || a.state === "NEUTRALIZED") continue;
+      const prior = a.actionTarget && S.tracks.get(a.actionTarget);
+      if (prior && prior.identity === "HOSTILE" && (prior.state === "ACTIVE" || prior.state === "ENGAGING")) {
+        if (!a.armed || a.actionRole !== "INTERCEPT / REPOSITION" || dist(a.x, a.y, prior.x, prior.y) > (a.weaponRange || 0)) continue;
+      } else if (a.actionTarget) clearAirAction(a);
+
+      if (!a.armed) {
+        const supportTarget = hostiles.slice().sort((x, y) => dist(a.x, a.y,x.x,x.y) - dist(a.x,a.y,y.x,y.y))[0];
+        if (!supportTarget) continue;
+        const c2Platform = /E-3|RC-135|RQ-/.test(a.platform || "");
+        a.actionTarget = supportTarget.trackId;
+        a.actionRole = c2Platform ? "SENSOR / C2 RELAY" : "PROTECTED-AIRSPACE REPOSITION";
+        logEvent("INFO", "INFO", `${autonomousReleaseLabel()} · AIR SUPPORT ${a.trackId} ${a.platform || a.classificationType} · ${a.actionRole} · cue ${supportTarget.trackId}`);
+        continue;
+      }
       if (a.weaponMag == null) a.weaponMag = a.weapon === "GUN" ? 120 : 2;
       if (a.weaponMag <= 0) continue;
       a.cool = (a.cool || 0) - dt;
       if (a.cool > 0) continue;
-      let best = null, bd = a.weaponRange;
+      let best = null, bd = 1e12, bestScore = 1e15;
       for (const h of hostiles) {
-        if (h.state !== "ACTIVE" || !autonomousDefenseAllows(h)) continue;
+        if (!autonomousDefenseAllows(h)) continue;
+        if (h.state === "ENGAGING" && !h.airVolley && !h.engEff) continue;
+        if ((h.airVolley || []).some((shot) => shot.shooterId === a.trackId)) continue;
         const d = dist(a.x, a.y, h.x, h.y);
-        if (d < bd) { bd = d; best = h; }
+        const score = d + (h.state === "ACTIVE" ? 0 : 1e9);
+        if (score < bestScore) { bestScore = score; bd = d; best = h; }
       }
       if (!best) continue;
+      if (bd > a.weaponRange) {
+        a.actionTarget = best.trackId;
+        a.actionRole = "INTERCEPT / REPOSITION";
+        logEvent("INFO", "INFO", `${autonomousReleaseLabel()} · AIR INTERCEPT TASK ${a.trackId} ${a.platform || a.classificationType} · closing ${best.trackId}`);
+        continue;
+      }
       a.weaponMag = Math.max(0, a.weaponMag - (a.weapon === "GUN" ? 20 : 1));
-      best.state = "ENGAGING"; best.engEff = a.trackId; best.engAir = true; best.engT = missionNow();
+      const firstAirShot = !(best.airVolley && best.airVolley.length);
+      if (best.state === "ACTIVE") {
+        best.state = "ENGAGING"; best.engEff = a.trackId; best.engAir = true; best.engT = missionNow();
+      }
+      const pk = PK_BY_WEAPON[a.weapon] ?? 0.8, label = `${a.platform} ${a.weapon}`;
+      (best.airVolley || (best.airVolley = [])).push({ shooterId: a.trackId, pk, label });
+      a.actionTarget = best.trackId;
+      a.actionRole = "AIR WEAPONS VOLLEY";
       a.cool = a.weaponCooldown || 2.6;
       S.stats.engagements++;
       S.stats.costSpent += SHOT_COST_WEAPON[a.weapon] ?? 100000;
-      logEvent("PERMIT", "PERMIT", `${autonomousReleaseLabel()} \u00b7 AIR INTERCEPT ${best.trackId} <- ${a.platform} (${a.service}) ${a.weapon} \u00b7 auth ${S.role} \u00b7 ${fmtCost(SHOT_COST_WEAPON[a.weapon] ?? 100000)}`);
-      const tid = best.trackId, fs = best.firstSeen, pk = PK_BY_WEAPON[a.weapon] ?? 0.8, label = `${a.platform} ${a.weapon}`;
-      scheduleSim(400 + bd * 1.2, () => {
-        const x = S.tracks.get(tid);
-        if (x && x.state === "ENGAGING" && x.engAir) resolveOutcome(x, fs, pk, { isAir: true, label });
-      }, { trackId: tid, kind: "AIR_EFFECT" });
+      logEvent("PERMIT", "PERMIT", `${autonomousReleaseLabel()} · ${firstAirShot ? "AIR INTERCEPT" : "AIR VOLLEY"} ${best.trackId} <- ${a.platform} (${a.service}) ${a.weapon} · auth ${S.role} · ${fmtCost(SHOT_COST_WEAPON[a.weapon] ?? 100000)}`);
+      if (!best.airVolleyScheduled) {
+        best.airVolleyScheduled = true;
+        const tid = best.trackId, fs = best.firstSeen;
+        scheduleSim(400 + bd * 1.2, () => {
+          const x = S.tracks.get(tid);
+          if (!x) return;
+          const shots = (x.airVolley || []).slice();
+          if (x.state === "ENGAGING" && shots.length) {
+            const combinedPk = 1 - shots.reduce((survive, shot) => survive * (1 - shot.pk), 1);
+            const volleyLabel = shots.length === 1 ? shots[0].label : `JOINT AIR VOLLEY · ${shots.length} SHOOTERS`;
+            clearAirVolley(x);
+            resolveOutcome(x, fs, combinedPk, { isAir: true, label: volleyLabel });
+          } else clearAirVolley(x);
+        }, { trackId: tid, kind: "AIR_EFFECT" });
+      }
     }
   }
 
@@ -3812,7 +4014,7 @@
 
     // sensor coverage + sensors (with modality effects)
     for (const s of SENSORS) {
-      if (s.geometryUnknown) continue;
+      if (s.geometryUnknown || s.coastalInset) continue;
       // draw EO/IR at its EFFECTIVE range so night/rain degradation is honest
       const rEff = s.sensorType === "EO_IR" ? s.range * eoFactor() : s.range;
       ctx.beginPath(); ctx.arc(sx(s.x), sy(s.y), rEff * scale, 0, Math.PI * 2);
@@ -3855,6 +4057,7 @@
     }
     // effector envelopes + effectors (idle ones greyed in HUB)
     for (const e of S.effectors) {
+      if (e.geometryUnknown || e.coastalInset) continue;
       const idle = S.arch === "HUB" && !HUB_EFFECTORS.has(e.effectorId);
       ctx.beginPath(); ctx.arc(sx(e.x), sy(e.y), e.maxRange * scale, 0, Math.PI * 2);
       ctx.strokeStyle = idle ? "rgba(120,120,120,0.05)" : (e.mag > 0 ? "rgba(70,198,110,0.16)" : "rgba(120,120,120,0.1)");
@@ -3896,6 +4099,11 @@
   function drawSensor(s) {
     const x = sx(s.x), y = sy(s.y), rad = s.range * VIEW.scale;
     ctx.save();
+    const selected = S.selectedAsset && S.selectedAsset.kind === "sensor" && S.selectedAsset.id === s.sensorId;
+    if (selected) {
+      ctx.strokeStyle = "#f1f7ff"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(x, y, 11 + Math.sin(perf() / 240), 0, Math.PI * 2); ctx.stroke();
+    }
 
     // modality effects
     if (s.sensorType === "RADAR") {
@@ -3955,6 +4163,11 @@
   function drawEffector(e, idle) {
     const x = sx(e.x), y = sy(e.y);
     ctx.save();
+    const selected = S.selectedAsset && S.selectedAsset.kind === "effector" && S.selectedAsset.id === e.effectorId;
+    if (selected) {
+      ctx.strokeStyle = "#f1f7ff"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(x, y, 11 + Math.sin(perf() / 240), 0, Math.PI * 2); ctx.stroke();
+    }
     const c = idle ? "#3c4654" : (e.mag > 0 ? "#46c66e" : "#5a6472");
     ctx.globalAlpha = idle ? 0.55 : 1;
     ctx.strokeStyle = c; ctx.fillStyle = "#0b1610"; ctx.lineWidth = 1.5;
@@ -4208,6 +4421,91 @@
     return { x, y, w, h, relayX: x + w - 20, relayY: y + 48 };
   }
 
+  function coastalInsetGeometry() {
+    const w = Math.min(238, Math.max(208, VIEW.w * 0.31));
+    return { x: VIEW.w - w - 12, y: 76, w, h: 126 };
+  }
+  function airportInsetGeometry() {
+    const coast = coastalInsetGeometry(), w = coast.w;
+    return { x: coast.x, y: coast.y + coast.h + 8, w, h: 132 };
+  }
+  function coastalInsetPoint(kind, item) {
+    const box = coastalInsetGeometry(), slot = Number(item.coastalSlot) || 0;
+    if (kind === "sensor") return { x: box.x + 27 + (slot % 3) * 29, y: box.y + 68 + Math.floor(slot / 3) * 24 };
+    return { x: box.x + 137 + (slot % 4) * 21, y: box.y + 68 + Math.floor(slot / 4) * 24 };
+  }
+  function airportInsetPoint(kind, item) {
+    const box = airportInsetGeometry(), row = Number(item.airportSlot) || 0, node = Number(item.airportNode) || 0;
+    return { x: box.x + (kind === "sensor" ? 112 : 171) + node * 15, y: box.y + 52 + row * 15 };
+  }
+  function systemScreenPoints(kind, item) {
+    const points = [];
+    if (!item.coastalInset) points.push({ x: sx(item.x), y: sy(item.y), inset: false });
+    if (item.coastalInset) points.push({ ...coastalInsetPoint(kind, item), inset: true });
+    if (item.airportInset) points.push({ ...airportInsetPoint(kind, item), inset: true });
+    return points;
+  }
+  function systemNodeHit(px, py) {
+    let hit = null, best = 13;
+    for (const s of SENSORS) {
+      for (const p of systemScreenPoints("sensor", s)) {
+        const d = dist(px, py, p.x, p.y);
+        if (d < best) { best = d; hit = { kind: "sensor", id: s.sensorId }; }
+      }
+    }
+    for (const e of S.effectors) {
+      for (const p of systemScreenPoints("effector", e)) {
+        const d = dist(px, py, p.x, p.y);
+        if (d < best) { best = d; hit = { kind: "effector", id: e.effectorId }; }
+      }
+    }
+    return hit;
+  }
+  function drawInsetSystemGlyph(kind, item, point) {
+    const selected = S.selectedAsset && S.selectedAsset.kind === kind && S.selectedAsset.id === (kind === "sensor" ? item.sensorId : item.effectorId);
+    ctx.save();
+    if (selected) {
+      ctx.strokeStyle = "#f1f7ff"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(point.x, point.y, 8 + Math.sin(perf() / 240), 0, Math.PI * 2); ctx.stroke();
+    }
+    if (kind === "sensor") {
+      ctx.fillStyle = "#07141d"; ctx.strokeStyle = ACCENT; ctx.lineWidth = 1.2;
+      ctx.fillRect(point.x - 4, point.y - 4, 8, 8); ctx.strokeRect(point.x - 4, point.y - 4, 8, 8);
+    } else {
+      const ready = item.mag > 0 && !item.rearmT;
+      ctx.fillStyle = "#07140d"; ctx.strokeStyle = ready ? "#46c66e" : "#596574"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(point.x, point.y - 5); ctx.lineTo(point.x + 5, point.y); ctx.lineTo(point.x, point.y + 5); ctx.lineTo(point.x - 5, point.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawWashingtonInsets() {
+    if (!SCN.coastalScreen || !SCN.airportScreen) return;
+    const coast = coastalInsetGeometry(), airports = airportInsetGeometry();
+    ctx.save(); ctx.textAlign = "left";
+    for (const box of [coast, airports]) {
+      ctx.fillStyle = "rgba(5,18,29,0.94)"; ctx.strokeStyle = "rgba(84,154,198,0.82)"; ctx.lineWidth = 1.1;
+      ctx.fillRect(box.x, box.y, box.w, box.h); ctx.strokeRect(box.x, box.y, box.w, box.h);
+    }
+    ctx.fillStyle = "#9edcff"; ctx.font = "bold 8px " + MONO; ctx.fillText(SCN.coastalScreen.label, coast.x + 9, coast.y + 14);
+    ctx.fillStyle = "#718da4"; ctx.font = "7px " + MONO; ctx.fillText(SCN.coastalScreen.distance, coast.x + 9, coast.y + 27);
+    ctx.fillStyle = "#79bedf"; ctx.fillText("SENSORS", coast.x + 9, coast.y + 45); ctx.fillText("EFFECTORS", coast.x + 119, coast.y + 45);
+    for (const s of SENSORS.filter((x) => x.coastalInset)) drawInsetSystemGlyph("sensor", s, coastalInsetPoint("sensor", s));
+    for (const e of S.effectors.filter((x) => x.coastalInset)) drawInsetSystemGlyph("effector", e, coastalInsetPoint("effector", e));
+    ctx.fillStyle = "#7993a8"; ctx.fillText(SCN.coastalScreen.note, coast.x + 9, coast.y + coast.h - 9);
+
+    ctx.fillStyle = "#9edcff"; ctx.font = "bold 8px " + MONO; ctx.fillText(SCN.airportScreen.label, airports.x + 9, airports.y + 14);
+    ctx.fillStyle = "#718da4"; ctx.font = "7px " + MONO; ctx.fillText(SCN.airportScreen.note, airports.x + 9, airports.y + 27);
+    ctx.fillStyle = "#79bedf"; ctx.fillText("AIRPORT", airports.x + 9, airports.y + 40); ctx.fillText("SENSORS", airports.x + 96, airports.y + 40); ctx.fillText("EFFECTORS", airports.x + 153, airports.y + 40);
+    for (const airport of (SCN.regionalAirports || [])) {
+      const slot = SCN.regionalAirports.indexOf(airport), y = airports.y + 54 + slot * 15;
+      ctx.fillStyle = "#b7cad8"; ctx.font = "bold 7px " + MONO; ctx.fillText(airport.code, airports.x + 9, y);
+    }
+    for (const s of SENSORS.filter((x) => x.airportInset)) drawInsetSystemGlyph("sensor", s, airportInsetPoint("sensor", s));
+    for (const e of S.effectors.filter((x) => x.airportInset)) drawInsetSystemGlyph("effector", e, airportInsetPoint("effector", e));
+    ctx.fillStyle = "#7993a8"; ctx.font = "7px " + MONO; ctx.fillText("SELECT ANY NODE FOR STATUS / MAGAZINE / LINK", airports.x + 9, airports.y + airports.h - 8);
+    ctx.restore();
+  }
+
   function drawScenarioSites() {
     ctx.save();
     if (SCN.civilAirport) {
@@ -4221,6 +4519,14 @@
       if (SCN.denseLaydown && S.mapView.zoom < 1.35 && airport.defenseSummary) {
         placeLabel(airport.defenseSummary, ax, ay + 18, "rgba(108,213,155,0.9)", "bold 8px " + MONO, "center");
       }
+    }
+    for (const airport of (SCN.regionalAirports || [])) {
+      const ax = sx(airport.x), ay = sy(airport.y);
+      if (ax < -35 || ax > VIEW.w + 35 || ay < -35 || ay > VIEW.h + 35) continue;
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(-0.35);
+      ctx.fillStyle = "rgba(8,17,25,0.82)"; ctx.strokeStyle = "rgba(200,220,235,0.85)"; ctx.lineWidth = 1;
+      ctx.fillRect(-12, -3, 24, 6); ctx.strokeRect(-12, -3, 24, 6); ctx.restore();
+      placeLabel(`${airport.code} \u00B7 ${airport.name}`, ax, ay - 10, "rgba(215,235,247,0.88)", "8px " + MONO, "center");
     }
     for (const station of (SCN.borderStations || [])) {
       const x = sx(station.x), y = sy(station.y);
@@ -4289,6 +4595,7 @@
       ctx.beginPath(); ctx.moveTo(box.relayX - 4, box.relayY + 6); ctx.lineTo(box.relayX, box.relayY - 6); ctx.lineTo(box.relayX + 4, box.relayY + 6); ctx.stroke();
       ctx.fillStyle = "#71879a"; ctx.fillText("SAN DIEGO BACKHAUL", box.x + 67, box.y + 67);
     }
+    drawWashingtonInsets();
     ctx.restore();
   }
 
@@ -4306,11 +4613,64 @@
     ctx.fillText(info.description || "NOTIONAL TERRESTRIAL NODE", boxX + bw / 2, boxY + 40);
   }
 
+  function drawScenarioDataMesh() {
+    const mesh = SCN.dataMesh;
+    if (!mesh || S.transport === "OFF") return;
+    const gateways = mesh.gateways || [];
+    if (!gateways.length) return;
+    ctx.save();
+    // Hardened fiber ring between the joint gateways.
+    ctx.strokeStyle = "rgba(84,201,238,0.55)"; ctx.lineWidth = 2; ctx.setLineDash([]);
+    ctx.beginPath();
+    gateways.forEach((g, i) => { if (i) ctx.lineTo(sx(g.x), sy(g.y)); else ctx.moveTo(sx(g.x), sy(g.y)); });
+    ctx.closePath(); ctx.stroke();
+    for (const g of gateways) {
+      const x = sx(g.x), y = sy(g.y);
+      ctx.fillStyle = "rgba(6,24,35,0.95)"; ctx.strokeStyle = "#68d2ee"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+
+    // Every local sensor and effector has a visible path to its nearest mesh
+    // gateway. Inset systems are connected through their own relay buses below.
+    const localSystems = SENSORS.filter((s) => !s.geometryUnknown && !s.coastalInset && !s.airportInset).map((item) => ({ item, kind: "sensor" }))
+      .concat(S.effectors.filter((e) => !e.geometryUnknown && !e.coastalInset && !e.airportInset).map((item) => ({ item, kind: "effector" })));
+    ctx.strokeStyle = "rgba(112,201,255,0.22)"; ctx.lineWidth = 0.8; ctx.setLineDash([2, 4]);
+    for (const { item } of localSystems) {
+      const gateway = gateways.slice().sort((a, b) => dist(item.x,item.y,a.x,a.y) - dist(item.x,item.y,b.x,b.y))[0];
+      ctx.beginPath(); ctx.moveTo(sx(item.x), sy(item.y)); ctx.lineTo(sx(gateway.x), sy(gateway.y)); ctx.stroke();
+    }
+
+    const drawInsetBus = (kind, items, busX, trunkY, gateway, color, pointFor) => {
+      if (!items.length) return;
+      ctx.strokeStyle = color; ctx.lineWidth = 1.3; ctx.setLineDash([7, 3]);
+      ctx.beginPath(); ctx.moveTo(sx(gateway.x), sy(gateway.y)); ctx.lineTo(busX, trunkY); ctx.stroke();
+      ctx.setLineDash([]); ctx.lineWidth = 1;
+      const points = items.map((item) => pointFor(kind, item));
+      const y0 = Math.min(...points.map((p) => p.y)) - 7, y1 = Math.max(...points.map((p) => p.y)) + 7;
+      ctx.beginPath(); ctx.moveTo(busX, y0); ctx.lineTo(busX, y1); ctx.stroke();
+      for (const p of points) { ctx.beginPath(); ctx.moveTo(busX, p.y); ctx.lineTo(p.x, p.y); ctx.stroke(); }
+    };
+    const coast = coastalInsetGeometry(), airports = airportInsetGeometry();
+    const coastGateway = gateways.find((g) => g.name === "JBA") || gateways[0];
+    const coreGateway = gateways.find((g) => g.name === "FEDERAL CORE") || gateways[0];
+    drawInsetBus("sensor", SENSORS.filter((s) => s.coastalInset), coast.x + 111, coast.y + coast.h / 2, coastGateway, "rgba(255,210,122,0.72)", coastalInsetPoint);
+    drawInsetBus("effector", S.effectors.filter((e) => e.coastalInset), coast.x + 111, coast.y + coast.h / 2, coastGateway, "rgba(255,210,122,0.72)", coastalInsetPoint);
+    drawInsetBus("sensor", SENSORS.filter((s) => s.airportInset), airports.x + 151, airports.y + airports.h / 2, coreGateway, "rgba(176,140,255,0.68)", airportInsetPoint);
+    drawInsetBus("effector", S.effectors.filter((e) => e.airportInset), airports.x + 151, airports.y + airports.h / 2, coreGateway, "rgba(176,140,255,0.68)", airportInsetPoint);
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#75cbe7"; ctx.font = "bold 8px " + MONO; ctx.textAlign = "center";
+    ctx.fillText(mesh.label, sx(coreGateway.x), sy(coreGateway.y) - 13);
+    ctx.restore();
+  }
+
   // Data transport layer: MANET mesh among tactical nodes + a 5G gNB with backhaul.
   function drawTransports() {
     S.transportInfoRendered = false;
     if (S.transport === "OFF") return;
-    const nodes = [{ x: 0, y: 0 }].concat(SENSORS.filter((s) => !s.geometryUnknown).map((s) => ({ x: s.x, y: s.y }))).concat(S.effectors.filter((e) => !e.geometryUnknown).map((e) => ({ x: e.x, y: e.y })));
+    drawScenarioDataMesh();
+    const nodes = [{ x: 0, y: 0 }]
+      .concat(SENSORS.filter((s) => !s.geometryUnknown && !s.coastalInset && !s.airportInset).map((s) => ({ x: s.x, y: s.y })))
+      .concat(S.effectors.filter((e) => !e.geometryUnknown && !e.coastalInset && !e.airportInset).map((e) => ({ x: e.x, y: e.y })));
     if (S.transport === "BOTH" || S.transport === "MANET") {
       ctx.save();
       if (SCN.clipTransportToLand && traceScenarioLand()) ctx.clip();
@@ -4452,6 +4812,16 @@
         ctx.restore();
       }
     }
+    if (t.state === "ENGAGING" && t.airVolley && t.airVolley.length) {
+      const pulse = 0.45 + 0.35 * Math.sin(perf() / 95);
+      ctx.save(); ctx.strokeStyle = `rgba(120,210,255,${pulse})`; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+      for (const shot of t.airVolley) {
+        const shooter = S.tracks.get(shot.shooterId);
+        if (!shooter) continue;
+        ctx.beginPath(); ctx.moveTo(sx(shooter.x), sy(shooter.y)); ctx.lineTo(x, y); ctx.stroke();
+      }
+      ctx.restore();
+    }
 
     // level-of-detail: above LOD_THRESHOLD tracks, non-selected contacts shed the
     // expensive parts (labels, leader lines, trails) but KEEP their doctrinal
@@ -4523,6 +4893,72 @@
 
   const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
+  function systemDataPath(item) {
+    const mesh = SCN.dataMesh;
+    if (mesh) {
+      if (item.coastalInset) return mesh.coastalMedium;
+      if (item.airportInset) return mesh.airportMedium;
+      return item.protectedSite || item.airportDefense ? `${mesh.localMedium} / HARDENED FIBER` : mesh.localMedium;
+    }
+    if (item.coastalInset) return "MICROWAVE RELAY / HARDENED FIBER";
+    if (item.airportDefense) return "TACTICAL 5G / MANET";
+    if (item.protectedSite) return "MANET / HARDENED FIBER";
+    return "5G / MANET";
+  }
+  function systemLinkState(item) {
+    if (item.geometryUnknown) return "NO GEO / LINK UNKNOWN";
+    if (S.live && S.connectionState !== "LIVE") return S.connectionState;
+    if (S.degraded) return "DEGRADED / STORE-AND-FORWARD";
+    return "CONNECTED / SHARED COP";
+  }
+  function systemC2Node(item) {
+    if (item.coastalInset) return "ATLANTIC COASTAL RELAY";
+    if (item.airportInset) return `${item.airportCode} AIRPORT GATEWAY`;
+    const gateways = SCN.dataMesh && SCN.dataMesh.gateways;
+    if (gateways && gateways.length) {
+      return gateways.slice().sort((a, b) => dist(item.x,item.y,a.x,a.y) - dist(item.x,item.y,b.x,b.y))[0].name;
+    }
+    return S.node;
+  }
+  function renderSystemCard(selection, body) {
+    const item = selection.kind === "sensor"
+      ? SENSORS.find((s) => s.sensorId === selection.id)
+      : S.effectors.find((e) => e.effectorId === selection.id);
+    if (!item) { S.selectedAsset = null; return; }
+    const isSensor = selection.kind === "sensor", id = isSensor ? item.sensorId : item.effectorId;
+    const tracked = isSensor ? [...S.tracks.values()].filter((t) => (t.contributingSensors || []).includes(id)).length : 0;
+    const assigned = isSensor ? [] : [...S.tracks.values()].filter((t) => t.engEff === id || (t.airVolley || []).some((shot) => shot.shooterId === id));
+    const pct = isSensor ? null : Math.round(100 * item.mag / Math.max(1, item.cap));
+    const ready = isSensor ? !item.geometryUnknown : item.mag > 0 && !item.rearmT && (!S.live || item.readiness === "READY");
+    const sector = item.coastalSector || item.airportCode || (item.protectedSite ? "PROTECTED SITE" : "LOCAL SECTOR");
+    const status = isSensor
+      ? (item.geometryUnknown ? "GEOMETRY UNAVAILABLE" : item.dwellUntil && missionNow() < item.dwellUntil ? `DWELL ${item.dwellTrack}` : item.liveReadiness || "READY")
+      : item.rearmT ? "REARMING" : item.mag <= 0 ? "MAGAZINE EMPTY" : item.readiness || "READY";
+    const html = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span class="trk-id">${esc(id)}</span>
+        <span class="idpill" style="color:${isSensor ? "var(--accent)" : "var(--neutral)"};background:#10202a;border:1px solid #355468">${isSensor ? "SENSOR" : "EFFECTOR"}</span>
+      </div>
+      <div class="decision-status ${ready ? "go" : "hold"}">${esc(status)} \u00b7 ${esc(systemLinkState(item))}</div>
+      <dl class="kv">
+        <dt>System type</dt><dd>${esc((isSensor ? item.sensorType : item.effectorType).replace(/_/g, " "))}</dd>
+        <dt>Operator / service</dt><dd>${esc(item.service || "UNSPECIFIED")} \u00b7 ${esc(item.vendor || "UNSPECIFIED")}</dd>
+        <dt>Sector / installation</dt><dd>${esc(sector)}</dd>
+        <dt>Status</dt><dd>${esc(status)}</dd>
+        <dt>Maximum range</dt><dd>${((isSensor ? item.range : item.maxRange) / 1000).toFixed(1)} km \u00b7 illustrative</dd>
+        ${isSensor ? `<dt>Current tracks</dt><dd>${tracked}</dd><dt>Current task</dt><dd>${item.dwellTrack ? `DWELL ${esc(item.dwellTrack)}` : "AREA SEARCH / SHARED CUEING"}</dd>`
+          : `<dt>Magazine depth</dt><dd>${item.mag} / ${item.cap} ${esc(item.unit || "units")} \u00b7 ${pct}%</dd><dt>Current assignment</dt><dd>${assigned.length ? assigned.map((t) => esc(t.trackId)).join(" / ") : "AVAILABLE"}</dd>`}
+        <dt>Data interface</dt><dd>${esc(systemDataPath(item))}</dd>
+        <dt>C2 gateway</dt><dd>${esc(systemC2Node(item))}</dd>
+        <dt>Comms link</dt><dd>${esc(systemLinkState(item))}</dd>
+        <dt>Architecture</dt><dd>${esc(S.arch)} \u00b7 SHARED TRACK / WEAPON DATA</dd>
+        <dt>Position source</dt><dd>${S.live && item.authoritative ? "LIVE MATERIEL FEED" : "STATIC NOTIONAL LAYDOWN"}</dd>
+      </dl>
+      <div class="decision-section"><div class="decision-h">Data-sharing path</div><div>${esc(id)} \u2192 ${esc(systemC2Node(item))} \u2192 ${esc(SCN.dataMesh ? SCN.dataMesh.label : S.node)} \u2192 SHARED COP</div></div>`;
+    stableHTML(body, html, true);
+    body.dataset.decisionState = `${selection.kind}|${id}|${status}|${systemLinkState(item)}`;
+  }
+
   // ---- render split operator wings ----
   function renderRail() {
     renderScoreboard();
@@ -4548,14 +4984,15 @@
       const liveUnavailable = S.live && (e.readiness !== "READY" || e.geometryUnknown);
       const c = liveUnavailable ? "var(--hostile)" : e.rearmT ? "var(--suspect)" : e.mag > 0 ? "var(--neutral)" : "var(--faint)";
       const pct = Math.round((e.mag / e.cap) * 100);
-      return `<div class="eff"><span class="dot" style="background:${c}"></span>
+      return `<button type="button" class="eff asset-eff-row" data-asset-kind="effector" data-asset-id="${esc(e.effectorId)}" aria-current="${S.selectedAsset && S.selectedAsset.kind === "effector" && S.selectedAsset.id === e.effectorId ? "true" : "false"}"><span class="dot" style="background:${c}"></span>
         <span class="nm">${esc(e.effectorId)}<small>${esc(e.effectorType.replace(/_/g, " "))} &middot; ${esc(e.vendor)} &middot; ${esc(e.service || "USA")} &middot; ${fmtCost(SHOT_COST[e.effectorType] || 10000)}/shot</small></span>
-        <span class="mag">${liveUnavailable ? esc(e.geometryUnknown ? "NO GEO" : e.readiness) : e.rearmT ? "REARM" : pct + "%"}</span></div>`;
+        <span class="mag">${liveUnavailable ? esc(e.geometryUnknown ? "NO GEO" : e.readiness) : e.rearmT ? "REARM" : pct + "%"}</span></button>`;
     }).join("") + (S.effectors.length > effShown.length ? `<div class="track-list-note">Showing 6 priority effectors of ${S.effectors.length}. Full inventory remains in AAR and the source feed.</div>` : ""));
 
     const t = S.selected && S.tracks.get(S.selected);
     const body = $("trackBody");
-    if (!t) { stableHTML(body, '<p class="empty">No track selected. Select a contact on the plot or in the track list.</p>', true); delete body.dataset.decisionState; return; }
+    if (S.selectedAsset) { renderSystemCard(S.selectedAsset, body); return; }
+    if (!t) { stableHTML(body, '<p class="empty">Nothing selected. Select a track, sensor, or effector on the plot or in a list.</p>', true); delete body.dataset.decisionState; return; }
     renderDecisionCard(t, body);
   }
 
@@ -4645,6 +5082,7 @@
         <dt>Altitude</dt><dd>${Math.round(t.altMeters || 0)} m \u00b7 ${esc(t.altitudeDatum || "datum unspecified")}</dd>
         <dt>Signature</dt><dd>${isBlue(t) ? (t.civil ? (xpdr ? `${esc(xpdr.source)} \u00b7 ${esc(xpdr.status)}` : "ADS-B / AIS") : "IFF / cooperative") : t.emitting === false ? "comms-silent (RF-blind)" : "RF emitting"}</dd>
         <dt>Flight profile</dt><dd>${isBlue(t) ? (t.civil ? (t.surface ? "surface transit (AIS)" : "civil corridor (ADS-B)") : "patrol") : ({ direct: "direct attack", lowIngress: "low ingress", cruise: "cruise / OWA", isr: "ISR standoff orbit", clutter: "erratic / low-slow" }[t.profile] || "\u2014")}</dd>
+        ${isBlue(t) && !t.civil ? `<dt>Mission action</dt><dd>${esc(t.actionRole || "ON-STATION / MONITORING")}${t.actionTarget ? ` \u00b7 ${esc(t.actionTarget)}` : ""}</dd>` : ""}
         <dt>Assigned objective</dt><dd>${esc(objective.name)}</dd>
         <dt>Range to objective</dt><dd>${(rng / 1000).toFixed(1)} km</dd>
         <dt>Predicted intercept</dt><dd style="${etaColor}">${etaStr}</dd>
@@ -4727,7 +5165,7 @@
     const html = SENSORS.map((s) => {
       const dwelling = s.dwellUntil && missionNow() < s.dwellUntil;
       const tracked = [...S.tracks.values()].filter((t) => (t.contributingSensors || []).includes(s.sensorId)).length;
-      return `<div class="sensor-row"><span class="dot" style="background:${s.geometryUnknown ? "var(--hostile)" : dwelling ? "var(--suspect)" : "var(--neutral)"}"></span><span>${esc(s.sensorId)}<span class="meta">${esc(s.sensorType.replace(/_/g,"/"))} \u00b7 ${esc(s.vendor)} \u00b7 ${esc(s.service || "USA")}</span></span><span>${s.geometryUnknown ? "NO GEO" : dwelling ? `DWELL ${esc(s.dwellTrack || "")}` : `${esc(s.liveReadiness || "READY")} \u00b7 ${tracked} TRK`}</span></div>`;
+      return `<button type="button" class="sensor-row" data-asset-kind="sensor" data-asset-id="${esc(s.sensorId)}" aria-current="${S.selectedAsset && S.selectedAsset.kind === "sensor" && S.selectedAsset.id === s.sensorId ? "true" : "false"}"><span class="dot" style="background:${s.geometryUnknown ? "var(--hostile)" : dwelling ? "var(--suspect)" : "var(--neutral)"}"></span><span>${esc(s.sensorId)}<span class="meta">${esc(s.sensorType.replace(/_/g,"/"))} \u00b7 ${esc(s.vendor)} \u00b7 ${esc(s.service || "USA")}</span></span><span>${s.geometryUnknown ? "NO GEO" : dwelling ? `DWELL ${esc(s.dwellTrack || "")}` : `${esc(s.liveReadiness || "READY")} \u00b7 ${tracked} TRK`}</span></button>`;
     }).join("");
     stableHTML($("sensorPosture"), html);
   }
@@ -4786,9 +5224,27 @@
       if (nextFocus) nextFocus.focus();
     }
   });
+  const handleAssetListClick = (ev) => {
+    const row = ev.target.closest("[data-asset-kind][data-asset-id]");
+    if (row) selectAsset(row.dataset.assetKind, row.dataset.assetId);
+  };
+  $("sensorPosture").addEventListener("click", handleAssetListClick);
+  $("effList").addEventListener("click", handleAssetListClick);
   function selectTrack(id) {
     S.selected = id;
+    S.selectedAsset = null;
     document.querySelectorAll("[data-track-select]").forEach((b) => b.setAttribute("aria-current", b.dataset.trackSelect === id ? "true" : "false"));
+    document.querySelectorAll("[data-asset-kind][data-asset-id]").forEach((b) => b.setAttribute("aria-current", "false"));
+    renderRail();
+  }
+  function selectAsset(kind, id) {
+    if (!id || (kind !== "sensor" && kind !== "effector")) return;
+    S.selected = null;
+    S.selectedAsset = { kind, id };
+    document.querySelectorAll("[data-track-select]").forEach((b) => b.setAttribute("aria-current", "false"));
+    document.querySelectorAll("[data-asset-kind][data-asset-id]").forEach((b) => {
+      b.setAttribute("aria-current", b.dataset.assetKind === kind && b.dataset.assetId === id ? "true" : "false");
+    });
     renderRail();
   }
   function transportNodeHit(px, py) {
@@ -4826,7 +5282,7 @@
       }
       return;
     }
-    canvas.style.cursor = transportNodeHit(p.x, p.y) ? "pointer" : "";
+    canvas.style.cursor = transportNodeHit(p.x, p.y) || systemNodeHit(p.x, p.y) ? "pointer" : "";
   });
   function finishMapPan(ev) {
     const drag = S.mapView.drag;
@@ -4865,6 +5321,8 @@
       return;
     }
     S.transportInfoOpen = false;
+    const system = systemNodeHit(px, py);
+    if (system) { selectAsset(system.kind, system.id); return; }
     let best = null, bd = 22;
     for (const t of S.tracks.values()) {
       if (t.state === "NEUTRALIZED") continue;
@@ -5971,7 +6429,7 @@
     S.alerts = []; S.alertSeq = 0;
     S.requestKeys = { task: new Map(), engage: new Map(), abort: new Map() };
     S.delegatedDefense = { armed: false, expiresAt: 0, minTq: 12, classes: ["MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "FIXED_WING"] };
-    S.tracks.clear(); _labelSlots.clear(); S.selected = null; S.engaged = 0;
+    S.tracks.clear(); _labelSlots.clear(); S.selected = null; S.selectedAsset = null; S.engaged = 0;
     S.effectors = JSON.parse(JSON.stringify(EFFECTORS));
     computeCoverage();
     S.stats = { defeated: 0, leakers: 0, engagements: 0, crossVendor: 0, crossService: 0, airKills: 0, misses: 0, unconfirmedEffects: 0, partialEffects: 0, aborts: 0, defeatTimes: [], costSpent: 0, threatValue: 0, softKills: 0, cheapKills: 0 };
@@ -6008,6 +6466,9 @@
       } else {
         spawnCivAir();
         if (rand() < 0.5) spawnCivAir();
+      }
+      for (const airport of (SCN.regionalAirports || []).filter((item) => item.routes && item.routes.length && item.civilTrafficCount > 0)) {
+        for (let i = 0; i < airport.civilTrafficCount; i++) spawnCivAir({ arriving: i % 2 === 0, airport });
       }
       if (SCN.terrain === "coast" || SCN.terrain === "island") {
         const vessels = SCN.civilVessels || [{}, {}];
@@ -6172,7 +6633,7 @@
     setInterval(renderRail, 750);   // preserve workstation focus while command state remains current
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
     if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
-      window.__CUAS__ = { S, autoplay, stopAutoplay, autoplaySelection, spawnAutoplayWave, selectTrack, setWorkspace, taskSensor, engage, abortEngagement, liveTask, liveEngage, liveAbortEngagement, livePollEngagements, processLiveEngagementStatus, persistentRequestKey, setDelegatedDefense, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, resetMapView, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, trackPrediction, engageTrack, airDefense, navalDefense, weaponsFreeActive, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay, toast, latchAlert, acknowledgeAlert, setConnectionState, scenarioPointOnLand, pointInPolygon, aoRadius, currentScenario: () => SCN, mapView: () => ({ centerX: S.mapView.centerX, centerY: S.mapView.centerY, zoom: S.mapView.zoom }), labelOffset: (trackId) => _labelSlots.get("track:" + trackId), plotPoint: (track) => ({ x: sx(track.dx != null ? track.dx : track.x), y: sy(track.dy != null ? track.dy : track.y) }), transportPoints: () => { const g = SCN.gnb || { x: 900, y: -900 }, b = SCN.networkBackhaul; return { gnb: { x: sx(g.x), y: sy(g.y) }, backhaul: b ? { x: sx(b.x), y: sy(b.y) } : null }; } };
+      window.__CUAS__ = { S, autoplay, stopAutoplay, autoplaySelection, spawnAutoplayWave, selectTrack, selectAsset, systemDataPath, systemLinkState, systemScreenPoints, setWorkspace, taskSensor, engage, abortEngagement, liveTask, liveEngage, liveAbortEngagement, livePollEngagements, processLiveEngagementStatus, persistentRequestKey, setDelegatedDefense, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, resetMapView, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, trackPrediction, engageTrack, airDefense, navalDefense, weaponsFreeActive, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay, toast, latchAlert, acknowledgeAlert, setConnectionState, scenarioPointOnLand, pointInPolygon, aoRadius, currentScenario: () => SCN, mapView: () => ({ centerX: S.mapView.centerX, centerY: S.mapView.centerY, zoom: S.mapView.zoom }), labelOffset: (trackId) => _labelSlots.get("track:" + trackId), plotPoint: (track) => ({ x: sx(track.dx != null ? track.dx : track.x), y: sy(track.dy != null ? track.dy : track.y) }), transportPoints: () => { const g = SCN.gnb || { x: 900, y: -900 }, b = SCN.networkBackhaul; return { gnb: { x: sx(g.x), y: sy(g.y) }, backhaul: b ? { x: sx(b.x), y: sy(b.y) } : null }; } };
     }
     // first-visit tour (skipped in automated/debug runs; ?tour=1 forces it)
     let tourDone = true;
