@@ -143,9 +143,19 @@ operations presets. San Diego models bidirectional civilian airport traffic with
 synthetic Mode-S / ADS-B callsign, ICAO address, squawk, quality, altitude, speed,
 and flight-plan fields. Its airport counter-UAS additions are soft-kill / capture
 illustrations constrained by the existing no-fire geometry. The 5G overlay also
-shows a labeled microwave backhaul toward an off-map San Clemente Island relay;
-the line is communications symbology, not a statement of real coverage or
-infrastructure.
+terminates at a visible, explicitly off-scale San Clemente Island inset. El Paso
+adds KELP arrivals/departures, local airport defenses, and three Border Patrol
+stations with paired sensors and non-kinetic effectors. Norfolk includes KORF
+traffic and defenses, multiple naval and commercial surface tracks, and a 5G
+backbone that terminates at a labeled terrestrial point on the land side of the
+configured coast. These lines are communications symbology, not statements of
+real coverage or infrastructure.
+
+The fixed-site layout separates the former wide decision rail into left and
+right operator wings around a center map that always scales the complete AO.
+Notifications use a single replace-in-place status line in workstation chrome,
+never a stack over the map. One monospace command-display family is used across
+the primary workstation, dialogs, controls, guided tour, and AAR.
 
 No scenario inventory, location, route, coverage envelope, performance value, or
 command relationship is authoritative. Operational use requires approved source

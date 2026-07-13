@@ -70,13 +70,19 @@ The embedded simulation includes San Diego, El Paso, and Norfolk / Hampton
 Roads area-of-operations presets. San Diego includes notional civilian
 arrivals and departures at KSAN with Mode-S / ADS-B identity fields, a
 soft-kill counter-UAS layer around the airport, and a visually distinct
-microwave extension from the 5G transport overlay toward an off-map San
-Clemente Island relay. Geography, inventory, coverage, and performance remain
+microwave extension from the 5G transport overlay to a visible off-scale San
+Clemente Island inset. El Paso adds KELP traffic and airport defense plus three
+distributed Border Patrol sensor/effector sites. Norfolk adds KORF traffic and
+airport defense, a land-terminated 5G backbone, and a denser naval/commercial
+surface picture. Geography, inventory, coverage, and performance remain
 illustrative and are not suitable for operational decisions.
 
-The workstation rail is organized by role and keeps release-critical data in a
-bounded, no-scroll glance view. Complete decision evidence and audit history
-open in dedicated dialogs instead of competing with the primary operator view.
+The workstation uses a split-wing layout: priority tracks and posture remain in
+a bounded left wing, decision support remains in a bounded right wing, and the
+complete tactical AO scales into the unobstructed center map. Routine notices
+replace one compact status line instead of stacking over the map. Complete
+decision evidence and audit history open in dedicated dialogs, and the entire
+interface—including the AAR—uses one command-screen monospace typeface.
 
 The COP is designed for a fixed command-center workstation, not a phone. The
 supported effective-display target is 1280x720 or larger (1920x1080, 4K, 5K,
