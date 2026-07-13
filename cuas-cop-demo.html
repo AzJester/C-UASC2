@@ -1030,7 +1030,7 @@
       </div>
       <div class="fedhud" id="fedhud"></div>
       <div class="legend" id="legend"></div>
-      <div class="hint">drag to pan &middot; wheel to zoom &middot; select tracks / sensors / effectors &middot; sensors &#9634; &middot; effectors &#9670;</div>
+      <div class="hint">drag to pan &middot; wheel to zoom &middot; select a sensor / effector to reveal its data path &middot; sensors &#9634; &middot; effectors &#9670;</div>
     </div>
 
     <aside class="rail rail-right" aria-label="Decision-support wing">
@@ -1057,13 +1057,14 @@
             </div>
           </div>
           <div class="field" style="margin-top:10px;margin-bottom:0">
-            <label>Data transport</label>
+            <label>Selected data path</label>
             <div class="seg" id="transSeg">
               <button data-v="BOTH" aria-pressed="true">BOTH</button>
               <button data-v="MANET">MANET</button>
               <button data-v="5G">5G</button>
-              <button data-v="OFF">OFF</button>
+              <button data-v="OFF">HIDE</button>
             </div>
+            <div class="meta" style="margin-top:5px">Lines stay hidden until a system or network node is selected.</div>
           </div>
           <div class="field" style="margin-top:10px;margin-bottom:0">
             <label>Basemap</label>
@@ -1331,8 +1332,8 @@
           <div><b>Operator wings</b> &mdash; priority tracks and posture stay on the left, decision support stays on the right, and the complete AO scales into the center map. Both wings are no-scroll glance views.</div>
           <div><b>San Diego airport</b> &mdash; notional KSAN arrivals/departures publish synthetic Mode-S / ADS-B callsign, ICAO address, squawk, quality, altitude, speed, and flight-plan fields. Nearby airport-defense effectors are soft-kill / capture demonstrations inside no-fire constraints.</div>
           <div><b>San Clemente link</b> &mdash; the San Diego map includes a visible off-scale island inset where the labeled 5G microwave backhaul terminates. It is illustrative communications symbology, not real infrastructure or coverage.</div>
-          <div><b>5G node details</b> &mdash; select a purple gNB or POP to open its contextual network card; select it again or click elsewhere to dismiss it.</div>
-          <div><b>Airport defense</b> &mdash; every scenario airport has arriving/departing transponder traffic, nearby sensors, and soft-kill / capture effectors inside its no-fire constraints.</div>
+          <div><b>Data connections</b> &mdash; links are hidden by default to keep the map clear. Select a sensor or effector to reveal only its route to the shared COP, or select a purple gNB / POP to reveal its bounded backhaul path and contextual network card. Click elsewhere to clear the path.</div>
+          <div><b>Airport defense</b> &mdash; every scenario airport has arriving/departing transponder traffic plus sensors and soft-kill / capture effectors distributed around the airport perimeter inside its no-fire constraints.</div>
           <div><b>Washington NCR</b> &mdash; satellite-preferred regional view with illustrative protection around public federal landmarks, military installations, Northern Virginia sites, and Reagan National. All defense positions and capabilities are notional.</div>
           <div><b>El Paso border</b> &mdash; three labeled Border Patrol stations distribute paired sensors and non-kinetic effectors along the boundary.</div>
           <div><b>Norfolk maritime</b> &mdash; naval and commercial surface tracks share Hampton Roads; the 5G backbone terminates at a labeled terrestrial point on land.</div>
@@ -1511,8 +1512,8 @@
         { sensorId: "SEN-SHIP-04", sensorType: "RADAR", vendor: "Vendor J", service: "USN",  x: -4700, y: -3400,  range: 6500 },
         { sensorId: "SEN-SHIP-10", sensorType: "RADAR", vendor: "Vendor M", service: "USN",  x: -5300, y: -900,   range: 6500 },
         { sensorId: "SEN-SHIP-11", sensorType: "RADAR", vendor: "Vendor N", service: "USN",  x: -3200, y: -4400, range: 6000 },
-        { sensorId: "SEN-AIR-RAD-12", sensorType: "RADAR", vendor: "Vendor P", service: "USA", x: 2050, y: 3300, range: 5200, airportDefense: true },
-        { sensorId: "SEN-AIR-EO-13", sensorType: "EO_IR", vendor: "Vendor Q", service: "USA", x: 1150, y: 3900, range: 3000, airportDefense: true },
+        { sensorId: "SEN-AIR-RAD-12", sensorType: "RADAR", vendor: "Vendor P", service: "USA", x: 790, y: 3660, range: 5200, airportDefense: true, airportCode: "KSAN", airportPerimeter: "WEST" },
+        { sensorId: "SEN-AIR-EO-13", sensorType: "EO_IR", vendor: "Vendor Q", service: "USA", x: 2590, y: 3660, range: 3000, airportDefense: true, airportCode: "KSAN", airportPerimeter: "EAST" },
       ],
       effectors: [
         { effectorId: "EFF-EW-01",     effectorType: "EW_JAMMER",           vendor: "Vendor D", service: "USA",  x: 350,   y: 300,   maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
@@ -1526,8 +1527,8 @@
         { effectorId: "EFF-LMADIS-09", effectorType: "EW_JAMMER",           vendor: "Vendor K", service: "USMC", x: 500,   y: -1000, maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
         { effectorId: "EFF-DELE-10",   effectorType: "DIRECTED_ENERGY",     vendor: "Vendor M", service: "USN",  x: -5300, y: -900,   maxRange: 3400, mag: 100, cap: 100, unit: "%",   auto: true, weapon: "HELIOS DE" },
         { effectorId: "EFF-CRAM-11",   effectorType: "KINETIC_GUN",         vendor: "Vendor N", service: "USN",  x: -3200, y: -4400, maxRange: 2600, mag: 300, cap: 300, unit: "rds", auto: true, weapon: "C-RAM Phalanx" },
-        { effectorId: "EFF-AIR-EW-12", effectorType: "EW_JAMMER",           vendor: "Vendor P", service: "USA",  x: 2150, y: 3250, maxRange: 3600, mag: 100, cap: 100, unit: "sec", airportDefense: true },
-        { effectorId: "EFF-AIR-NET-13",effectorType: "NET_CAPTURE",         vendor: "Vendor Q", service: "USA",  x: 1200, y: 3900, maxRange: 1500, mag: 6, cap: 6, unit: "nets", airportDefense: true },
+        { effectorId: "EFF-AIR-EW-12", effectorType: "EW_JAMMER",           vendor: "Vendor P", service: "USA",  x: 1690, y: 4560, maxRange: 3600, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportCode: "KSAN", airportPerimeter: "NORTH" },
+        { effectorId: "EFF-AIR-NET-13",effectorType: "NET_CAPTURE",         vendor: "Vendor Q", service: "USA",  x: 1690, y: 2760, maxRange: 1500, mag: 6, cap: 6, unit: "nets", airportDefense: true, airportCode: "KSAN", airportPerimeter: "SOUTH" },
       ],
       hubPair: { "SEN-RAD-01": "EFF-GUN-06", "SEN-EO-03": "EFF-LAS-05", "SEN-MADIS-05": "EFF-LMADIS-09" },
       blue: [
@@ -1603,20 +1604,20 @@
         { x: 2850, y: 900, r: 1300, label: "MIRAMAR APPROACH" },
       ],
       sensors: [
-        { sensorId: "SEN-MIR-RAD-30", sensorType: "RADAR", vendor: "Vendor W", service: "USMC", x: -530, y: -470, range: 6000, protectedSite: true, airportDefense: true },
-        { sensorId: "SEN-MIR-RF-31", sensorType: "RF", vendor: "Vendor X", service: "USMC", x: 170, y: 430, range: 5200, protectedSite: true, airportDefense: true },
-        { sensorId: "SEN-MIR-EO-32", sensorType: "EO_IR", vendor: "Vendor Y", service: "USMC", x: 620, y: -270, range: 3600, protectedSite: true, airportDefense: true },
+        { sensorId: "SEN-MIR-RAD-30", sensorType: "RADAR", vendor: "Vendor W", service: "USMC", x: -950, y: 0, range: 6000, protectedSite: true, airportDefense: true, airportCode: "KNKX", airportPerimeter: "WEST" },
+        { sensorId: "SEN-MIR-RF-31", sensorType: "RF", vendor: "Vendor X", service: "USMC", x: 475, y: 823, range: 5200, protectedSite: true, airportDefense: true, airportCode: "KNKX", airportPerimeter: "NORTHEAST" },
+        { sensorId: "SEN-MIR-EO-32", sensorType: "EO_IR", vendor: "Vendor Y", service: "USMC", x: 475, y: -823, range: 3600, protectedSite: true, airportDefense: true, airportCode: "KNKX", airportPerimeter: "SOUTHEAST" },
         { sensorId: "SEN-MIR-GAP-33", sensorType: "RADAR", vendor: "Vendor Z", service: "USMC", x: 2500, y: 1700, range: 4600, protectedSite: true },
         { sensorId: "SEN-OFF-RAD-40", sensorType: "RADAR", vendor: "Vendor J", service: "USN", x: -17000, y: -1000, range: 14000, offshore: true },
         { sensorId: "SEN-OFF-RAD-41", sensorType: "RADAR", vendor: "Vendor M", service: "USN", x: -18500, y: 2500, range: 13000, offshore: true },
       ],
       effectors: [
-        { effectorId: "EFF-MIR-EW-30", effectorType: "EW_JAMMER", vendor: "Vendor W", service: "USMC", x: -480, y: -370, maxRange: 5200, mag: 100, cap: 100, unit: "sec", protectedSite: true, airportDefense: true },
+        { effectorId: "EFF-MIR-EW-30", effectorType: "EW_JAMMER", vendor: "Vendor W", service: "USMC", x: 0, y: 950, maxRange: 5200, mag: 100, cap: 100, unit: "sec", protectedSite: true, airportDefense: true, airportCode: "KNKX", airportPerimeter: "NORTH" },
         { effectorId: "EFF-MIR-RF-31", effectorType: "RF_TAKEOVER", vendor: "Vendor X", service: "USMC", x: 70, y: 480, maxRange: 4300, mag: 100, cap: 100, unit: "sec", protectedSite: true },
         { effectorId: "EFF-MIR-INT-32", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor Y", service: "USMC", x: 520, y: -70, maxRange: 5200, mag: 10, cap: 10, unit: "rounds", protectedSite: true },
         { effectorId: "EFF-MIR-DE-33", effectorType: "DIRECTED_ENERGY", vendor: "Vendor Z", service: "USMC", x: -80, y: -720, maxRange: 3600, mag: 100, cap: 100, unit: "%", protectedSite: true },
         { effectorId: "EFF-MIR-GUN-34", effectorType: "KINETIC_GUN", vendor: "Vendor W", service: "USMC", x: 820, y: 430, maxRange: 2600, mag: 300, cap: 300, unit: "rds", protectedSite: true },
-        { effectorId: "EFF-MIR-NET-35", effectorType: "NET_CAPTURE", vendor: "Vendor X", service: "USMC", x: -730, y: 130, maxRange: 1800, mag: 8, cap: 8, unit: "nets", protectedSite: true, airportDefense: true },
+        { effectorId: "EFF-MIR-NET-35", effectorType: "NET_CAPTURE", vendor: "Vendor X", service: "USMC", x: 0, y: -950, maxRange: 1800, mag: 8, cap: 8, unit: "nets", protectedSite: true, airportDefense: true, airportCode: "KNKX", airportPerimeter: "SOUTH" },
         { effectorId: "EFF-OFF-SEARAM-40", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor J", service: "USN", x: -17000, y: -1000, maxRange: 12500, mag: 11, cap: 11, unit: "rounds", auto: true, weapon: "SeaRAM", offshore: true },
         { effectorId: "EFF-OFF-HELIOS-41", effectorType: "DIRECTED_ENERGY", vendor: "Vendor M", service: "USN", x: -18500, y: 2500, maxRange: 7000, mag: 100, cap: 100, unit: "%", auto: true, weapon: "HELIOS DE", offshore: true },
         { effectorId: "EFF-OFF-CIWS-42", effectorType: "KINETIC_GUN", vendor: "Vendor N", service: "USN", x: -16000, y: -3500, maxRange: 5200, mag: 300, cap: 300, unit: "rds", auto: true, weapon: "C-RAM Phalanx", offshore: true },
@@ -1675,8 +1676,8 @@
         { sensorId: "SEN-BP-RF-10", sensorType: "RF",    vendor: "Vendor R", service: "DHS", x: -4470, y: -1810, range: 3600, borderStation: true },
         { sensorId: "SEN-BP-RAD-11",sensorType: "RADAR", vendor: "Vendor S", service: "DHS", x: -170,  y: -1810, range: 4400, borderStation: true },
         { sensorId: "SEN-BP-EO-12", sensorType: "EO_IR", vendor: "Vendor T", service: "DHS", x: 4130,  y: -1810, range: 3000, borderStation: true },
-        { sensorId: "SEN-KELP-RAD-20", sensorType: "RADAR", vendor: "Vendor U", service: "USA", x: 2450, y: -550, range: 5000, airportDefense: true },
-        { sensorId: "SEN-KELP-EO-21",  sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: 3250, y: -950, range: 2800, airportDefense: true },
+        { sensorId: "SEN-KELP-RAD-20", sensorType: "RADAR", vendor: "Vendor U", service: "USA", x: 1950, y: -750, range: 5000, airportDefense: true, airportCode: "KELP", airportPerimeter: "WEST" },
+        { sensorId: "SEN-KELP-EO-21",  sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: 3750, y: -750, range: 2800, airportDefense: true, airportCode: "KELP", airportPerimeter: "EAST" },
       ],
       effectors: [
         { effectorId: "EFF-EW-01",     effectorType: "EW_JAMMER",           vendor: "Vendor D", service: "USA",  x: 350,   y: 200,   maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
@@ -1690,8 +1691,8 @@
         { effectorId: "EFF-BP-EW-10",  effectorType: "EW_JAMMER",           vendor: "Vendor R", service: "DHS", x: -4130, y: -1660, maxRange: 3200, mag: 100, cap: 100, unit: "sec", borderStation: true },
         { effectorId: "EFF-BP-RF-11",  effectorType: "RF_TAKEOVER",         vendor: "Vendor S", service: "DHS", x: 170,   y: -1660, maxRange: 3000, mag: 100, cap: 100, unit: "sec", borderStation: true },
         { effectorId: "EFF-BP-NET-12", effectorType: "NET_CAPTURE",         vendor: "Vendor T", service: "DHS", x: 4470,  y: -1660, maxRange: 1500, mag: 6,   cap: 6,   unit: "nets", borderStation: true },
-        { effectorId: "EFF-KELP-EW-20",effectorType: "EW_JAMMER",           vendor: "Vendor U", service: "USA", x: 2500,  y: -500,  maxRange: 3400, mag: 100, cap: 100, unit: "sec", airportDefense: true },
-        { effectorId: "EFF-KELP-NET-21",effectorType: "NET_CAPTURE",        vendor: "Vendor V", service: "USA", x: 3200,  y: -1000, maxRange: 1500, mag: 6,   cap: 6,   unit: "nets", airportDefense: true },
+        { effectorId: "EFF-KELP-EW-20",effectorType: "EW_JAMMER",           vendor: "Vendor U", service: "USA", x: 2850,  y: 150,  maxRange: 3400, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportCode: "KELP", airportPerimeter: "NORTH" },
+        { effectorId: "EFF-KELP-NET-21",effectorType: "NET_CAPTURE",        vendor: "Vendor V", service: "USA", x: 2850,  y: -1650, maxRange: 1500, mag: 6,   cap: 6,   unit: "nets", airportDefense: true, airportCode: "KELP", airportPerimeter: "SOUTH / U.S. SIDE" },
       ],
       hubPair: { "SEN-RAD-01": "EFF-GUN-06", "SEN-EO-03": "EFF-LAS-05", "SEN-MADIS-05": "EFF-LMADIS-09" },
       blue: [
@@ -1748,8 +1749,8 @@
         { sensorId: "SEN-SHIP-04",  sensorType: "RADAR", vendor: "Vendor J", service: "USN",  x: -4800, y: -2600, range: 6500 },
         { sensorId: "SEN-SHIP-10",  sensorType: "RADAR", vendor: "Vendor M", service: "USN",  x: -5200, y: 1100,  range: 6500 },
         { sensorId: "SEN-AF-11",    sensorType: "RADAR", vendor: "Vendor N", service: "USAF", x: 3300,  y: 2200,  range: 6000 },
-        { sensorId: "SEN-KORF-RAD-20", sensorType: "RADAR", vendor: "Vendor U", service: "USA", x: 2650, y: 2800, range: 5000, airportDefense: true },
-        { sensorId: "SEN-KORF-EO-21",  sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: 3350, y: 3200, range: 2800, airportDefense: true },
+        { sensorId: "SEN-KORF-RAD-20", sensorType: "RADAR", vendor: "Vendor U", service: "USA", x: 2100, y: 3000, range: 5000, airportDefense: true, airportCode: "KORF", airportPerimeter: "WEST" },
+        { sensorId: "SEN-KORF-EO-21",  sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: 3900, y: 3000, range: 2800, airportDefense: true, airportCode: "KORF", airportPerimeter: "EAST" },
       ],
       effectors: [
         { effectorId: "EFF-EW-01",     effectorType: "EW_JAMMER",           vendor: "Vendor D", service: "USN",  x: 250,   y: 300,   maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
@@ -1761,8 +1762,8 @@
         { effectorId: "EFF-NET-07",    effectorType: "NET_CAPTURE",         vendor: "Vendor I", service: "USMC", x: 650,   y: -1100, maxRange: 1800, mag: 6,   cap: 6,   unit: "nets" },
         { effectorId: "EFF-SEARAM-08", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor J", service: "USN",  x: -4800, y: -2600, maxRange: 4200, mag: 11,  cap: 11,  unit: "rounds", auto: true, weapon: "SeaRAM" },
         { effectorId: "EFF-DELE-10",   effectorType: "DIRECTED_ENERGY",     vendor: "Vendor M", service: "USN",  x: -5200, y: 1100,  maxRange: 3400, mag: 100, cap: 100, unit: "%", auto: true, weapon: "HELIOS DE" },
-        { effectorId: "EFF-KORF-EW-20",effectorType: "EW_JAMMER",           vendor: "Vendor U", service: "USA",  x: 2700, y: 2750, maxRange: 3400, mag: 100, cap: 100, unit: "sec", airportDefense: true },
-        { effectorId: "EFF-KORF-NET-21",effectorType: "NET_CAPTURE",        vendor: "Vendor V", service: "USA",  x: 3300, y: 3250, maxRange: 1500, mag: 6, cap: 6, unit: "nets", airportDefense: true },
+        { effectorId: "EFF-KORF-EW-20",effectorType: "EW_JAMMER",           vendor: "Vendor U", service: "USA",  x: 3000, y: 3900, maxRange: 3400, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportCode: "KORF", airportPerimeter: "NORTH" },
+        { effectorId: "EFF-KORF-NET-21",effectorType: "NET_CAPTURE",        vendor: "Vendor V", service: "USA",  x: 3000, y: 2100, maxRange: 1500, mag: 6, cap: 6, unit: "nets", airportDefense: true, airportCode: "KORF", airportPerimeter: "SOUTH" },
       ],
       hubPair: { "SEN-RAD-01": "EFF-GUN-06", "SEN-EO-03": "EFF-HPM-04", "SEN-RF-05": "EFF-RF-02" },
       blue: [
@@ -1899,8 +1900,8 @@
         { sensorId: "SEN-PENT-RF-07", sensorType: "RF", vendor: "Vendor G", service: "USSF", x: -1300, y: -3200, range: 9500, protectedSite: true },
         { sensorId: "SEN-JBM-RAD-08", sensorType: "RADAR", vendor: "Vendor H", service: "USA", x: -3900, y: -1800, range: 10000, protectedSite: true },
         { sensorId: "SEN-JBM-EO-09", sensorType: "EO_IR", vendor: "Vendor I", service: "USMC", x: -3400, y: -2400, range: 5500, protectedSite: true },
-        { sensorId: "SEN-DCA-RAD-10", sensorType: "RADAR", vendor: "Vendor J", service: "USA", x: -500, y: -5000, range: 11000, airportDefense: true },
-        { sensorId: "SEN-DCA-EO-11", sensorType: "EO_IR", vendor: "Vendor K", service: "USA", x: 300, y: -5400, range: 6000, airportDefense: true },
+        { sensorId: "SEN-DCA-RAD-10", sensorType: "RADAR", vendor: "Vendor J", service: "USA", x: -1420, y: -5200, range: 11000, airportDefense: true, airportCode: "KDCA", airportPerimeter: "WEST" },
+        { sensorId: "SEN-DCA-EO-11", sensorType: "EO_IR", vendor: "Vendor K", service: "USA", x: 780, y: -5200, range: 6000, airportDefense: true, airportCode: "KDCA", airportPerimeter: "EAST" },
         { sensorId: "SEN-MCNAIR-RAD-12", sensorType: "RADAR", vendor: "Vendor L", service: "USA", x: 1700, y: -3500, range: 9000, protectedSite: true },
         { sensorId: "SEN-ALEX-RAD-13", sensorType: "RADAR", vendor: "Vendor M", service: "USA", x: -6800, y: -7300, range: 12000, protectedSite: true },
         { sensorId: "SEN-ALEX-RF-14", sensorType: "RF", vendor: "Vendor N", service: "USSF", x: -6200, y: -7900, range: 10000, protectedSite: true },
@@ -1918,16 +1919,16 @@
         { sensorId: "SEN-ATL-EO-34", sensorType: "EO_IR", vendor: "Vendor AD", service: "USN", x: 90000, y: -25000, range: 22000, coastalInset: true, coastalSlot: 3, coastalSector: "CHESAPEAKE MOUTH" },
         { sensorId: "SEN-ATL-RAD-35", sensorType: "RADAR", vendor: "Vendor AE", service: "USAF", x: 108000, y: -52000, range: 48000, coastalInset: true, coastalSlot: 4, coastalSector: "VIRGINIA CAPES" },
         { sensorId: "SEN-ATL-RF-36", sensorType: "RF", vendor: "Vendor AF", service: "USN", x: 122000, y: -76000, range: 40000, coastalInset: true, coastalSlot: 5, coastalSector: "ATLANTIC SOUTH" },
-        { sensorId: "SEN-IAD-RAD-40", sensorType: "RADAR", vendor: "Vendor AI", service: "USA", x: -36700, y: 6500, range: 16000, airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 0, airportCode: "KIAD" },
-        { sensorId: "SEN-IAD-EO-41", sensorType: "EO_IR", vendor: "Vendor AJ", service: "USA", x: -35900, y: 5900, range: 7000, airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 1, airportCode: "KIAD" },
-        { sensorId: "SEN-BWI-RAD-42", sensorType: "RADAR", vendor: "Vendor AK", service: "USA", x: 31400, y: 31200, range: 16000, airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 0, airportCode: "KBWI" },
-        { sensorId: "SEN-BWI-EO-43", sensorType: "EO_IR", vendor: "Vendor AL", service: "USA", x: 32200, y: 30600, range: 7000, airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 1, airportCode: "KBWI" },
-        { sensorId: "SEN-HEF-RAD-44", sensorType: "RADAR", vendor: "Vendor AM", service: "USA", x: -41900, y: -19300, range: 14000, airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 0, airportCode: "KHEF" },
-        { sensorId: "SEN-HEF-EO-45", sensorType: "EO_IR", vendor: "Vendor AN", service: "USA", x: -41100, y: -19900, range: 6500, airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 1, airportCode: "KHEF" },
-        { sensorId: "SEN-CGS-RAD-46", sensorType: "RADAR", vendor: "Vendor AP", service: "USA", x: 10700, y: 13200, range: 12000, airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 0, airportCode: "KCGS" },
-        { sensorId: "SEN-CGS-EO-47", sensorType: "EO_IR", vendor: "Vendor AQ", service: "USA", x: 11500, y: 12600, range: 6000, airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 1, airportCode: "KCGS" },
-        { sensorId: "SEN-GAI-RAD-48", sensorType: "RADAR", vendor: "Vendor AR", service: "USA", x: -19500, y: 27300, range: 13000, airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 0, airportCode: "KGAI" },
-        { sensorId: "SEN-GAI-EO-49", sensorType: "EO_IR", vendor: "Vendor AS", service: "USA", x: -18700, y: 26700, range: 6200, airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 1, airportCode: "KGAI" },
+        { sensorId: "SEN-IAD-RAD-40", sensorType: "RADAR", vendor: "Vendor AI", service: "USA", x: -37400, y: 6200, range: 16000, airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 0, airportCode: "KIAD", airportPerimeter: "WEST" },
+        { sensorId: "SEN-IAD-EO-41", sensorType: "EO_IR", vendor: "Vendor AJ", service: "USA", x: -35200, y: 6200, range: 7000, airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 1, airportCode: "KIAD", airportPerimeter: "EAST" },
+        { sensorId: "SEN-BWI-RAD-42", sensorType: "RADAR", vendor: "Vendor AK", service: "USA", x: 30700, y: 30900, range: 16000, airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 0, airportCode: "KBWI", airportPerimeter: "WEST" },
+        { sensorId: "SEN-BWI-EO-43", sensorType: "EO_IR", vendor: "Vendor AL", service: "USA", x: 32900, y: 30900, range: 7000, airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 1, airportCode: "KBWI", airportPerimeter: "EAST" },
+        { sensorId: "SEN-HEF-RAD-44", sensorType: "RADAR", vendor: "Vendor AM", service: "USA", x: -42400, y: -19600, range: 14000, airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 0, airportCode: "KHEF", airportPerimeter: "WEST" },
+        { sensorId: "SEN-HEF-EO-45", sensorType: "EO_IR", vendor: "Vendor AN", service: "USA", x: -40600, y: -19600, range: 6500, airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 1, airportCode: "KHEF", airportPerimeter: "EAST" },
+        { sensorId: "SEN-CGS-RAD-46", sensorType: "RADAR", vendor: "Vendor AP", service: "USA", x: 10400, y: 12900, range: 12000, airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 0, airportCode: "KCGS", airportPerimeter: "WEST" },
+        { sensorId: "SEN-CGS-EO-47", sensorType: "EO_IR", vendor: "Vendor AQ", service: "USA", x: 11800, y: 12900, range: 6000, airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 1, airportCode: "KCGS", airportPerimeter: "EAST" },
+        { sensorId: "SEN-GAI-RAD-48", sensorType: "RADAR", vendor: "Vendor AR", service: "USA", x: -19900, y: 27000, range: 13000, airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 0, airportCode: "KGAI", airportPerimeter: "WEST" },
+        { sensorId: "SEN-GAI-EO-49", sensorType: "EO_IR", vendor: "Vendor AS", service: "USA", x: -18300, y: 27000, range: 6200, airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 1, airportCode: "KGAI", airportPerimeter: "EAST" },
       ],
       effectors: [
         { effectorId: "EFF-NCR-EW-01", effectorType: "EW_JAMMER", vendor: "Vendor A", service: "USA", x: -100, y: 200, maxRange: 12000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
@@ -1941,8 +1942,8 @@
         { effectorId: "EFF-JBM-EW-09", effectorType: "EW_JAMMER", vendor: "Vendor H", service: "USA", x: -3800, y: -1800, maxRange: 8500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
         { effectorId: "EFF-JBM-RF-10", effectorType: "RF_TAKEOVER", vendor: "Vendor I", service: "USMC", x: -3300, y: -2400, maxRange: 7800, mag: 100, cap: 100, unit: "sec", protectedSite: true },
         { effectorId: "EFF-JBM-NET-11", effectorType: "NET_CAPTURE", vendor: "Vendor H", service: "USA", x: -4200, y: -2200, maxRange: 2300, mag: 10, cap: 10, unit: "nets", protectedSite: true },
-        { effectorId: "EFF-DCA-EW-12", effectorType: "EW_JAMMER", vendor: "Vendor J", service: "USA", x: -450, y: -5000, maxRange: 8500, mag: 100, cap: 100, unit: "sec", airportDefense: true },
-        { effectorId: "EFF-DCA-NET-13", effectorType: "NET_CAPTURE", vendor: "Vendor K", service: "USA", x: 250, y: -5500, maxRange: 2400, mag: 10, cap: 10, unit: "nets", airportDefense: true },
+        { effectorId: "EFF-DCA-EW-12", effectorType: "EW_JAMMER", vendor: "Vendor J", service: "USA", x: -320, y: -4100, maxRange: 8500, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportCode: "KDCA", airportPerimeter: "NORTH" },
+        { effectorId: "EFF-DCA-NET-13", effectorType: "NET_CAPTURE", vendor: "Vendor K", service: "USA", x: -320, y: -6300, maxRange: 2400, mag: 10, cap: 10, unit: "nets", airportDefense: true, airportCode: "KDCA", airportPerimeter: "SOUTH" },
         { effectorId: "EFF-MCNAIR-EW-14", effectorType: "EW_JAMMER", vendor: "Vendor L", service: "USA", x: 1700, y: -3400, maxRange: 8200, mag: 100, cap: 100, unit: "sec", protectedSite: true },
         { effectorId: "EFF-MCNAIR-NET-15", effectorType: "NET_CAPTURE", vendor: "Vendor L", service: "USA", x: 2050, y: -3800, maxRange: 2200, mag: 10, cap: 10, unit: "nets", protectedSite: true },
         { effectorId: "EFF-ALEX-EW-16", effectorType: "EW_JAMMER", vendor: "Vendor M", service: "USA", x: -6800, y: -7300, maxRange: 8500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
@@ -1968,16 +1969,16 @@
         { effectorId: "EFF-ATL-NET-36", effectorType: "NET_CAPTURE", vendor: "Vendor AF", service: "USN", x: 122000, y: -76000, maxRange: 3200, mag: 12, cap: 12, unit: "nets", coastalInset: true, coastalSlot: 5, coastalSector: "ATLANTIC SOUTH" },
         { effectorId: "EFF-ATL-EW-37", effectorType: "EW_JAMMER", vendor: "Vendor AG", service: "USCG", x: 105000, y: 12000, maxRange: 26000, mag: 100, cap: 100, unit: "sec", coastalInset: true, coastalSlot: 6, coastalSector: "MID-COAST RESERVE" },
         { effectorId: "EFF-ATL-INT-38", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor AH", service: "USN", x: 116000, y: -36000, maxRange: 17000, mag: 18, cap: 18, unit: "rounds", coastalInset: true, coastalSlot: 7, coastalSector: "COASTAL RESERVE" },
-        { effectorId: "EFF-IAD-EW-40", effectorType: "EW_JAMMER", vendor: "Vendor AI", service: "USA", x: -36600, y: 6400, maxRange: 9000, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 0, airportCode: "KIAD" },
-        { effectorId: "EFF-IAD-NET-41", effectorType: "NET_CAPTURE", vendor: "Vendor AJ", service: "USA", x: -35800, y: 6000, maxRange: 2600, mag: 10, cap: 10, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 1, airportCode: "KIAD" },
-        { effectorId: "EFF-BWI-EW-42", effectorType: "EW_JAMMER", vendor: "Vendor AK", service: "USA", x: 31500, y: 31100, maxRange: 9000, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 0, airportCode: "KBWI" },
-        { effectorId: "EFF-BWI-NET-43", effectorType: "NET_CAPTURE", vendor: "Vendor AL", service: "USA", x: 32100, y: 30700, maxRange: 2600, mag: 10, cap: 10, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 1, airportCode: "KBWI" },
-        { effectorId: "EFF-HEF-EW-44", effectorType: "EW_JAMMER", vendor: "Vendor AM", service: "USA", x: -41800, y: -19400, maxRange: 8200, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 0, airportCode: "KHEF" },
-        { effectorId: "EFF-HEF-NET-45", effectorType: "NET_CAPTURE", vendor: "Vendor AN", service: "USA", x: -41200, y: -19800, maxRange: 2400, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 1, airportCode: "KHEF" },
-        { effectorId: "EFF-CGS-EW-46", effectorType: "EW_JAMMER", vendor: "Vendor AP", service: "USA", x: 10800, y: 13100, maxRange: 7600, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 0, airportCode: "KCGS" },
-        { effectorId: "EFF-CGS-NET-47", effectorType: "NET_CAPTURE", vendor: "Vendor AQ", service: "USA", x: 11400, y: 12700, maxRange: 2200, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 1, airportCode: "KCGS" },
-        { effectorId: "EFF-GAI-EW-48", effectorType: "EW_JAMMER", vendor: "Vendor AR", service: "USA", x: -19400, y: 27200, maxRange: 7800, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 0, airportCode: "KGAI" },
-        { effectorId: "EFF-GAI-NET-49", effectorType: "NET_CAPTURE", vendor: "Vendor AS", service: "USA", x: -18800, y: 26800, maxRange: 2300, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 1, airportCode: "KGAI" },
+        { effectorId: "EFF-IAD-EW-40", effectorType: "EW_JAMMER", vendor: "Vendor AI", service: "USA", x: -36300, y: 7300, maxRange: 9000, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 0, airportCode: "KIAD", airportPerimeter: "NORTH" },
+        { effectorId: "EFF-IAD-NET-41", effectorType: "NET_CAPTURE", vendor: "Vendor AJ", service: "USA", x: -36300, y: 5100, maxRange: 2600, mag: 10, cap: 10, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 0, airportNode: 1, airportCode: "KIAD", airportPerimeter: "SOUTH" },
+        { effectorId: "EFF-BWI-EW-42", effectorType: "EW_JAMMER", vendor: "Vendor AK", service: "USA", x: 31800, y: 32000, maxRange: 9000, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 0, airportCode: "KBWI", airportPerimeter: "NORTH" },
+        { effectorId: "EFF-BWI-NET-43", effectorType: "NET_CAPTURE", vendor: "Vendor AL", service: "USA", x: 31800, y: 29800, maxRange: 2600, mag: 10, cap: 10, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 1, airportNode: 1, airportCode: "KBWI", airportPerimeter: "SOUTH" },
+        { effectorId: "EFF-HEF-EW-44", effectorType: "EW_JAMMER", vendor: "Vendor AM", service: "USA", x: -41500, y: -18700, maxRange: 8200, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 0, airportCode: "KHEF", airportPerimeter: "NORTH" },
+        { effectorId: "EFF-HEF-NET-45", effectorType: "NET_CAPTURE", vendor: "Vendor AN", service: "USA", x: -41500, y: -20500, maxRange: 2400, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 2, airportNode: 1, airportCode: "KHEF", airportPerimeter: "SOUTH" },
+        { effectorId: "EFF-CGS-EW-46", effectorType: "EW_JAMMER", vendor: "Vendor AP", service: "USA", x: 11100, y: 13600, maxRange: 7600, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 0, airportCode: "KCGS", airportPerimeter: "NORTH" },
+        { effectorId: "EFF-CGS-NET-47", effectorType: "NET_CAPTURE", vendor: "Vendor AQ", service: "USA", x: 11100, y: 12200, maxRange: 2200, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 3, airportNode: 1, airportCode: "KCGS", airportPerimeter: "SOUTH" },
+        { effectorId: "EFF-GAI-EW-48", effectorType: "EW_JAMMER", vendor: "Vendor AR", service: "USA", x: -19100, y: 27800, maxRange: 7800, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 0, airportCode: "KGAI", airportPerimeter: "NORTH" },
+        { effectorId: "EFF-GAI-NET-49", effectorType: "NET_CAPTURE", vendor: "Vendor AS", service: "USA", x: -19100, y: 26200, maxRange: 2300, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportInset: true, airportSlot: 4, airportNode: 1, airportCode: "KGAI", airportPerimeter: "SOUTH" },
       ],
       hubPair: { "SEN-NCR-RAD-01": "EFF-NCR-EW-01", "SEN-NCR-RF-02": "EFF-NCR-RF-02", "SEN-NCR-EO-03": "EFF-NCR-NET-03", "SEN-JBA-RAD-15": "EFF-JBA-INT-21", "SEN-BEL-RAD-19": "EFF-BEL-INT-27" },
       blue: [
@@ -2120,10 +2121,10 @@
         { sensorId: "SEN-C2-EO-11", sensorType: "EO_IR", vendor: "Vendor R", service: "USA", x: 5000, y: 8800, range: 6500, protectedSite: true },
         { sensorId: "SEN-SOUTH-RAD-18", sensorType: "RADAR", vendor: "Vendor S", service: "USA", x: -9000, y: -18800, range: 15000, protectedSite: true },
         { sensorId: "SEN-SOUTH-RF-19", sensorType: "RF", vendor: "Vendor T", service: "USMC", x: -11800, y: -17200, range: 12000, protectedSite: true },
-        { sensorId: "SEN-PGUM-RAD-20", sensorType: "RADAR", vendor: "Vendor U", service: "USA", x: -150, y: 4250, range: 9500, airportDefense: true },
-        { sensorId: "SEN-PGUM-EO-21", sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: 900, y: 4650, range: 5200, airportDefense: true },
-        { sensorId: "SEN-PGUM-RF-22", sensorType: "RF", vendor: "Vendor U", service: "USA", x: 1250, y: 3750, range: 8200, airportDefense: true },
-        { sensorId: "SEN-PGUM-GAP-23", sensorType: "RADAR", vendor: "Vendor V", service: "USA", x: -1150, y: 5050, range: 7600, airportDefense: true },
+        { sensorId: "SEN-PGUM-RAD-20", sensorType: "RADAR", vendor: "Vendor U", service: "USA", x: -729, y: 4414, range: 9500, airportDefense: true, airportCode: "PGUM", airportPerimeter: "WEST" },
+        { sensorId: "SEN-PGUM-EO-21", sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: 1471, y: 4414, range: 5200, airportDefense: true, airportCode: "PGUM", airportPerimeter: "EAST" },
+        { sensorId: "SEN-PGUM-RF-22", sensorType: "RF", vendor: "Vendor U", service: "USA", x: 371, y: 5514, range: 8200, airportDefense: true, airportCode: "PGUM", airportPerimeter: "NORTH" },
+        { sensorId: "SEN-PGUM-GAP-23", sensorType: "RADAR", vendor: "Vendor V", service: "USA", x: 371, y: 3314, range: 7600, airportDefense: true, airportCode: "PGUM", airportPerimeter: "SOUTH" },
       ],
       effectors: [
         { effectorId: "EFF-EW-01", effectorType: "EW_JAMMER", vendor: "Vendor D", service: "USAF", x: 300, y: 450, maxRange: 11000, mag: 100, cap: 100, unit: "sec" },
@@ -2153,10 +2154,10 @@
         { effectorId: "EFF-C2-DE-15", effectorType: "DIRECTED_ENERGY", vendor: "Vendor R", service: "USA", x: 5000, y: 8700, maxRange: 6000, mag: 100, cap: 100, unit: "%", protectedSite: true },
         { effectorId: "EFF-SOUTH-EW-28", effectorType: "EW_JAMMER", vendor: "Vendor S", service: "USA", x: -9000, y: -18700, maxRange: 9000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
         { effectorId: "EFF-SOUTH-INT-29", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor T", service: "USMC", x: -11600, y: -17300, maxRange: 9000, mag: 12, cap: 12, unit: "rounds", protectedSite: true },
-        { effectorId: "EFF-PGUM-EW-20", effectorType: "EW_JAMMER", vendor: "Vendor U", service: "USA", x: -50, y: 4300, maxRange: 8000, mag: 100, cap: 100, unit: "sec", airportDefense: true },
-        { effectorId: "EFF-PGUM-NET-21", effectorType: "NET_CAPTURE", vendor: "Vendor V", service: "USA", x: 850, y: 4700, maxRange: 2400, mag: 8, cap: 8, unit: "nets", airportDefense: true },
-        { effectorId: "EFF-PGUM-RF-30", effectorType: "RF_TAKEOVER", vendor: "Vendor U", service: "USA", x: 1250, y: 3850, maxRange: 7200, mag: 100, cap: 100, unit: "sec", airportDefense: true },
-        { effectorId: "EFF-PGUM-NET-31", effectorType: "NET_CAPTURE", vendor: "Vendor V", service: "USA", x: -1100, y: 5000, maxRange: 2400, mag: 8, cap: 8, unit: "nets", airportDefense: true },
+        { effectorId: "EFF-PGUM-EW-20", effectorType: "EW_JAMMER", vendor: "Vendor U", service: "USA", x: -407, y: 5192, maxRange: 8000, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportCode: "PGUM", airportPerimeter: "NORTHWEST" },
+        { effectorId: "EFF-PGUM-NET-21", effectorType: "NET_CAPTURE", vendor: "Vendor V", service: "USA", x: 1149, y: 5192, maxRange: 2400, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportCode: "PGUM", airportPerimeter: "NORTHEAST" },
+        { effectorId: "EFF-PGUM-RF-30", effectorType: "RF_TAKEOVER", vendor: "Vendor U", service: "USA", x: 1149, y: 3636, maxRange: 7200, mag: 100, cap: 100, unit: "sec", airportDefense: true, airportCode: "PGUM", airportPerimeter: "SOUTHEAST" },
+        { effectorId: "EFF-PGUM-NET-31", effectorType: "NET_CAPTURE", vendor: "Vendor V", service: "USA", x: -407, y: 3636, maxRange: 2400, mag: 8, cap: 8, unit: "nets", airportDefense: true, airportCode: "PGUM", airportPerimeter: "SOUTHWEST" },
       ],
       hubPair: { "SEN-RAD-01": "EFF-GUN-05", "SEN-EO-03": "EFF-DE-04", "SEN-RF-02": "EFF-RF-02" },
       blue: [
@@ -2273,8 +2274,9 @@
     echelon: { bn: false, rgt: false },     // up-echelon federation state
     arch: "NETWORKED",                       // NETWORKED | HUB (any-shooter vs legacy)
     coverage: null,                          // cached {netPct, hubPct, gap:[{x,y}]}
-    transport: "BOTH",                       // BOTH | MANET | 5G | OFF (data transport overlay)
+    transport: "BOTH",                       // BOTH | MANET | 5G | OFF (selected data path; lines hidden without a selection)
     transportInfoOpen: false,                // contextual 5G node details, opened from the map
+    visibleDataRoute: null,                   // active contextual line: selected system or selected network node
     basemap: "SAT",                          // SAT default | TAC manual/offline fallback
     basemapExplicit: false,                  // query/manual selection overrides a scenario preference
     wx: "CLEAR",                             // CLEAR | WIND | RAIN (seeded per run)
@@ -2693,7 +2695,7 @@
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
   const COP_VERSION = "1.0.0";    // human-readable application release
-  const COP_BUILD = "f5981bdb";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "aef58aa9";   // stamped by scripts/build_cop.py (content hash)
   $("appVersion").textContent = `v${COP_VERSION} · ${COP_BUILD}`;
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
@@ -4427,7 +4429,7 @@
   }
   function airportInsetGeometry() {
     const coast = coastalInsetGeometry(), w = coast.w;
-    return { x: coast.x, y: coast.y + coast.h + 8, w, h: 132 };
+    return { x: coast.x, y: coast.y + coast.h + 8, w, h: 168 };
   }
   function coastalInsetPoint(kind, item) {
     const box = coastalInsetGeometry(), slot = Number(item.coastalSlot) || 0;
@@ -4436,7 +4438,9 @@
   }
   function airportInsetPoint(kind, item) {
     const box = airportInsetGeometry(), row = Number(item.airportSlot) || 0, node = Number(item.airportNode) || 0;
-    return { x: box.x + (kind === "sensor" ? 112 : 171) + node * 15, y: box.y + 52 + row * 15 };
+    const centerX = box.x + 157, centerY = box.y + 56 + row * 21;
+    if (kind === "sensor") return { x: centerX + (node ? 35 : -35), y: centerY };
+    return { x: centerX, y: centerY + (node ? 8 : -8) };
   }
   function systemScreenPoints(kind, item) {
     const points = [];
@@ -4495,14 +4499,18 @@
 
     ctx.fillStyle = "#9edcff"; ctx.font = "bold 8px " + MONO; ctx.fillText(SCN.airportScreen.label, airports.x + 9, airports.y + 14);
     ctx.fillStyle = "#718da4"; ctx.font = "7px " + MONO; ctx.fillText(SCN.airportScreen.note, airports.x + 9, airports.y + 27);
-    ctx.fillStyle = "#79bedf"; ctx.fillText("AIRPORT", airports.x + 9, airports.y + 40); ctx.fillText("SENSORS", airports.x + 96, airports.y + 40); ctx.fillText("EFFECTORS", airports.x + 153, airports.y + 40);
+    ctx.fillStyle = "#79bedf"; ctx.fillText("AIRPORT PERIMETER RINGS", airports.x + 9, airports.y + 40);
     for (const airport of (SCN.regionalAirports || [])) {
-      const slot = SCN.regionalAirports.indexOf(airport), y = airports.y + 54 + slot * 15;
-      ctx.fillStyle = "#b7cad8"; ctx.font = "bold 7px " + MONO; ctx.fillText(airport.code, airports.x + 9, y);
+      const slot = SCN.regionalAirports.indexOf(airport), centerX = airports.x + 157, centerY = airports.y + 56 + slot * 21;
+      ctx.fillStyle = "#b7cad8"; ctx.font = "bold 7px " + MONO; ctx.fillText(airport.code, airports.x + 9, centerY + 2);
+      ctx.strokeStyle = "rgba(121,190,223,0.42)"; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.ellipse(centerX, centerY, 45, 11, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "rgba(180,204,220,0.22)"; ctx.strokeStyle = "rgba(205,225,238,0.68)";
+      ctx.fillRect(centerX - 13, centerY - 2, 26, 4); ctx.strokeRect(centerX - 13, centerY - 2, 26, 4);
     }
     for (const s of SENSORS.filter((x) => x.airportInset)) drawInsetSystemGlyph("sensor", s, airportInsetPoint("sensor", s));
     for (const e of S.effectors.filter((x) => x.airportInset)) drawInsetSystemGlyph("effector", e, airportInsetPoint("effector", e));
-    ctx.fillStyle = "#7993a8"; ctx.font = "7px " + MONO; ctx.fillText("SELECT ANY NODE FOR STATUS / MAGAZINE / LINK", airports.x + 9, airports.y + airports.h - 8);
+    ctx.fillStyle = "#7993a8"; ctx.font = "7px " + MONO; ctx.fillText("□ SENSOR  ◇ EFFECTOR  · SELECT TO SHOW LINK", airports.x + 9, airports.y + airports.h - 8);
     ctx.restore();
   }
 
@@ -4613,124 +4621,123 @@
     ctx.fillText(info.description || "NOTIONAL TERRESTRIAL NODE", boxX + bw / 2, boxY + 40);
   }
 
+  function selectedSystemRecord() {
+    if (!S.selectedAsset) return null;
+    const item = S.selectedAsset.kind === "sensor"
+      ? SENSORS.find((s) => s.sensorId === S.selectedAsset.id)
+      : S.effectors.find((e) => e.effectorId === S.selectedAsset.id);
+    return item ? { kind: S.selectedAsset.kind, item } : null;
+  }
+
   function drawScenarioDataMesh() {
     const mesh = SCN.dataMesh;
     if (!mesh || S.transport === "OFF") return;
     const gateways = mesh.gateways || [];
     if (!gateways.length) return;
     ctx.save();
-    // Hardened fiber ring between the joint gateways.
-    ctx.strokeStyle = "rgba(84,201,238,0.55)"; ctx.lineWidth = 2; ctx.setLineDash([]);
-    ctx.beginPath();
-    gateways.forEach((g, i) => { if (i) ctx.lineTo(sx(g.x), sy(g.y)); else ctx.moveTo(sx(g.x), sy(g.y)); });
-    ctx.closePath(); ctx.stroke();
+    const coreGateway = gateways.find((g) => g.name === "FEDERAL CORE") || gateways[0];
     for (const g of gateways) {
       const x = sx(g.x), y = sy(g.y);
       ctx.fillStyle = "rgba(6,24,35,0.95)"; ctx.strokeStyle = "#68d2ee"; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     }
-
-    // Every local sensor and effector has a visible path to its nearest mesh
-    // gateway. Inset systems are connected through their own relay buses below.
-    const localSystems = SENSORS.filter((s) => !s.geometryUnknown && !s.coastalInset && !s.airportInset).map((item) => ({ item, kind: "sensor" }))
-      .concat(S.effectors.filter((e) => !e.geometryUnknown && !e.coastalInset && !e.airportInset).map((item) => ({ item, kind: "effector" })));
-    ctx.strokeStyle = "rgba(112,201,255,0.22)"; ctx.lineWidth = 0.8; ctx.setLineDash([2, 4]);
-    for (const { item } of localSystems) {
-      const gateway = gateways.slice().sort((a, b) => dist(item.x,item.y,a.x,a.y) - dist(item.x,item.y,b.x,b.y))[0];
-      ctx.beginPath(); ctx.moveTo(sx(item.x), sy(item.y)); ctx.lineTo(sx(gateway.x), sy(gateway.y)); ctx.stroke();
-    }
-
-    const drawInsetBus = (kind, items, busX, trunkY, gateway, color, pointFor) => {
-      if (!items.length) return;
-      ctx.strokeStyle = color; ctx.lineWidth = 1.3; ctx.setLineDash([7, 3]);
-      ctx.beginPath(); ctx.moveTo(sx(gateway.x), sy(gateway.y)); ctx.lineTo(busX, trunkY); ctx.stroke();
-      ctx.setLineDash([]); ctx.lineWidth = 1;
-      const points = items.map((item) => pointFor(kind, item));
-      const y0 = Math.min(...points.map((p) => p.y)) - 7, y1 = Math.max(...points.map((p) => p.y)) + 7;
-      ctx.beginPath(); ctx.moveTo(busX, y0); ctx.lineTo(busX, y1); ctx.stroke();
-      for (const p of points) { ctx.beginPath(); ctx.moveTo(busX, p.y); ctx.lineTo(p.x, p.y); ctx.stroke(); }
-    };
-    const coast = coastalInsetGeometry(), airports = airportInsetGeometry();
-    const coastGateway = gateways.find((g) => g.name === "JBA") || gateways[0];
-    const coreGateway = gateways.find((g) => g.name === "FEDERAL CORE") || gateways[0];
-    drawInsetBus("sensor", SENSORS.filter((s) => s.coastalInset), coast.x + 111, coast.y + coast.h / 2, coastGateway, "rgba(255,210,122,0.72)", coastalInsetPoint);
-    drawInsetBus("effector", S.effectors.filter((e) => e.coastalInset), coast.x + 111, coast.y + coast.h / 2, coastGateway, "rgba(255,210,122,0.72)", coastalInsetPoint);
-    drawInsetBus("sensor", SENSORS.filter((s) => s.airportInset), airports.x + 151, airports.y + airports.h / 2, coreGateway, "rgba(176,140,255,0.68)", airportInsetPoint);
-    drawInsetBus("effector", S.effectors.filter((e) => e.airportInset), airports.x + 151, airports.y + airports.h / 2, coreGateway, "rgba(176,140,255,0.68)", airportInsetPoint);
-    ctx.setLineDash([]);
     ctx.fillStyle = "#75cbe7"; ctx.font = "bold 8px " + MONO; ctx.textAlign = "center";
     ctx.fillText(mesh.label, sx(coreGateway.x), sy(coreGateway.y) - 13);
+
+    // Connection routes are intentionally contextual. The gateways and system
+    // boxes remain visible, but only the selected system's bounded route is drawn.
+    const selected = selectedSystemRecord();
+    if (selected) {
+      const { item, kind } = selected;
+      const gateway = item.coastalInset
+        ? gateways.find((g) => g.name === "JBA") || gateways[0]
+        : gateways.slice().sort((a, b) => dist(item.x, item.y, a.x, a.y) - dist(item.x, item.y, b.x, b.y))[0];
+      const source = item.airportInset ? airportInsetPoint(kind, item)
+        : item.coastalInset ? coastalInsetPoint(kind, item)
+        : { x: sx(item.x), y: sy(item.y) };
+      const route = [source];
+      if (item.airportInset) route.push({ x: airportInsetGeometry().x + airportInsetGeometry().w - 10, y: source.y });
+      if (item.coastalInset) route.push({ x: coastalInsetGeometry().x + coastalInsetGeometry().w - 10, y: source.y });
+      route.push({ x: sx(gateway.x), y: sy(gateway.y) });
+      if (gateway !== coreGateway) route.push({ x: sx(coreGateway.x), y: sy(coreGateway.y) });
+      ctx.strokeStyle = item.coastalInset ? "rgba(255,210,122,0.92)" : item.airportInset ? "rgba(176,140,255,0.92)" : "rgba(112,215,255,0.9)";
+      ctx.lineWidth = 1.8; ctx.setLineDash([7, 3]);
+      ctx.beginPath(); route.forEach((p, i) => { if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); }); ctx.stroke();
+      ctx.setLineDash([]);
+      S.visibleDataRoute = { kind: "system", id: selected.kind === "sensor" ? item.sensorId : item.effectorId, points: route.length,
+        bounded: route.every((p) => p.x >= 0 && p.x <= VIEW.w && p.y >= 0 && p.y <= VIEW.h) };
+    }
     ctx.restore();
   }
 
   // Data transport layer: MANET mesh among tactical nodes + a 5G gNB with backhaul.
   function drawTransports() {
     S.transportInfoRendered = false;
+    S.visibleDataRoute = null;
     if (S.transport === "OFF") return;
     drawScenarioDataMesh();
-    const nodes = [{ x: 0, y: 0 }]
-      .concat(SENSORS.filter((s) => !s.geometryUnknown && !s.coastalInset && !s.airportInset).map((s) => ({ x: s.x, y: s.y })))
-      .concat(S.effectors.filter((e) => !e.geometryUnknown && !e.coastalInset && !e.airportInset).map((e) => ({ x: e.x, y: e.y })));
-    if (S.transport === "BOTH" || S.transport === "MANET") {
+    const selected = selectedSystemRecord();
+    const selectedIsLocal = selected && !selected.item.coastalInset && !selected.item.airportInset;
+    const showManet = S.transport === "BOTH" || S.transport === "MANET";
+    const show5g = S.transport === "BOTH" || S.transport === "5G";
+    const gnb = SCN.gnb || { x: 900, y: -900 };
+    const gx = sx(gnb.x), gy = sy(gnb.y);
+
+    if (showManet && selectedIsLocal && !SCN.dataMesh) {
+      const ax = sx(selected.item.x), ay = sy(selected.item.y), bx = sx(0), by = sy(0);
       ctx.save();
       if (SCN.clipTransportToLand && traceScenarioLand()) ctx.clip();
-      ctx.strokeStyle = "rgba(120,200,255,0.16)"; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = "rgba(120,210,255,0.88)"; ctx.lineWidth = 1.7; ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
       const pulse = (perf() / 1400) % 1;
-      for (let i = 0; i < nodes.length; i++) {
-        const near = nodes.map((n, j) => ({ j, d: i === j ? 1e12 : dist(nodes[i].x, nodes[i].y, n.x, n.y) }))
-          .sort((a, b) => a.d - b.d).slice(0, 2);
-        for (const { j } of near) {
-          const ax = sx(nodes[i].x), ay = sy(nodes[i].y), bx = sx(nodes[j].x), by = sy(nodes[j].y);
-          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
-          if (i < j) {  // one data pulse per edge
-            ctx.setLineDash([]);
-            ctx.fillStyle = "rgba(150,215,255,0.7)";
-            ctx.beginPath(); ctx.arc(ax + (bx - ax) * pulse, ay + (by - ay) * pulse, 1.6, 0, Math.PI * 2); ctx.fill();
-            ctx.setLineDash([3, 4]);
-          }
-        }
-      }
-      ctx.setLineDash([]);
-      ctx.fillStyle = "rgba(120,200,255,0.55)"; ctx.font = "8px " + MONO; ctx.textAlign = "left";
-      ctx.fillText("MANET MESH", sx(nodes[1].x) + 8, sy(nodes[1].y) + 14);
+      ctx.setLineDash([]); ctx.fillStyle = "rgba(150,225,255,0.9)";
+      ctx.beginPath(); ctx.arc(ax + (bx - ax) * pulse, ay + (by - ay) * pulse, 1.8, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
+      S.visibleDataRoute = { kind: "system", id: selected.kind === "sensor" ? selected.item.sensorId : selected.item.effectorId, points: 2 };
     }
-    if (S.transport === "BOTH" || S.transport === "5G") {
+
+    if (show5g) {
       ctx.save();
-      const gnb = SCN.gnb || { x: 900, y: -900 };
-      const gx = sx(gnb.x), gy = sy(gnb.y);
-      ctx.save();
-      if (SCN.clipTransportToLand && traceScenarioLand()) ctx.clip();
-      ctx.strokeStyle = "rgba(170,120,255,0.22)"; ctx.setLineDash([2, 5]); ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(gx, gy, 2600 * VIEW.scale, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-      ctx.restore();
       ctx.strokeStyle = "#b08cff"; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(gx - 4, gy + 5); ctx.lineTo(gx, gy - 7); ctx.lineTo(gx + 4, gy + 5); ctx.stroke();
       ctx.beginPath(); ctx.arc(gx, gy - 8, 2, 0, Math.PI * 2); ctx.stroke();
       ctx.fillStyle = "#b08cff"; ctx.font = "8px " + MONO; ctx.textAlign = "center";
       ctx.fillText("5G gNB", gx, gy + 16);
-      // Scenario-specific terrestrial backhaul stays on land when a site is
-      // declared; otherwise the generic echelon connection leaves the top edge.
-      ctx.strokeStyle = "rgba(170,120,255,0.5)"; ctx.lineWidth = 1.4; ctx.setLineDash([6, 3]);
-      if (SCN.networkBackhaul) {
-        const backhaul = SCN.networkBackhaul, bx = sx(backhaul.x), by = sy(backhaul.y);
-        const path = backhaul.path && backhaul.path.length ? backhaul.path : [gnb, backhaul];
+
+      if (selectedIsLocal && !SCN.dataMesh) {
         ctx.save();
         if (SCN.clipTransportToLand && traceScenarioLand()) ctx.clip();
-        ctx.beginPath(); path.forEach((p, i) => { if (i) ctx.lineTo(sx(p.x), sy(p.y)); else ctx.moveTo(sx(p.x), sy(p.y)); }); ctx.stroke();
-        ctx.restore(); ctx.setLineDash([]);
+        ctx.strokeStyle = "rgba(190,145,255,0.9)"; ctx.lineWidth = 1.7; ctx.setLineDash([6, 3]);
+        ctx.beginPath(); ctx.moveTo(sx(selected.item.x), sy(selected.item.y)); ctx.lineTo(gx, gy); ctx.stroke();
+        ctx.restore();
+        S.visibleDataRoute = { kind: "system", id: selected.kind === "sensor" ? selected.item.sensorId : selected.item.effectorId, points: 2 };
+      }
+
+      if (SCN.networkBackhaul) {
+        const backhaul = SCN.networkBackhaul, bx = sx(backhaul.x), by = sy(backhaul.y);
         ctx.fillStyle = "rgba(22,14,34,0.94)"; ctx.strokeStyle = "#b08cff"; ctx.lineWidth = 1.3;
         ctx.fillRect(bx - 5, by - 5, 10, 10); ctx.strokeRect(bx - 5, by - 5, 10, 10);
         ctx.fillStyle = "#b08cff"; ctx.font = "7px " + MONO; ctx.textAlign = "center";
         ctx.fillText("5G POP", bx, by - 9);
-        if (S.transportInfoOpen) drawTransportInfo(bx, by, backhaul);
+        if (S.transportInfoOpen) {
+          const path = backhaul.path && backhaul.path.length ? backhaul.path : [gnb, backhaul];
+          ctx.save();
+          if (SCN.clipTransportToLand && traceScenarioLand()) ctx.clip();
+          ctx.strokeStyle = "rgba(190,145,255,0.9)"; ctx.lineWidth = 1.7; ctx.setLineDash([6, 3]);
+          ctx.beginPath(); path.forEach((p, i) => { if (i) ctx.lineTo(sx(p.x), sy(p.y)); else ctx.moveTo(sx(p.x), sy(p.y)); }); ctx.stroke();
+          ctx.restore(); ctx.setLineDash([]);
+          drawTransportInfo(bx, by, backhaul);
+          S.visibleDataRoute = { kind: "network", id: backhaul.label || "5G POP", points: path.length,
+            bounded: path.every((p) => sx(p.x) >= 0 && sx(p.x) <= VIEW.w && sy(p.y) >= 0 && sy(p.y) <= VIEW.h) };
+        }
       } else {
-        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, 30); ctx.stroke(); ctx.setLineDash([]);
-        ctx.fillStyle = "#b08cff"; ctx.textAlign = "left";
-        ctx.fillText("5G BACKHAUL \u2192 BN/RGT", gx + 6, 34);
-        if (S.transportInfoOpen) drawTransportInfo(gx, gy, SCN.transportInfo || {});
+        if (S.transportInfoOpen) {
+          drawTransportInfo(gx, gy, SCN.transportInfo || {});
+          S.visibleDataRoute = { kind: "network", id: SCN.transportInfo?.label || "5G gNB", points: 1 };
+        }
       }
-      if (SCN.microwaveRelay) {
+
+      if (SCN.microwaveRelay && S.transportInfoOpen) {
         const relay = SCN.microwaveRelay;
         const inset = relay.inset ? islandInsetGeometry() : null;
         const rx = inset ? inset.relayX : sx(relay.x), ry = inset ? inset.relayY : sy(relay.y);
@@ -4745,6 +4752,8 @@
           ctx.fillText("MICROWAVE BACKHAUL", Math.min(rx + 8, VIEW.w - 145), Math.max(18, ry - 2));
           ctx.fillText(relay.label, Math.min(rx + 8, VIEW.w - 145), Math.max(28, ry + 10));
         }
+        S.visibleDataRoute = { kind: "network", id: relay.label, points: 2,
+          bounded: gx >= 0 && gx <= VIEW.w && gy >= 0 && gy <= VIEW.h && rx >= 0 && rx <= VIEW.w && ry >= 0 && ry <= VIEW.h };
       }
       ctx.restore();
     }
@@ -4930,7 +4939,7 @@
     const assigned = isSensor ? [] : [...S.tracks.values()].filter((t) => t.engEff === id || (t.airVolley || []).some((shot) => shot.shooterId === id));
     const pct = isSensor ? null : Math.round(100 * item.mag / Math.max(1, item.cap));
     const ready = isSensor ? !item.geometryUnknown : item.mag > 0 && !item.rearmT && (!S.live || item.readiness === "READY");
-    const sector = item.coastalSector || item.airportCode || (item.protectedSite ? "PROTECTED SITE" : "LOCAL SECTOR");
+    const sector = item.coastalSector || (item.airportCode ? `${item.airportCode} · ${item.airportPerimeter || "PERIMETER"}` : "") || (item.protectedSite ? "PROTECTED SITE" : "LOCAL SECTOR");
     const status = isSensor
       ? (item.geometryUnknown ? "GEOMETRY UNAVAILABLE" : item.dwellUntil && missionNow() < item.dwellUntil ? `DWELL ${item.dwellTrack}` : item.liveReadiness || "READY")
       : item.rearmT ? "REARMING" : item.mag <= 0 ? "MAGAZINE EMPTY" : item.readiness || "READY";
@@ -5231,6 +5240,7 @@
   $("sensorPosture").addEventListener("click", handleAssetListClick);
   $("effList").addEventListener("click", handleAssetListClick);
   function selectTrack(id) {
+    S.transportInfoOpen = false;
     S.selected = id;
     S.selectedAsset = null;
     document.querySelectorAll("[data-track-select]").forEach((b) => b.setAttribute("aria-current", b.dataset.trackSelect === id ? "true" : "false"));
@@ -5239,6 +5249,7 @@
   }
   function selectAsset(kind, id) {
     if (!id || (kind !== "sensor" && kind !== "effector")) return;
+    S.transportInfoOpen = false;
     S.selected = null;
     S.selectedAsset = { kind, id };
     document.querySelectorAll("[data-track-select]").forEach((b) => b.setAttribute("aria-current", "false"));
@@ -5316,8 +5327,10 @@
     if (S.autoplay.running) stopAutoplay();   // manual takeover stops the brief
     const { x: px, y: py } = plotEventPoint(ev);
     if (transportNodeHit(px, py)) {
-      S.transportInfoOpen = !S.transportInfoOpen;
-      selectTrack(null);
+      const open = !S.transportInfoOpen;
+      S.selected = null; S.selectedAsset = null; S.transportInfoOpen = open;
+      document.querySelectorAll("[data-track-select],[data-asset-kind][data-asset-id]").forEach((b) => b.setAttribute("aria-current", "false"));
+      renderRail();
       return;
     }
     S.transportInfoOpen = false;

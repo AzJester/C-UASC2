@@ -382,11 +382,14 @@ def test_washington_airports_coast_and_every_effector_share_the_data_mesh(page):
         """() => {
           const C = window.__CUAS__; C.applyScenario('washington'); C.setPaused(true);
           const scn = C.currentScenario();
-          const airports = scn.regionalAirports.map(airport => ({
-            code:airport.code,
-            sensors:scn.sensors.filter(s => airport.sensorIds.includes(s.sensorId)).length,
-            effectors:scn.effectors.filter(e => airport.effectorIds.includes(e.effectorId)).length,
-          }));
+          const airports = scn.regionalAirports.map(airport => {
+            const sensors=scn.sensors.filter(s => airport.sensorIds.includes(s.sensorId));
+            const effectors=scn.effectors.filter(e => airport.effectorIds.includes(e.effectorId));
+            return {code:airport.code, sensors:sensors.length, effectors:effectors.length,
+              distances:[...sensors,...effectors].map(item => Math.hypot(item.x-airport.x,item.y-airport.y)),
+              sensorDx:sensors.map(item => item.x-airport.x), effectorDy:effectors.map(item => item.y-airport.y),
+              perimeter:[...sensors,...effectors].map(item => item.airportPerimeter)};
+          });
           const paths = scn.effectors.map(e => C.systemDataPath(e));
           const coastSensor = scn.sensors.find(s => s.coastalInset);
           const airportEffector = scn.effectors.find(e => e.airportInset);
@@ -418,6 +421,10 @@ def test_washington_airports_coast_and_every_effector_share_the_data_mesh(page):
     assert out["sensors"] >= 38 and out["effectors"] >= 48
     assert {a["code"] for a in out["airports"]} == {"KIAD", "KBWI", "KHEF", "KCGS", "KGAI"}
     assert all(a["sensors"] >= 2 and a["effectors"] >= 2 for a in out["airports"])
+    assert all(min(a["distances"]) >= 650 and max(a["distances"]) <= 1200 for a in out["airports"])
+    assert all(min(a["sensorDx"]) < 0 < max(a["sensorDx"]) for a in out["airports"])
+    assert all(min(a["effectorDy"]) < 0 < max(a["effectorDy"]) for a in out["airports"])
+    assert all(all(a["perimeter"]) for a in out["airports"])
     assert all(any(code in zone for zone in out["noFire"]) for code in ("KIAD", "KBWI", "KHEF", "KCGS", "KGAI"))
     assert out["coastalSensors"] >= 6 and out["coastalEffectors"] >= 8
     assert len(out["mesh"]["gateways"]) >= 5
@@ -681,11 +688,16 @@ def test_every_scenario_airport_has_local_defenses_and_traffic(page):
           return ['sandiego', 'miramar', 'elpaso', 'norfolk', 'washington', 'guam'].map(id => {
             C.applyScenario(id);
             const scn = C.currentScenario(), airport = scn.civilAirport;
-            const near = (item) => Math.hypot(item.x-airport.x, item.y-airport.y) <= 1200;
+            const distance = (item) => Math.hypot(item.x-airport.x, item.y-airport.y);
+            const near = (item) => distance(item) <= 1200;
+            const sensors=scn.sensors.filter(s => airport.sensorIds.includes(s.sensorId) && near(s));
+            const effectors=scn.effectors.filter(e => e.airportDefense && near(e));
             const aircraft = C.spawnCivAir();
             return {id, code:airport.code, plan:aircraft.flightPlan,
-              sensors:scn.sensors.filter(s => airport.sensorIds.includes(s.sensorId) && near(s)).length,
-              effectors:scn.effectors.filter(e => e.airportDefense && near(e)).map(e => e.effectorType)};
+              sensors:sensors.length, effectors:effectors.map(e => e.effectorType),
+              distances:[...sensors,...effectors].map(distance),
+              sensorDx:sensors.map(s => s.x-airport.x), effectorDy:effectors.map(e => e.y-airport.y),
+              perimeter:[...sensors,...effectors].map(item => item.airportPerimeter)};
           });
         }"""
     )
@@ -693,6 +705,34 @@ def test_every_scenario_airport_has_local_defenses_and_traffic(page):
         assert scenario["code"] in scenario["plan"]
         assert scenario["sensors"] >= 2
         assert {"EW_JAMMER", "NET_CAPTURE"}.issubset(set(scenario["effectors"]))
+        assert min(scenario["distances"]) >= 650
+        assert min(scenario["sensorDx"]) < 0 < max(scenario["sensorDx"])
+        assert min(scenario["effectorDy"]) < 0 < max(scenario["effectorDy"])
+        assert all(scenario["perimeter"])
+
+
+def test_data_connections_are_contextual_and_dc_routes_are_bounded(page):
+    page.evaluate("() => { window.__CUAS__.applyScenario('washington'); window.__CUAS__.setPaused(true); }")
+    page.wait_for_timeout(80)
+    assert page.evaluate("window.__CUAS__.S.visibleDataRoute") is None
+
+    page.evaluate("window.__CUAS__.selectAsset('sensor','SEN-IAD-RAD-40')")
+    page.wait_for_timeout(80)
+    selected = page.evaluate("window.__CUAS__.S.visibleDataRoute")
+    assert selected["kind"] == "system" and selected["id"] == "SEN-IAD-RAD-40"
+    assert selected["points"] <= 4 and selected["bounded"] is True
+
+    page.evaluate("window.__CUAS__.selectTrack(null)")
+    page.wait_for_timeout(80)
+    assert page.evaluate("window.__CUAS__.S.visibleDataRoute") is None
+
+    point = page.evaluate("window.__CUAS__.transportPoints().gnb")
+    page.locator("#plot").click(position={"x": point["x"], "y": point["y"]})
+    page.wait_for_timeout(80)
+    network = page.evaluate("window.__CUAS__.S.visibleDataRoute")
+    assert network["kind"] == "network" and network["points"] <= 4
+    assert network["bounded"] is True
+    page.evaluate("window.__CUAS__.setPaused(false)")
 
 
 def test_map_supports_wheel_zoom_drag_pan_and_recenter(page):
