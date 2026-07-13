@@ -409,42 +409,54 @@ def test_guam_regional_view_uses_pacific_installations(page):
         assert continental_base not in out["bases"].upper()
 
 
-def test_san_diego_has_layered_miramar_defense_and_targeted_ingress(page):
+def test_west_coast_is_split_into_local_north_island_and_miramar_areas(page):
     out = page.evaluate(
         """() => {
           const C = window.__CUAS__; C.applyScenario('sandiego'); C.setPaused(true);
-          const scn = C.currentScenario();
-          const miramar = scn.protectedSites.find(s => s.name.includes('MIRAMAR'));
-          const near = (item) => Math.hypot(item.x-miramar.x, item.y-miramar.y) <= 1200;
+          const north = C.currentScenario();
+          const northResult = {id:north.id, aoRadius:north.aoRadius, name:north.asset.name,
+            preferred:north.preferredBasemap, lat:north.asset.lat, lon:north.asset.lon,
+            hasMiramar:north.protectedSites.some(s => s.name.includes('MIRAMAR'))};
+          C.applyScenario('miramar'); C.setPaused(true);
+          const scn = C.currentScenario(), target=scn.threatTargets[0];
+          const near = (item) => Math.hypot(item.x-target.x, item.y-target.y) <= 1200;
           const sensors = scn.sensors.filter(s => s.protectedSite && near(s));
           const effectors = scn.effectors.filter(e => e.protectedSite && near(e));
-          const threat = C.spawnThreat(0.3, {target:miramar, r:21000, bearing:Math.PI});
-          const result = {aoRadius:scn.aoRadius, name:miramar.name,
+          const threat = C.spawnThreat(0.3, {target, r:6200, bearing:Math.PI});
+          const miramarResult = {id:scn.id, aoRadius:scn.aoRadius, name:scn.asset.name,
+            preferred:scn.preferredBasemap, lat:scn.asset.lat, lon:scn.asset.lon,
             sensors:sensors.length, effectors:effectors.length,
             types:[...new Set(effectors.map(e => e.effectorType))],
             f35b:[...C.S.tracks.values()].some(t => t.platform === 'F-35B' && t.service === 'USMC' && t.armed),
             targetName:threat.targetName, targetX:threat.targetX, targetY:threat.targetY,
-            spawnRange:Math.hypot(threat.x-miramar.x, threat.y-miramar.y),
+            spawnRange:Math.hypot(threat.x-target.x, threat.y-target.y),
             prediction:C.trackPrediction(threat).interceptSec};
-          C.setPaused(false); return result;
+          C.setPaused(false); return {north:northResult, miramar:miramarResult,
+            buttons:[...document.querySelectorAll('#scnSeg button')].map(b => b.textContent.trim())};
         }"""
     )
-    assert out["aoRadius"] >= 22000
-    assert "MCAS MIRAMAR" in out["name"]
-    assert out["sensors"] >= 3 and out["effectors"] >= 6
-    assert {"EW_JAMMER", "RF_TAKEOVER", "DIRECTED_ENERGY", "KINETIC_GUN", "KINETIC_INTERCEPTOR", "NET_CAPTURE"}.issubset(set(out["types"]))
-    assert out["f35b"] is True
-    assert "MIRAMAR" in out["targetName"]
-    assert out["targetX"] == 6730 and out["targetY"] == 18870
-    assert 20990 <= out["spawnRange"] <= 21010
-    assert out["prediction"] is not None
+    assert out["buttons"][:2] == ["North Island", "Miramar"]
+    assert out["north"]["id"] == "sandiego" and out["north"]["aoRadius"] <= 7000
+    assert out["north"]["name"] == "NAS NORTH ISLAND"
+    assert out["north"]["preferred"] == "SAT" and out["north"]["hasMiramar"] is False
+    assert out["miramar"]["id"] == "miramar" and out["miramar"]["aoRadius"] <= 6500
+    assert out["miramar"]["name"] == "MCAS MIRAMAR"
+    assert out["miramar"]["preferred"] == "SAT"
+    assert (out["north"]["lat"], out["north"]["lon"]) != (out["miramar"]["lat"], out["miramar"]["lon"])
+    assert out["miramar"]["sensors"] >= 3 and out["miramar"]["effectors"] >= 6
+    assert {"EW_JAMMER", "RF_TAKEOVER", "DIRECTED_ENERGY", "KINETIC_GUN", "KINETIC_INTERCEPTOR", "NET_CAPTURE"}.issubset(set(out["miramar"]["types"]))
+    assert out["miramar"]["f35b"] is True
+    assert "MIRAMAR" in out["miramar"]["targetName"]
+    assert out["miramar"]["targetX"] == 0 and out["miramar"]["targetY"] == 0
+    assert 6190 <= out["miramar"]["spawnRange"] <= 6210
+    assert out["miramar"]["prediction"] is not None
 
 
 def test_every_scenario_airport_has_local_defenses_and_traffic(page):
     out = page.evaluate(
         """() => {
           const C = window.__CUAS__;
-          return ['sandiego', 'elpaso', 'norfolk', 'guam'].map(id => {
+          return ['sandiego', 'miramar', 'elpaso', 'norfolk', 'guam'].map(id => {
             C.applyScenario(id);
             const scn = C.currentScenario(), airport = scn.civilAirport;
             const near = (item) => Math.hypot(item.x-airport.x, item.y-airport.y) <= 1200;
@@ -459,6 +471,34 @@ def test_every_scenario_airport_has_local_defenses_and_traffic(page):
         assert scenario["code"] in scenario["plan"]
         assert scenario["sensors"] >= 2
         assert {"EW_JAMMER", "NET_CAPTURE"}.issubset(set(scenario["effectors"]))
+
+
+def test_map_supports_wheel_zoom_drag_pan_and_recenter(page):
+    page.evaluate("() => { window.__CUAS__.applyScenario('miramar'); window.__CUAS__.resetMapView(false); }")
+    plot = page.locator("#plot")
+    box = plot.bounding_box()
+    assert box
+    center_x, center_y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+
+    page.mouse.move(center_x, center_y)
+    page.mouse.wheel(0, -420)
+    page.wait_for_timeout(80)
+    zoomed = page.evaluate("window.__CUAS__.mapView()")
+    assert zoomed["zoom"] > 1.25
+
+    page.mouse.move(center_x, center_y)
+    page.mouse.down()
+    page.mouse.move(center_x + 120, center_y + 70, steps=5)
+    page.mouse.up()
+    page.wait_for_timeout(50)
+    panned = page.evaluate("window.__CUAS__.mapView()")
+    assert abs(panned["centerX"]) > 50 or abs(panned["centerY"]) > 50
+    assert page.locator("#btnRecenterMap").get_attribute("class") and "active" in page.locator("#btnRecenterMap").get_attribute("class")
+
+    page.locator("#btnRecenterMap").click()
+    reset = page.evaluate("window.__CUAS__.mapView()")
+    assert reset == {"centerX": 0, "centerY": 0, "zoom": 1}
+    assert page.locator("#mapZoom").text_content() == "100%"
 
 
 def test_el_paso_border_patrol_network_is_distributed(page):
@@ -523,6 +563,7 @@ def test_event_panel_is_taller_and_regional_view_uses_alert_font(page):
 def test_5g_details_open_only_when_a_transport_node_is_clicked(page):
     expected = {
         "sandiego": "SAN DIEGO",
+        "miramar": "MIRAMAR",
         "elpaso": "EL PASO",
         "norfolk": "NORFOLK",
         "guam": "GUAM",
