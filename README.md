@@ -64,25 +64,46 @@ human-in/on-the-loop consent, battle damage assessment, no-fire collateral zones
 threat profiles (low ingress, OWA cruise, ISR orbiters, decoys), civilian
 air and boat traffic, seeded weather and time of day, a degraded-comms
 inject, a notional cost-exchange ledger, and an AAR replay scrubber.
+Confirmed WEAPONS FREE is a joint simulation state: eligible ground effectors,
+armed Blue aircraft, and designated naval close-in defenses all prosecute
+HOSTILE tracks within their modeled quality, range, identity, and no-fire gates.
+AutoBrief is hands-free: choose Joint Defense, Airport Defense, or Network
+Resilience, then choose a real-time 2-, 5-, 10-, or 15-minute run. The brief
+detects, fuses, tasks, shows the red release warning, confirms simulated
+WEAPONS FREE, fires eligible joint effectors, and adds bounded waves until the
+selected time limit before presenting outcomes.
 Preset links: `?scn=guam&arch=NETWORKED&wx=WIND&tod=NIGHT&seed=N`.
 
 The embedded simulation includes San Diego, El Paso, Norfolk / Hampton Roads,
 and Guam area-of-operations presets. San Diego includes notional civilian
 arrivals and departures at KSAN with Mode-S / ADS-B identity fields, a
-soft-kill counter-UAS layer around the airport, and a visually distinct
-microwave extension from the 5G transport overlay to a visible off-scale San
-Clemente Island inset. El Paso adds KELP traffic and airport defense plus three
+soft-kill counter-UAS layer around the airport, and a second defended target at
+MCAS Miramar with dedicated sensors, six effector types, and an armed USMC air
+patrol. Threats can ingress toward either North Island or Miramar. A visually
+distinct microwave extension connects the 5G transport overlay to a visible
+off-scale San Clemente Island inset. El Paso adds KELP traffic and airport defense plus three
 distributed Border Patrol sensor/effector sites, all physically sited north of
 the international border. Norfolk adds KORF traffic and airport defense, an
 explicitly boxed inland terrestrial 5G fiber handoff, and a denser naval/
-commercial surface picture. Guam adds a dense, multi-axis joint-defense sector
-with layered sensing and effectors around PGUM plus three additional notional
-protected sites. Geography, inventory, coverage, and performance remain
+commercial surface picture. Guam opens at whole-island scale with satellite
+imagery preferred, a simplified public Census island boundary, FAA-referenced
+PGUM/PGUA anchors, and layered sensing and effectors around PGUM plus four
+additional notional protected sites. All fixed Guam nodes and the sampled 5G
+fiber route are constrained to the island; only maritime tracks occupy the sea.
+Guam's Regional view uses an INDOPACOM roster anchored at Camp H.M. Smith with
+Pearl Harbor-Hickam, Kadena, and MCAS Iwakuni instead of continental peers.
+Geography, inventory, coverage, and performance remain
 illustrative and are not suitable for operational decisions.
 
 5G endpoint descriptions are contextual: the map shows compact gNB and POP
-nodes during normal operation, and clicking either 5G node opens the boxed site
-description. Clicking elsewhere dismisses it.
+nodes during normal operation, and clicking a 5G node on any scenario opens the
+boxed site description. Clicking the node again or clicking elsewhere dismisses
+it. Guam's coverage symbol is clipped to the island and its backbone follows an
+explicitly on-land path to an on-island POP.
+
+Moving track identifiers use persistent local label slots. Vessel tags stay
+beside their hulls with a short leader line and shift only when an actual label
+collision requires it, eliminating frame-to-frame jumping in busy sea lanes.
 
 The workstation uses a compact split-wing layout: priority tracks and posture
 remain in a narrow bounded left wing, decision support remains in a narrow
