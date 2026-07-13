@@ -37,6 +37,14 @@ Identity, role, sector, WCS, authority source, policy version, controlling node,
 communication condition, data age, and simulation/live state are persistent and
 cannot be inferred solely from color.
 
+The primary operator rail is a bounded glance surface, not a document. At the
+minimum 1280x720 workstation target it must expose the prioritized track list,
+selected-track release summary, current command state, hold/abort control, and
+latest actionable events without vertical scrolling. Display settings,
+supporting evidence, complete inventories, and audit history use explicit
+panels or dialogs. Historical logs may scroll inside their dedicated review
+surface; nested scroll regions are not permitted in the primary decision rail.
+
 ## 3. Operator decision loop
 
 The primary workflow follows:
@@ -127,3 +135,19 @@ checks pass:
 
 Parameters and scenarios require subject-matter-expert review and provenance
 before any claim of operational or comparative validity.
+
+## 8. Demonstration scenario extensions
+
+San Diego, El Paso, and Norfolk / Hampton Roads are selectable notional area-of-
+operations presets. San Diego models bidirectional civilian airport traffic with
+synthetic Mode-S / ADS-B callsign, ICAO address, squawk, quality, altitude, speed,
+and flight-plan fields. Its airport counter-UAS additions are soft-kill / capture
+illustrations constrained by the existing no-fire geometry. The 5G overlay also
+shows a labeled microwave backhaul toward an off-map San Clemente Island relay;
+the line is communications symbology, not a statement of real coverage or
+infrastructure.
+
+No scenario inventory, location, route, coverage envelope, performance value, or
+command relationship is authoritative. Operational use requires approved source
+data, classification review, spectrum coordination, airspace integration,
+weapons-safety analysis, and subject-matter-expert validation.

@@ -167,12 +167,14 @@ def test_fixed_site_desktop_layout_matrix(page, width, height):
         "() => ({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,"
         "sh:document.documentElement.scrollHeight,ch:document.documentElement.clientHeight,"
         "rootSw:document.querySelector('#cuas').scrollWidth,rootCw:document.querySelector('#cuas').clientWidth,"
+        "railSh:document.querySelector('.rail-scroll').scrollHeight,railCh:document.querySelector('.rail-scroll').clientHeight,"
         "gate:!!document.querySelector('.workstation-gate'),command:!!document.querySelector('.commandbar'),"
         "trackList:!!document.querySelector('#trackList')})"
     )
     assert metrics["sw"] <= metrics["cw"] + 1
     assert metrics["sh"] <= metrics["ch"] + 1
     assert metrics["rootSw"] <= metrics["rootCw"] + 1
+    assert metrics["railSh"] <= metrics["railCh"] + 1
     assert metrics["gate"] is False
     assert metrics["command"] and metrics["trackList"]
     assert not errors
