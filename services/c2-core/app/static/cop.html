@@ -1136,11 +1136,12 @@
     <div class="scenario">
       <div class="ctl-grp">
         <span class="glabel">AO</span>
-        <div class="seg" id="scnSeg" style="flex:0 0 auto;width:610px" title="Choose the area of operations">
+        <div class="seg" id="scnSeg" style="flex:0 0 auto;width:735px" title="Choose the area of operations">
           <button data-v="sandiego" aria-pressed="true" title="San Diego and North Island: local satellite view of the naval air station, international airport, harbor, and approaches">North Island</button>
           <button data-v="miramar" title="MCAS Miramar: independent local satellite view with its own sensors, effectors, aircraft, and threat axes">Miramar</button>
           <button data-v="elpaso" title="El Paso border: US-Mexico border to the south, TARS aerostat, threats from the south">El Paso</button>
           <button data-v="norfolk" title="Norfolk and Hampton Roads: Atlantic and Chesapeake approaches, naval traffic, and dense civilian airspace">Norfolk</button>
+          <button data-v="washington" title="Washington, DC and Northern Virginia: notional layered protection for the National Capital Region, public landmarks, airports, and surrounding military installations">Washington DC</button>
           <button data-v="guam" title="Guam joint-defense sector: layered counter-UAS protection for air, port, logistics, and communications sites">Guam</button>
         </div>
       </div>
@@ -1303,7 +1304,7 @@
       <div class="aar-col">
         <div class="aar-h">Controls</div>
         <div class="help-list">
-          <div><b>AO</b> &mdash; switch scenario (San Diego coast / El Paso border / Norfolk and Hampton Roads / Guam joint-defense sector)</div>
+          <div><b>AO</b> &mdash; switch scenario (North Island / Miramar / El Paso / Norfolk / Washington NCR / Guam)</div>
           <div><b>Time</b> &mdash; pause/resume and 0.5x / 1x / 2x speed</div>
           <div><b>Inject</b> &mdash; choose a joint-defense, airport-defense, or network-resilience AutoBrief lasting 2, 5, 10, or 15 minutes; or inject a swarm / mass raid manually</div>
           <div><b>Weapons Free</b> &mdash; requires a second press on the flashing red confirmation. Once armed, eligible ground, aircraft, and naval effectors attack HOSTILE tracks while identity, quality, range, and no-fire gates remain active.</div>
@@ -1314,9 +1315,10 @@
           <div><b>San Clemente link</b> &mdash; the San Diego map includes a visible off-scale island inset where the labeled 5G microwave backhaul terminates. It is illustrative communications symbology, not real infrastructure or coverage.</div>
           <div><b>5G node details</b> &mdash; select a purple gNB or POP to open its contextual network card; select it again or click elsewhere to dismiss it.</div>
           <div><b>Airport defense</b> &mdash; every scenario airport has arriving/departing transponder traffic, nearby sensors, and soft-kill / capture effectors inside its no-fire constraints.</div>
+          <div><b>Washington NCR</b> &mdash; satellite-preferred regional view with illustrative protection around public federal landmarks, military installations, Northern Virginia sites, and Reagan National. All defense positions and capabilities are notional.</div>
           <div><b>El Paso border</b> &mdash; three labeled Border Patrol stations distribute paired sensors and non-kinetic effectors along the boundary.</div>
           <div><b>Norfolk maritime</b> &mdash; naval and commercial surface tracks share Hampton Roads; the 5G backbone terminates at a labeled terrestrial point on land.</div>
-          <div><b>Guam joint defense</b> &mdash; the satellite-preferred whole-island view uses a public island outline. Fixed sensors, effectors, protected sites, and the 5G fiber path remain on land; only ships are intentionally offshore.</div>
+          <div><b>Guam joint defense</b> &mdash; the satellite-preferred whole-island view uses a public island outline. Fixed sensors, effectors, protected sites, the PGUM airport-defense ring, and the 5G fiber path remain on land; only ships are intentionally offshore.</div>
           <div><b>Basemap</b> &mdash; SAT &middot; EXTERNAL is the default and requests public Esri World Imagery. TACTICAL &middot; LOCAL remains available manually and is used automatically when imagery is unreachable.</div>
           <div><b>Weather</b> &mdash; CLEAR / WIND / RAIN: wind slows small UAS, rain shortens EO/IR and directed-energy reach</div>
           <div><b>Time of day</b> &mdash; AUTO follows the scenario clock; NIGHT darkens the plot and cuts EO/IR to 55% (watch its ring shrink)</div>
@@ -1527,13 +1529,24 @@
       id: "miramar", label: "MCAS Miramar",
       asset: { name: "MCAS MIRAMAR", sub: "DEFENDED ASSET \u00B7 USMC AIR STATION", lat: 32.8685, lon: -117.1432 },
       grid: "GRID 11S MS \u00B7 WGS84 \u00B7 1 km",
-      terrain: "inland",
+      terrain: "coast",
       preferredBasemap: "SAT",
       satelliteRequired: true,
       aoRadius: 6500,
       rings: [2000, 4000, 6000],
       primaryService: "USMC",
       approachLabel: "MCAS Miramar and San Diego inland approaches",
+      coastX: -15000,
+      waterLabel: "PACIFIC OCEAN \u00B7 MIRAMAR WESTERN APPROACH",
+      offshoreScreen: {
+        label: "PACIFIC NAVAL SCREEN", distance: "~15\u201318 KM WEST",
+        note: "DDG-51 \u00B7 LCS \u00B7 MH-60R", x: -17000, y: -1000,
+      },
+      shippingLanes: [-17600, -16600],
+      civilVessels: [
+        { platform: "FISHING VESSEL", laneX: -17600, y: -4800, north: true },
+        { platform: "CARGO", laneX: -16600, y: 5200, north: false },
+      ],
       civilAirVia: { x: 0, y: 0 },
       civilAirport: {
         name: "MCAS MIRAMAR", code: "KNKX", x: 0, y: 0,
@@ -1543,7 +1556,11 @@
           { inbound: { x: 5000, y: 5000 }, outbound: { x: -5200, y: -4300 }, origin: "KNID", destination: "KNKX" },
         ],
       },
-      threatTargets: [{ name: "MCAS MIRAMAR \u00B7 KNKX", x: 0, y: 0 }],
+      threatTargets: [
+        { name: "MCAS MIRAMAR \u00B7 KNKX", x: 0, y: 0 },
+        { name: "MIRAMAR FLIGHT LINE", x: -900, y: 250 },
+        { name: "USMC LOGISTICS AREA", x: 1250, y: -850 },
+      ],
       protectedSites: [
         { name: "MIRAMAR FLIGHT LINE", x: -900, y: 250, kind: "AIR" },
         { name: "USMC LOGISTICS AREA", x: 1250, y: -850, kind: "C2" },
@@ -1557,7 +1574,12 @@
         medium: "TACTICAL 5G ACCESS", label: "MCAS MIRAMAR 5G NODE",
         description: "ON-BASE ACCESS NODE WITH TERRESTRIAL FIBER BACKHAUL",
       },
-      threat: { angle: Math.PI, spread: 1.0, axes: [Math.PI, -Math.PI / 2, Math.PI / 2] },
+      // Repeated western lanes make the ocean the most likely origin, while all
+      // eight compass sectors remain represented for a true 360-degree threat.
+      threat: {
+        angle: Math.PI, spread: 0.38,
+        axes: [Math.PI, Math.PI, Math.PI, Math.PI, 3 * Math.PI / 4, -3 * Math.PI / 4, 0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2],
+      },
       noFire: [
         { x: -2900, y: -1700, r: 1450, label: "MIRA MESA COMMUNITY" },
         { x: 2850, y: 900, r: 1300, label: "MIRAMAR APPROACH" },
@@ -1567,6 +1589,8 @@
         { sensorId: "SEN-MIR-RF-31", sensorType: "RF", vendor: "Vendor X", service: "USMC", x: 170, y: 430, range: 5200, protectedSite: true, airportDefense: true },
         { sensorId: "SEN-MIR-EO-32", sensorType: "EO_IR", vendor: "Vendor Y", service: "USMC", x: 620, y: -270, range: 3600, protectedSite: true, airportDefense: true },
         { sensorId: "SEN-MIR-GAP-33", sensorType: "RADAR", vendor: "Vendor Z", service: "USMC", x: 2500, y: 1700, range: 4600, protectedSite: true },
+        { sensorId: "SEN-OFF-RAD-40", sensorType: "RADAR", vendor: "Vendor J", service: "USN", x: -17000, y: -1000, range: 14000, offshore: true },
+        { sensorId: "SEN-OFF-RAD-41", sensorType: "RADAR", vendor: "Vendor M", service: "USN", x: -18500, y: 2500, range: 13000, offshore: true },
       ],
       effectors: [
         { effectorId: "EFF-MIR-EW-30", effectorType: "EW_JAMMER", vendor: "Vendor W", service: "USMC", x: -480, y: -370, maxRange: 5200, mag: 100, cap: 100, unit: "sec", protectedSite: true, airportDefense: true },
@@ -1575,14 +1599,20 @@
         { effectorId: "EFF-MIR-DE-33", effectorType: "DIRECTED_ENERGY", vendor: "Vendor Z", service: "USMC", x: -80, y: -720, maxRange: 3600, mag: 100, cap: 100, unit: "%", protectedSite: true },
         { effectorId: "EFF-MIR-GUN-34", effectorType: "KINETIC_GUN", vendor: "Vendor W", service: "USMC", x: 820, y: 430, maxRange: 2600, mag: 300, cap: 300, unit: "rds", protectedSite: true },
         { effectorId: "EFF-MIR-NET-35", effectorType: "NET_CAPTURE", vendor: "Vendor X", service: "USMC", x: -730, y: 130, maxRange: 1800, mag: 8, cap: 8, unit: "nets", protectedSite: true, airportDefense: true },
+        { effectorId: "EFF-OFF-SEARAM-40", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor J", service: "USN", x: -17000, y: -1000, maxRange: 12500, mag: 11, cap: 11, unit: "rounds", auto: true, weapon: "SeaRAM", offshore: true },
+        { effectorId: "EFF-OFF-HELIOS-41", effectorType: "DIRECTED_ENERGY", vendor: "Vendor M", service: "USN", x: -18500, y: 2500, maxRange: 7000, mag: 100, cap: 100, unit: "%", auto: true, weapon: "HELIOS DE", offshore: true },
+        { effectorId: "EFF-OFF-CIWS-42", effectorType: "KINETIC_GUN", vendor: "Vendor N", service: "USN", x: -16000, y: -3500, maxRange: 5200, mag: 300, cap: 300, unit: "rds", auto: true, weapon: "C-RAM Phalanx", offshore: true },
       ],
-      hubPair: { "SEN-MIR-RAD-30": "EFF-MIR-GUN-34", "SEN-MIR-RF-31": "EFF-MIR-EW-30", "SEN-MIR-EO-32": "EFF-MIR-DE-33" },
+      hubPair: { "SEN-MIR-RAD-30": "EFF-MIR-GUN-34", "SEN-MIR-RF-31": "EFF-MIR-EW-30", "SEN-MIR-EO-32": "EFF-MIR-DE-33", "SEN-OFF-RAD-40": "EFF-OFF-SEARAM-40", "SEN-OFF-RAD-41": "EFF-OFF-HELIOS-41" },
       blue: [
         { identity: "FRIEND", platform: "F-35B", service: "USMC", cls: "FIXED_WING", alt: 7200, ox: -1900, oy: 1500, orad: 1700, ospeed: 0.17, speed: 195, armed: true, weapon: "AAM", weaponRange: 5200, weaponCooldown: 2.2 },
         { identity: "FRIEND", platform: "MV-22B", service: "USMC", cls: "ROTARY", alt: 900, ox: -1200, oy: -1500, orad: 750, ospeed: 0.22, speed: 120 },
         { identity: "FRIEND", platform: "AH-1Z", service: "USMC", cls: "ROTARY", alt: 180, ox: 800, oy: 650, orad: 650, ospeed: 0.30, speed: 80, armed: true, weapon: "GUN", weaponRange: 2400 },
         { identity: "ASSUMED_FRIEND", platform: "RQ-21A", service: "USMC", cls: "UAS_GROUP_3", alt: 1500, ox: 1900, oy: -1500, orad: 900, ospeed: 0.18, speed: 40 },
         { identity: "FRIEND", platform: "CH-53E", service: "USMC", cls: "ROTARY", alt: 650, ox: 1100, oy: 1900, orad: 800, ospeed: 0.20, speed: 95 },
+        { identity: "FRIEND", platform: "DDG-51 DESTROYER", service: "USN", cls: "SURFACE", alt: 0, ox: -17000, oy: -1000, orad: 350, ospeed: 0.04, speed: 8 },
+        { identity: "FRIEND", platform: "LCS", service: "USN", cls: "SURFACE", alt: 0, ox: -18500, oy: 2500, orad: 420, ospeed: 0.05, speed: 9 },
+        { identity: "FRIEND", platform: "MH-60R", service: "USN", cls: "ROTARY", alt: 420, ox: -16200, oy: -500, orad: 1200, ospeed: 0.25, speed: 72, armed: true, weapon: "GUN", weaponRange: 3000, weaponMag: 120 },
       ],
     },
     elpaso: {
@@ -1731,6 +1761,146 @@
         { identity: "FRIEND", platform: "USCG CUTTER", service: "USCG", cls: "SURFACE", alt: 0, ox: -5000, oy: 3500, orad: 190, ospeed: 0.05, speed: 9 },
       ],
     },
+    washington: {
+      id: "washington", label: "Washington, DC / National Capital Region",
+      asset: { name: "NATIONAL CAPITAL REGION", sub: "DEFENDED FEDERAL CORE \u00B7 JFHQ-NCR", lat: 38.8977, lon: -77.0365 },
+      grid: "GRID 18S UJ \u00B7 WGS84 \u00B7 5 km",
+      terrain: "inland",
+      preferredBasemap: "SAT",
+      denseLaydown: true,
+      aoRadius: 26000,
+      rings: [5000, 10000, 20000],
+      primaryService: "JFHQ-NCR",
+      approachLabel: "National Capital Region \u00B7 360-degree multi-axis approaches",
+      notionalDefenseNote: "PUBLIC LANDMARKS \u00B7 ILLUSTRATIVE SENSOR / EFFECTOR POSITIONS ONLY",
+      regional: {
+        title: "USNORTHCOM \u00B7 JFHQ-NCR \u2014 National Capital Region defense picture",
+        badge: "NCR", hq: "Joint Force Headquarters \u00B7 National Capital Region",
+        peers: [
+          { id: "JBA", name: "Joint Base Andrews, MD", svc: "USAF", wReady: 8, wTot: 9, sustain: 0.94 },
+          { id: "FTM", name: "Fort Meade, MD", svc: "USA", wReady: 6, wTot: 7, sustain: 0.91 },
+          { id: "NSASP", name: "NSA South Potomac \u00B7 Dahlgren, VA", svc: "USN", wReady: 5, wTot: 6, sustain: 0.89 },
+        ],
+      },
+      civilAirVia: { x: -320, y: -5200 },
+      civilAirport: {
+        name: "REAGAN NATIONAL", code: "KDCA", x: -320, y: -5200,
+        trafficCount: 4,
+        sensorIds: ["SEN-DCA-RAD-10", "SEN-DCA-EO-11"],
+        routes: [
+          { inbound: { x: -24500, y: -9000 }, outbound: { x: 24500, y: -3500 }, origin: "KATL", destination: "KDCA" },
+          { inbound: { x: 21000, y: 15000 }, outbound: { x: -23000, y: 12500 }, origin: "KBOS", destination: "KDCA" },
+        ],
+      },
+      protectedSites: [
+        { name: "WHITE HOUSE / EXECUTIVE COMPLEX", x: 0, y: 0, kind: "GOV", detailOnly: true },
+        { name: "U.S. CAPITOL COMPLEX", x: 2400, y: -850, kind: "GOV", detailOnly: true },
+        { name: "PENTAGON / DOD HEADQUARTERS", x: -1700, y: -2870, kind: "C2", detailOnly: true },
+        { name: "JOINT BASE MYER-HENDERSON HALL", x: -3700, y: -2000, kind: "BASE", service: "USA/USMC", detailOnly: true },
+        { name: "FORT McNAIR", x: 1700, y: -3400, kind: "BASE", service: "USA", detailOnly: true },
+        { name: "JOINT BASE ANDREWS", x: 14700, y: -9650, kind: "AIR", service: "USAF" },
+        { name: "FORT BELVOIR", x: -10200, y: -19900, kind: "BASE", service: "USA" },
+        { name: "MARK CENTER / ALEXANDRIA", x: -6800, y: -7300, kind: "C2" },
+      ],
+      siteSummary: { x: 7600, y: 4000, anchorX: 0, anchorY: -1500, label: "FEDERAL CORE \u00B7 5 PROTECTED CENTERS", note: "ZOOM IN TO INSPECT LOCAL LAYERS" },
+      threatRingFromCenter: true,
+      threatTargets: [
+        { name: "WHITE HOUSE / EXECUTIVE COMPLEX", x: 0, y: 0 },
+        { name: "U.S. CAPITOL COMPLEX", x: 2400, y: -850 },
+        { name: "PENTAGON / DOD HEADQUARTERS", x: -1700, y: -2870 },
+        { name: "JOINT BASE MYER-HENDERSON HALL", x: -3700, y: -2000 },
+        { name: "FORT McNAIR", x: 1700, y: -3400 },
+        { name: "JOINT BASE ANDREWS", x: 14700, y: -9650 },
+        { name: "FORT BELVOIR", x: -10200, y: -19900 },
+        { name: "MARK CENTER / ALEXANDRIA", x: -6800, y: -7300 },
+        { name: "REAGAN NATIONAL \u00B7 KDCA", x: -320, y: -5200 },
+      ],
+      threat: {
+        angle: Math.PI, spread: 0.48,
+        axes: [0, Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, Math.PI, -3 * Math.PI / 4, -Math.PI / 2, -Math.PI / 4],
+      },
+      gnb: { x: 800, y: -1000 },
+      networkBackhaul: {
+        x: -6500, y: -6500, label: "NCR TERRESTRIAL NETWORK POP",
+        medium: "HARDENED METRO FIBER RING", description: "ON-LAND NCR CORE \u00B7 NO OFFSHORE ENDPOINT",
+        path: [{ x: 800, y: -1000 }, { x: -1700, y: -2870 }, { x: -4200, y: -4300 }, { x: -6500, y: -6500 }],
+      },
+      transportInfo: {
+        medium: "TACTICAL 5G ACCESS", label: "NATIONAL CAPITAL REGION 5G NODE",
+        description: "NOTIONAL ON-LAND ACCESS \u00B7 HARDENED FIBER BACKHAUL",
+      },
+      noFire: [
+        { x: 500, y: -1200, r: 4700, label: "FEDERAL CORE / DENSE CIVIL AREA" },
+        { x: -320, y: -5200, r: 2600, label: "KDCA APPROACH / POTOMAC CORRIDOR" },
+        { x: -6600, y: -7600, r: 2400, label: "ALEXANDRIA CIVIL AREA" },
+      ],
+      sensors: [
+        { sensorId: "SEN-NCR-RAD-01", sensorType: "RADAR", vendor: "Vendor A", service: "USA", x: 0, y: 0, range: 18000, protectedSite: true },
+        { sensorId: "SEN-NCR-RF-02", sensorType: "RF", vendor: "Vendor B", service: "USSF", x: -900, y: 700, range: 14000, protectedSite: true },
+        { sensorId: "SEN-NCR-EO-03", sensorType: "EO_IR", vendor: "Vendor C", service: "USA", x: 700, y: -500, range: 6500, protectedSite: true },
+        { sensorId: "SEN-CAP-RAD-04", sensorType: "RADAR", vendor: "Vendor D", service: "USA", x: 2300, y: -650, range: 10000, protectedSite: true },
+        { sensorId: "SEN-CAP-EO-05", sensorType: "EO_IR", vendor: "Vendor E", service: "USA", x: 2750, y: -1100, range: 5200, protectedSite: true },
+        { sensorId: "SEN-PENT-RAD-06", sensorType: "RADAR", vendor: "Vendor F", service: "USA", x: -1900, y: -2700, range: 11000, protectedSite: true },
+        { sensorId: "SEN-PENT-RF-07", sensorType: "RF", vendor: "Vendor G", service: "USSF", x: -1300, y: -3200, range: 9500, protectedSite: true },
+        { sensorId: "SEN-JBM-RAD-08", sensorType: "RADAR", vendor: "Vendor H", service: "USA", x: -3900, y: -1800, range: 10000, protectedSite: true },
+        { sensorId: "SEN-JBM-EO-09", sensorType: "EO_IR", vendor: "Vendor I", service: "USMC", x: -3400, y: -2400, range: 5500, protectedSite: true },
+        { sensorId: "SEN-DCA-RAD-10", sensorType: "RADAR", vendor: "Vendor J", service: "USA", x: -500, y: -5000, range: 11000, airportDefense: true },
+        { sensorId: "SEN-DCA-EO-11", sensorType: "EO_IR", vendor: "Vendor K", service: "USA", x: 300, y: -5400, range: 6000, airportDefense: true },
+        { sensorId: "SEN-MCNAIR-RAD-12", sensorType: "RADAR", vendor: "Vendor L", service: "USA", x: 1700, y: -3500, range: 9000, protectedSite: true },
+        { sensorId: "SEN-ALEX-RAD-13", sensorType: "RADAR", vendor: "Vendor M", service: "USA", x: -6800, y: -7300, range: 12000, protectedSite: true },
+        { sensorId: "SEN-ALEX-RF-14", sensorType: "RF", vendor: "Vendor N", service: "USSF", x: -6200, y: -7900, range: 10000, protectedSite: true },
+        { sensorId: "SEN-JBA-RAD-15", sensorType: "RADAR", vendor: "Vendor P", service: "USAF", x: 14500, y: -9300, range: 19000, protectedSite: true },
+        { sensorId: "SEN-JBA-RF-16", sensorType: "RF", vendor: "Vendor Q", service: "USAF", x: 15200, y: -10100, range: 14000, protectedSite: true },
+        { sensorId: "SEN-JBA-EO-17", sensorType: "EO_IR", vendor: "Vendor R", service: "USAF", x: 13800, y: -10300, range: 7500, protectedSite: true },
+        { sensorId: "SEN-JBA-GAP-18", sensorType: "RADAR", vendor: "Vendor S", service: "USAF", x: 15100, y: -8800, range: 14000, protectedSite: true },
+        { sensorId: "SEN-BEL-RAD-19", sensorType: "RADAR", vendor: "Vendor T", service: "USA", x: -10500, y: -19600, range: 17000, protectedSite: true },
+        { sensorId: "SEN-BEL-RF-20", sensorType: "RF", vendor: "Vendor U", service: "USA", x: -9600, y: -20200, range: 13000, protectedSite: true },
+        { sensorId: "SEN-BEL-EO-21", sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: -11100, y: -19000, range: 7000, protectedSite: true },
+        { sensorId: "SEN-BEL-GAP-22", sensorType: "RADAR", vendor: "Vendor W", service: "USA", x: -9400, y: -18800, range: 14000, protectedSite: true },
+      ],
+      effectors: [
+        { effectorId: "EFF-NCR-EW-01", effectorType: "EW_JAMMER", vendor: "Vendor A", service: "USA", x: -100, y: 200, maxRange: 12000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-NCR-RF-02", effectorType: "RF_TAKEOVER", vendor: "Vendor B", service: "USSF", x: 500, y: -500, maxRange: 9000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-NCR-NET-03", effectorType: "NET_CAPTURE", vendor: "Vendor C", service: "USA", x: -800, y: 900, maxRange: 2600, mag: 12, cap: 12, unit: "nets", protectedSite: true },
+        { effectorId: "EFF-CAP-EW-04", effectorType: "EW_JAMMER", vendor: "Vendor D", service: "USA", x: 2300, y: -600, maxRange: 8500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-CAP-NET-05", effectorType: "NET_CAPTURE", vendor: "Vendor E", service: "USA", x: 2700, y: -1100, maxRange: 2400, mag: 10, cap: 10, unit: "nets", protectedSite: true },
+        { effectorId: "EFF-PENT-EW-06", effectorType: "EW_JAMMER", vendor: "Vendor F", service: "USA", x: -1800, y: -2800, maxRange: 9000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-PENT-RF-07", effectorType: "RF_TAKEOVER", vendor: "Vendor G", service: "USSF", x: -1300, y: -3100, maxRange: 8000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-PENT-NET-08", effectorType: "NET_CAPTURE", vendor: "Vendor F", service: "USA", x: -2200, y: -3400, maxRange: 2400, mag: 10, cap: 10, unit: "nets", protectedSite: true },
+        { effectorId: "EFF-JBM-EW-09", effectorType: "EW_JAMMER", vendor: "Vendor H", service: "USA", x: -3800, y: -1800, maxRange: 8500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-JBM-RF-10", effectorType: "RF_TAKEOVER", vendor: "Vendor I", service: "USMC", x: -3300, y: -2400, maxRange: 7800, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-JBM-NET-11", effectorType: "NET_CAPTURE", vendor: "Vendor H", service: "USA", x: -4200, y: -2200, maxRange: 2300, mag: 10, cap: 10, unit: "nets", protectedSite: true },
+        { effectorId: "EFF-DCA-EW-12", effectorType: "EW_JAMMER", vendor: "Vendor J", service: "USA", x: -450, y: -5000, maxRange: 8500, mag: 100, cap: 100, unit: "sec", airportDefense: true },
+        { effectorId: "EFF-DCA-NET-13", effectorType: "NET_CAPTURE", vendor: "Vendor K", service: "USA", x: 250, y: -5500, maxRange: 2400, mag: 10, cap: 10, unit: "nets", airportDefense: true },
+        { effectorId: "EFF-MCNAIR-EW-14", effectorType: "EW_JAMMER", vendor: "Vendor L", service: "USA", x: 1700, y: -3400, maxRange: 8200, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-MCNAIR-NET-15", effectorType: "NET_CAPTURE", vendor: "Vendor L", service: "USA", x: 2050, y: -3800, maxRange: 2200, mag: 10, cap: 10, unit: "nets", protectedSite: true },
+        { effectorId: "EFF-ALEX-EW-16", effectorType: "EW_JAMMER", vendor: "Vendor M", service: "USA", x: -6800, y: -7300, maxRange: 8500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-ALEX-RF-17", effectorType: "RF_TAKEOVER", vendor: "Vendor N", service: "USSF", x: -6200, y: -7800, maxRange: 7600, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-ALEX-NET-18", effectorType: "NET_CAPTURE", vendor: "Vendor M", service: "USA", x: -7300, y: -7600, maxRange: 2300, mag: 10, cap: 10, unit: "nets", protectedSite: true },
+        { effectorId: "EFF-JBA-EW-19", effectorType: "EW_JAMMER", vendor: "Vendor P", service: "USAF", x: 14500, y: -9300, maxRange: 11000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-JBA-RF-20", effectorType: "RF_TAKEOVER", vendor: "Vendor Q", service: "USAF", x: 15100, y: -10100, maxRange: 9000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-JBA-INT-21", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor R", service: "USAF", x: 14000, y: -9900, maxRange: 10000, mag: 14, cap: 14, unit: "rounds", protectedSite: true },
+        { effectorId: "EFF-JBA-DE-22", effectorType: "DIRECTED_ENERGY", vendor: "Vendor S", service: "USAF", x: 14750, y: -10400, maxRange: 6500, mag: 100, cap: 100, unit: "%", protectedSite: true },
+        { effectorId: "EFF-JBA-GUN-23", effectorType: "KINETIC_GUN", vendor: "Vendor P", service: "USAF", x: 15500, y: -9400, maxRange: 4500, mag: 360, cap: 360, unit: "rds", protectedSite: true },
+        { effectorId: "EFF-JBA-NET-24", effectorType: "NET_CAPTURE", vendor: "Vendor Q", service: "USAF", x: 13800, y: -9000, maxRange: 2600, mag: 12, cap: 12, unit: "nets", protectedSite: true },
+        { effectorId: "EFF-BEL-EW-25", effectorType: "EW_JAMMER", vendor: "Vendor T", service: "USA", x: -10300, y: -19600, maxRange: 10500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-BEL-RF-26", effectorType: "RF_TAKEOVER", vendor: "Vendor U", service: "USA", x: -9700, y: -20200, maxRange: 8800, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-BEL-INT-27", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor V", service: "USA", x: -11000, y: -20000, maxRange: 9800, mag: 14, cap: 14, unit: "rounds", protectedSite: true },
+        { effectorId: "EFF-BEL-DE-28", effectorType: "DIRECTED_ENERGY", vendor: "Vendor W", service: "USA", x: -10100, y: -19000, maxRange: 6500, mag: 100, cap: 100, unit: "%", protectedSite: true },
+        { effectorId: "EFF-BEL-GUN-29", effectorType: "KINETIC_GUN", vendor: "Vendor T", service: "USA", x: -9300, y: -19500, maxRange: 4500, mag: 360, cap: 360, unit: "rds", protectedSite: true },
+        { effectorId: "EFF-BEL-NET-30", effectorType: "NET_CAPTURE", vendor: "Vendor U", service: "USA", x: -10800, y: -18700, maxRange: 2600, mag: 12, cap: 12, unit: "nets", protectedSite: true },
+      ],
+      hubPair: { "SEN-NCR-RAD-01": "EFF-NCR-EW-01", "SEN-NCR-RF-02": "EFF-NCR-RF-02", "SEN-NCR-EO-03": "EFF-NCR-NET-03", "SEN-JBA-RAD-15": "EFF-JBA-INT-21", "SEN-BEL-RAD-19": "EFF-BEL-INT-27" },
+      blue: [
+        { identity: "FRIEND", platform: "F-16C", service: "USAF", cls: "FIXED_WING", alt: 8500, ox: 10000, oy: 5000, orad: 3200, ospeed: 0.18, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
+        { identity: "FRIEND", platform: "F-16C", service: "USAF", cls: "FIXED_WING", alt: 9000, ox: -8000, oy: 8000, orad: 3400, ospeed: 0.17, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
+        { identity: "FRIEND", platform: "F-16C", service: "USAF", cls: "FIXED_WING", alt: 8200, ox: 14500, oy: -6500, orad: 3000, ospeed: 0.19, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
+        { identity: "FRIEND", platform: "UH-60M", service: "USA", cls: "ROTARY", alt: 600, ox: -3800, oy: -3500, orad: 1100, ospeed: 0.22, speed: 82 },
+        { identity: "FRIEND", platform: "MH-65D", service: "USCG", cls: "ROTARY", alt: 450, ox: 1800, oy: -6000, orad: 1200, ospeed: 0.24, speed: 75, armed: true, weapon: "GUN", weaponRange: 2800, weaponMag: 120 },
+        { identity: "ASSUMED_FRIEND", platform: "RQ-7B", service: "USA", cls: "UAS_GROUP_3", alt: 1800, ox: -5500, oy: -10500, orad: 1800, ospeed: 0.17, speed: 45 },
+        { identity: "FRIEND", platform: "E-3", service: "USAF", cls: "FIXED_WING", alt: 9000, ox: 19000, oy: 11000, orad: 4500, ospeed: 0.11, speed: 155 },
+      ],
+    },
     guam: {
       id: "guam", label: "Guam Joint Defense",
       asset: { name: "GUAM JOINT DEFENSE SECTOR", sub: "DEFENDED ISLAND INFRASTRUCTURE \u00B7 INDOPACOM", lat: 13.4443, lon: 144.7937 },
@@ -1739,6 +1909,7 @@
       aoRadius: 29000,
       rings: [10000, 20000],
       preferredBasemap: "SAT",
+      denseLaydown: true,
       clipTransportToLand: true,
       waterLabel: "PHILIPPINE SEA \u00B7 WESTERN PACIFIC",
       primaryService: "JTF",
@@ -1782,7 +1953,9 @@
       civilAirVia: { x: 371, y: 4414 },
       civilAirport: {
         name: "GUAM INTL", code: "PGUM", x: 371, y: 4414,
-        sensorIds: ["SEN-PGUM-RAD-20", "SEN-PGUM-EO-21"],
+        trafficCount: 4,
+        defenseSummary: "AIRPORT DEFENSE \u00B7 4 SENSORS / 4 EFFECTORS",
+        sensorIds: ["SEN-PGUM-RAD-20", "SEN-PGUM-EO-21", "SEN-PGUM-RF-22", "SEN-PGUM-GAP-23"],
         routes: [
           { inbound: { x: -28000, y: 2500 }, outbound: { x: 28000, y: 6500 }, origin: "PHNL", destination: "PGUM" },
           { inbound: { x: 25000, y: 22000 }, outbound: { x: -27000, y: 18000 }, origin: "RJAA", destination: "PGUM" },
@@ -1795,9 +1968,9 @@
         path: [{ x: 1332, y: 5310 }, { x: 2500, y: 6500 }, { x: 3822, y: 7982 }],
       },
       protectedSites: [
-        { name: "ANDERSEN AFB \u00B7 PGUA", x: 14763, y: 15539, kind: "AIR" },
-        { name: "NAVAL BASE GUAM / APRA", x: -14746, y: -534, kind: "PORT" },
-        { name: "CAMP BLAZ JOINT NODE", x: 5229, y: 16108, kind: "C2" },
+        { name: "ANDERSEN AIR FORCE BASE \u00B7 PGUA", x: 14763, y: 15539, kind: "AIR", service: "USAF" },
+        { name: "NAVAL BASE GUAM \u00B7 APRA HARBOR", x: -14746, y: -534, kind: "PORT", service: "USN" },
+        { name: "MARINE CORPS BASE CAMP BLAZ", x: 5229, y: 16108, kind: "BASE", service: "USMC" },
         { name: "CENTRAL POWER / COMMS", x: 4580, y: 8427, kind: "C2" },
       ],
       shippingLanes: [-25500, 24500],
@@ -1806,7 +1979,20 @@
         { platform: "TANKER", laneX: -24500, y: 12000, north: false },
         { platform: "FREIGHTER", laneX: 24500, y: -9000, north: true },
       ],
-      threat: { angle: Math.PI, spread: 1.25, axes: [Math.PI, 0, Math.PI / 2, -Math.PI / 2] },
+      // Eight perimeter sectors produce a complete 360-degree approach picture.
+      // Each contact independently selects one of the island's defended sites.
+      threatRingFromCenter: true,
+      threatTargets: [
+        { name: "ANDERSEN AIR FORCE BASE", x: 14763, y: 15539 },
+        { name: "NAVAL BASE GUAM", x: -14746, y: -534 },
+        { name: "MARINE CORPS BASE CAMP BLAZ", x: 5229, y: 16108 },
+        { name: "GUAM INTL \u00B7 PGUM", x: 371, y: 4414 },
+        { name: "CENTRAL POWER / COMMS", x: 4580, y: 8427 },
+      ],
+      threat: {
+        angle: Math.PI, spread: 0.42,
+        axes: [0, Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, Math.PI, -3 * Math.PI / 4, -Math.PI / 2, -Math.PI / 4],
+      },
       noFire: [
         { x: 371, y: 4414, r: 2800, label: "PGUM APPROACH" },
         { x: -4298, y: 3084, r: 2500, label: "HAGATNA / CIVIL AREA" },
@@ -1818,14 +2004,24 @@
         { sensorId: "SEN-EO-03", sensorType: "EO_IR", vendor: "Vendor C", service: "USA", x: 1800, y: 1300, range: 7000 },
         { sensorId: "SEN-AND-RAD-04", sensorType: "RADAR", vendor: "Vendor D", service: "USAF", x: 13950, y: 15750, range: 19000, protectedSite: true },
         { sensorId: "SEN-AND-RF-05", sensorType: "RF", vendor: "Vendor E", service: "USMC", x: 15100, y: 15150, range: 12000, protectedSite: true },
+        { sensorId: "SEN-AND-EO-12", sensorType: "EO_IR", vendor: "Vendor D", service: "USAF", x: 14500, y: 16450, range: 7200, protectedSite: true },
+        { sensorId: "SEN-AND-PASS-13", sensorType: "RF", vendor: "Vendor E", service: "USAF", x: 13200, y: 14800, range: 13500, protectedSite: true },
         { sensorId: "SEN-PORT-RAD-06", sensorType: "RADAR", vendor: "Vendor F", service: "USN", x: -14350, y: -250, range: 16000, protectedSite: true },
         { sensorId: "SEN-PORT-EO-07", sensorType: "EO_IR", vendor: "Vendor G", service: "USN", x: -14950, y: -850, range: 6500, protectedSite: true },
+        { sensorId: "SEN-NBG-RF-14", sensorType: "RF", vendor: "Vendor F", service: "USN", x: -13700, y: 500, range: 13000, protectedSite: true },
+        { sensorId: "SEN-NBG-EO-15", sensorType: "EO_IR", vendor: "Vendor G", service: "USN", x: -15500, y: -100, range: 7000, protectedSite: true },
         { sensorId: "SEN-BLAZ-RF-08", sensorType: "RF", vendor: "Vendor H", service: "USMC", x: 5200, y: 15750, range: 12000, protectedSite: true },
         { sensorId: "SEN-BLAZ-EO-09", sensorType: "EO_IR", vendor: "Vendor I", service: "USA", x: 5900, y: 16350, range: 6500, protectedSite: true },
+        { sensorId: "SEN-BLAZ-RAD-16", sensorType: "RADAR", vendor: "Vendor H", service: "USMC", x: 4700, y: 16600, range: 15500, protectedSite: true },
+        { sensorId: "SEN-BLAZ-PASS-17", sensorType: "RF", vendor: "Vendor I", service: "USMC", x: 6100, y: 15400, range: 12500, protectedSite: true },
         { sensorId: "SEN-C2-RF-10", sensorType: "RF", vendor: "Vendor Q", service: "USSF", x: 4200, y: 8200, range: 13000, protectedSite: true },
         { sensorId: "SEN-C2-EO-11", sensorType: "EO_IR", vendor: "Vendor R", service: "USA", x: 5000, y: 8800, range: 6500, protectedSite: true },
+        { sensorId: "SEN-SOUTH-RAD-18", sensorType: "RADAR", vendor: "Vendor S", service: "USA", x: -9000, y: -18800, range: 15000, protectedSite: true },
+        { sensorId: "SEN-SOUTH-RF-19", sensorType: "RF", vendor: "Vendor T", service: "USMC", x: -11800, y: -17200, range: 12000, protectedSite: true },
         { sensorId: "SEN-PGUM-RAD-20", sensorType: "RADAR", vendor: "Vendor U", service: "USA", x: -150, y: 4250, range: 9500, airportDefense: true },
         { sensorId: "SEN-PGUM-EO-21", sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: 900, y: 4650, range: 5200, airportDefense: true },
+        { sensorId: "SEN-PGUM-RF-22", sensorType: "RF", vendor: "Vendor U", service: "USA", x: 1250, y: 3750, range: 8200, airportDefense: true },
+        { sensorId: "SEN-PGUM-GAP-23", sensorType: "RADAR", vendor: "Vendor V", service: "USA", x: -1150, y: 5050, range: 7600, airportDefense: true },
       ],
       effectors: [
         { effectorId: "EFF-EW-01", effectorType: "EW_JAMMER", vendor: "Vendor D", service: "USAF", x: 300, y: 450, maxRange: 11000, mag: 100, cap: 100, unit: "sec" },
@@ -1836,24 +2032,44 @@
         { effectorId: "EFF-AND-EW-06", effectorType: "EW_JAMMER", vendor: "Vendor J", service: "USMC", x: 14300, y: 15800, maxRange: 9500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
         { effectorId: "EFF-AND-DE-07", effectorType: "DIRECTED_ENERGY", vendor: "Vendor K", service: "USAF", x: 15050, y: 15400, maxRange: 6000, mag: 100, cap: 100, unit: "%", protectedSite: true },
         { effectorId: "EFF-AND-INT-08", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor L", service: "USA", x: 13700, y: 15100, maxRange: 9000, mag: 10, cap: 10, unit: "rounds", protectedSite: true },
+        { effectorId: "EFF-AND-RF-16", effectorType: "RF_TAKEOVER", vendor: "Vendor J", service: "USAF", x: 13250, y: 16000, maxRange: 8500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-AND-GUN-17", effectorType: "KINETIC_GUN", vendor: "Vendor K", service: "USAF", x: 14650, y: 14750, maxRange: 4200, mag: 320, cap: 320, unit: "rds", protectedSite: true },
+        { effectorId: "EFF-AND-NET-18", effectorType: "NET_CAPTURE", vendor: "Vendor L", service: "USAF", x: 15700, y: 16000, maxRange: 2400, mag: 10, cap: 10, unit: "nets", protectedSite: true },
         { effectorId: "EFF-PORT-EW-09", effectorType: "EW_JAMMER", vendor: "Vendor M", service: "USN", x: -14600, y: -600, maxRange: 9000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
         { effectorId: "EFF-PORT-DE-10", effectorType: "DIRECTED_ENERGY", vendor: "Vendor N", service: "USN", x: -13850, y: -300, maxRange: 6000, mag: 100, cap: 100, unit: "%", protectedSite: true },
         { effectorId: "EFF-PORT-GUN-11", effectorType: "KINETIC_GUN", vendor: "Vendor P", service: "USN", x: -15000, y: -1150, maxRange: 4200, mag: 280, cap: 280, unit: "rds", protectedSite: true },
+        { effectorId: "EFF-NBG-RF-19", effectorType: "RF_TAKEOVER", vendor: "Vendor M", service: "USN", x: -13700, y: 500, maxRange: 8500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-NBG-INT-22", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor N", service: "USN", x: -12600, y: 700, maxRange: 9000, mag: 12, cap: 12, unit: "rounds", protectedSite: true },
+        { effectorId: "EFF-NBG-NET-23", effectorType: "NET_CAPTURE", vendor: "Vendor P", service: "USN", x: -15200, y: 200, maxRange: 2400, mag: 10, cap: 10, unit: "nets", protectedSite: true },
         { effectorId: "EFF-BLAZ-RF-12", effectorType: "RF_TAKEOVER", vendor: "Vendor Q", service: "USMC", x: 5000, y: 16000, maxRange: 8500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
         { effectorId: "EFF-BLAZ-DE-13", effectorType: "DIRECTED_ENERGY", vendor: "Vendor R", service: "USA", x: 5800, y: 16450, maxRange: 6000, mag: 100, cap: 100, unit: "%", protectedSite: true },
+        { effectorId: "EFF-BLAZ-EW-24", effectorType: "EW_JAMMER", vendor: "Vendor Q", service: "USMC", x: 4800, y: 16600, maxRange: 9000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-BLAZ-INT-25", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor R", service: "USMC", x: 6300, y: 15400, maxRange: 9000, mag: 12, cap: 12, unit: "rounds", protectedSite: true },
+        { effectorId: "EFF-BLAZ-GUN-26", effectorType: "KINETIC_GUN", vendor: "Vendor Q", service: "USMC", x: 4500, y: 15100, maxRange: 4200, mag: 320, cap: 320, unit: "rds", protectedSite: true },
+        { effectorId: "EFF-BLAZ-NET-27", effectorType: "NET_CAPTURE", vendor: "Vendor R", service: "USMC", x: 6100, y: 16600, maxRange: 2400, mag: 10, cap: 10, unit: "nets", protectedSite: true },
         { effectorId: "EFF-C2-RF-14", effectorType: "RF_TAKEOVER", vendor: "Vendor Q", service: "USSF", x: 4500, y: 8000, maxRange: 8500, mag: 100, cap: 100, unit: "sec", protectedSite: true },
         { effectorId: "EFF-C2-DE-15", effectorType: "DIRECTED_ENERGY", vendor: "Vendor R", service: "USA", x: 5000, y: 8700, maxRange: 6000, mag: 100, cap: 100, unit: "%", protectedSite: true },
+        { effectorId: "EFF-SOUTH-EW-28", effectorType: "EW_JAMMER", vendor: "Vendor S", service: "USA", x: -9000, y: -18700, maxRange: 9000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-SOUTH-INT-29", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor T", service: "USMC", x: -11600, y: -17300, maxRange: 9000, mag: 12, cap: 12, unit: "rounds", protectedSite: true },
         { effectorId: "EFF-PGUM-EW-20", effectorType: "EW_JAMMER", vendor: "Vendor U", service: "USA", x: -50, y: 4300, maxRange: 8000, mag: 100, cap: 100, unit: "sec", airportDefense: true },
         { effectorId: "EFF-PGUM-NET-21", effectorType: "NET_CAPTURE", vendor: "Vendor V", service: "USA", x: 850, y: 4700, maxRange: 2400, mag: 8, cap: 8, unit: "nets", airportDefense: true },
+        { effectorId: "EFF-PGUM-RF-30", effectorType: "RF_TAKEOVER", vendor: "Vendor U", service: "USA", x: 1250, y: 3850, maxRange: 7200, mag: 100, cap: 100, unit: "sec", airportDefense: true },
+        { effectorId: "EFF-PGUM-NET-31", effectorType: "NET_CAPTURE", vendor: "Vendor V", service: "USA", x: -1100, y: 5000, maxRange: 2400, mag: 8, cap: 8, unit: "nets", airportDefense: true },
       ],
       hubPair: { "SEN-RAD-01": "EFF-GUN-05", "SEN-EO-03": "EFF-DE-04", "SEN-RF-02": "EFF-RF-02" },
       blue: [
-        { identity: "FRIEND", platform: "F-35A", service: "USAF", cls: "FIXED_WING", alt: 8500, ox: 13000, oy: 17000, orad: 3500, ospeed: 0.17, speed: 205, armed: true, weapon: "AAM", weaponRange: 9000, weaponCooldown: 2.2 },
-        { identity: "FRIEND", platform: "F/A-18E", service: "USN", cls: "FIXED_WING", alt: 7000, ox: -17000, oy: 6500, orad: 3200, ospeed: 0.20, speed: 185, armed: true, weapon: "AAM", weaponRange: 8500 },
+        { identity: "FRIEND", platform: "F-35A", service: "USAF", cls: "FIXED_WING", alt: 8500, ox: 13000, oy: 17000, orad: 3500, ospeed: 0.17, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
+        { identity: "FRIEND", platform: "F/A-18E", service: "USN", cls: "FIXED_WING", alt: 7000, ox: -17000, oy: 6500, orad: 3200, ospeed: 0.20, speed: 185, armed: true, weapon: "AAM", weaponRange: 9000, weaponMag: 6 },
         { identity: "FRIEND", platform: "E-2D", service: "USN", cls: "FIXED_WING", alt: 8200, ox: 19000, oy: 9000, orad: 4200, ospeed: 0.12, speed: 150 },
         { identity: "FRIEND", platform: "MH-60R", service: "USN", cls: "ROTARY", alt: 350, ox: -15500, oy: -2500, orad: 1200, ospeed: 0.27, speed: 72, armed: true, weapon: "GUN", weaponRange: 3000 },
-        { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: 9000, oy: -9000, orad: 3500, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 7000 },
-        { identity: "ASSUMED_FRIEND", platform: "RQ-21A", service: "USMC", cls: "UAS_GROUP_3", alt: 1500, ox: 4500, oy: 14000, orad: 1800, ospeed: 0.18, speed: 40 },
+        { identity: "FRIEND", platform: "MQ-9A", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: 9000, oy: -9000, orad: 3500, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 8000, weaponCooldown: 2.8, weaponMag: 6 },
+        { identity: "FRIEND", platform: "MQ-9A", service: "USMC", cls: "FIXED_WING", alt: 6800, ox: 4500, oy: 14000, orad: 2400, ospeed: 0.16, speed: 88, armed: true, weapon: "MISSILE", weaponRange: 8000, weaponCooldown: 2.8, weaponMag: 6 },
+        { identity: "FRIEND", platform: "F-35A", service: "USAF", cls: "FIXED_WING", alt: 9000, ox: 9000, oy: 19000, orad: 3000, ospeed: 0.18, speed: 205, armed: true, weapon: "AAM", weaponRange: 9500, weaponCooldown: 2.2, weaponMag: 6 },
+        { identity: "FRIEND", platform: "F-15EX", service: "USAF", cls: "FIXED_WING", alt: 9400, ox: 3000, oy: 20500, orad: 3400, ospeed: 0.16, speed: 215, armed: true, weapon: "AAM", weaponRange: 10000, weaponCooldown: 2.1, weaponMag: 8 },
+        { identity: "FRIEND", platform: "F-35B", service: "USMC", cls: "FIXED_WING", alt: 8200, ox: 6500, oy: 15500, orad: 2800, ospeed: 0.19, speed: 200, armed: true, weapon: "AAM", weaponRange: 9000, weaponCooldown: 2.2, weaponMag: 6 },
+        { identity: "FRIEND", platform: "F/A-18E", service: "USN", cls: "FIXED_WING", alt: 7400, ox: -20500, oy: 2500, orad: 3300, ospeed: 0.20, speed: 188, armed: true, weapon: "AAM", weaponRange: 9000, weaponCooldown: 2.2, weaponMag: 6 },
+        { identity: "FRIEND", platform: "MQ-9A", service: "USAF", cls: "FIXED_WING", alt: 7200, ox: -6500, oy: 10500, orad: 2600, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 8000, weaponCooldown: 2.8, weaponMag: 6 },
+        { identity: "FRIEND", platform: "MQ-9A", service: "USMC", cls: "FIXED_WING", alt: 7000, ox: -3500, oy: -11000, orad: 2800, ospeed: 0.15, speed: 88, armed: true, weapon: "MISSILE", weaponRange: 8000, weaponCooldown: 2.8, weaponMag: 6 },
         { identity: "FRIEND", platform: "DDG-51 DESTROYER", service: "USN", cls: "SURFACE", alt: 0, ox: -26000, oy: -6000, orad: 500, ospeed: 0.05, speed: 8 },
         { identity: "FRIEND", platform: "USCG CUTTER", service: "USCG", cls: "SURFACE", alt: 0, ox: 24500, oy: 10500, orad: 500, ospeed: 0.05, speed: 9 },
       ],
@@ -1949,7 +2165,7 @@
     pendingEng: new Map(),                 // LIVE: engagementId -> {trackId, t0, firstSeen}
     autoplay: { running: false, timer: null, mode: "joint", durationMinutes: 2, startedAt: 0, deadline: 0, armedByBrief: false, delayScale: 1 },
     view: "ALL",                            // ALL | RED | BLUE COP filter
-    scenario: "sandiego",                    // sandiego | miramar | elpaso | norfolk | guam
+    scenario: "sandiego",                    // sandiego | miramar | elpaso | norfolk | washington | guam
     mapView: { centerX: 0, centerY: 0, zoom: 1, drag: null, suppressClick: false },
     echelon: { bn: false, rgt: false },     // up-echelon federation state
     arch: "NETWORKED",                       // NETWORKED | HUB (any-shooter vs legacy)
@@ -2139,7 +2355,7 @@
     for (const t of S.tracks.values()) if (t.civil) n++;
     return n;
   }
-  function spawnCivAir() {
+  function spawnCivAir(opts = {}) {
     const via = SCN.civilAirVia || { x: 0, y: 3000 };
     const plat = CIV_AIR[(rand() * CIV_AIR.length) | 0];
     const ga = plat === "C172" || plat === "CIVIL HELO";
@@ -2159,7 +2375,7 @@
       if (SCN.civilAirport) {
         const airport = SCN.civilAirport;
         const route = airport.routes[(rand() * airport.routes.length) | 0];
-        const arriving = rand() < 0.5;
+        const arriving = opts.arriving != null ? !!opts.arriving : rand() < 0.5;
         const endpoint = arriving ? route.inbound : route.outbound;
         t.x = arriving ? endpoint.x : airport.x;
         t.y = arriving ? endpoint.y : airport.y;
@@ -2372,7 +2588,7 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "8c0ca0b6";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "509c3804";   // stamped by scripts/build_cop.py (content hash)
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
@@ -2400,7 +2616,8 @@
     // Targeted raids originate on an approach ring around their assigned
     // defended site. This keeps Miramar / airport scenarios inbound to the
     // selected objective instead of accidentally flying outward from center.
-    const x = objective.x + Math.cos(bearing) * r, y = objective.y + Math.sin(bearing) * r;
+    const ringOrigin = SCN.threatRingFromCenter ? { x: 0, y: 0 } : objective;
+    const x = ringOrigin.x + Math.cos(bearing) * r, y = ringOrigin.y + Math.sin(bearing) * r;
     const types = ["MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "FIXED_WING"];
     // transit contacts hold a crossing course past the AO (offset well clear of
     // the asset) instead of diving it; attack contacts steer for the asset.
@@ -2465,6 +2682,7 @@
       weaponRange: opts.weaponRange || 0,
       weapon: opts.weapon || null,
       weaponCooldown: opts.weaponCooldown || 2.6,
+      weaponMag: opts.weaponMag != null ? opts.weaponMag : null,
       cool: 0,
       ox, oy, orad, orbit, ox0: ox, oy0: oy,
       ospeed: (opts.ospeed || 0.25) * (0.8 + rand() * 0.4) * (rand() < 0.5 ? -1 : 1),
@@ -3728,7 +3946,8 @@
     } else {
       ctx.beginPath(); ctx.rect(x - 5, y - 5, 10, 10); ctx.fill(); ctx.stroke();
     }
-    placeLabel(s.sensorId + (s.service && s.service !== "USA" ? " " + s.service : ""),
+    const showLabel = !SCN.denseLaydown || S.mapView.zoom >= 1.35;
+    if (showLabel) placeLabel(s.sensorId + (s.service && s.service !== "USA" ? " " + s.service : ""),
               x, y - 9, "#6f8294", "9px " + MONO, "center");
     ctx.restore();
   }
@@ -3742,9 +3961,10 @@
     ctx.fill(); ctx.stroke();
     // effector labels go below the glyph; the de-confliction pass nudges any that
     // would collide (co-located ship/LMADIS, the cluster around the asset).
-    placeLabel(e.effectorId + (e.service && e.service !== "USA" ? " " + e.service : ""),
+    const showLabel = !SCN.denseLaydown || S.mapView.zoom >= 1.35;
+    if (showLabel) placeLabel(e.effectorId + (e.service && e.service !== "USA" ? " " + e.service : ""),
               x, y + 16, idle ? "#566273" : "#6f8294", "9px " + MONO, "center");
-    if (idle) placeLabel("IDLE \u00B7 no paired sensor", x, y + 26, "#7a8190", "7px " + MONO, "center");
+    if (idle && showLabel) placeLabel("IDLE \u00B7 no paired sensor", x, y + 26, "#7a8190", "7px " + MONO, "center");
     ctx.restore();
   }
   // ---- basemap, grid, overlays ----
@@ -3853,7 +4073,7 @@
           ctx.fillStyle = "rgba(210,170,90,0.45)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
           ctx.fillText("UNITED STATES", 14, clamp(by - 8, 14, h - 20));
           ctx.fillText("MEXICO \u00b7 INTERNATIONAL BORDER", 14, clamp(by + 16, 24, h - 6));
-        } else if (SCN.terrain === "coast" || SCN.terrain === "island") {
+        } else if (SCN.terrain === "island" || (SCN.terrain === "coast" && sx(SCN.coastX) > 0)) {
           ctx.fillStyle = "rgba(150,205,235,0.5)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
           ctx.fillText(SCN.waterLabel || "COASTAL WATERS", 14, h * 0.5);
         }
@@ -3934,8 +4154,10 @@
       ctx.beginPath();
       for (let i = 0; i <= steps; i++) { const tt = i / steps; i ? ctx.lineTo(cpx(tt), h * tt) : ctx.moveTo(cpx(tt), h * tt); }
       ctx.stroke();
-      ctx.fillStyle = "rgba(150,205,235,0.6)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
-      ctx.fillText(SCN.waterLabel || "COASTAL WATERS", 14, h * 0.5);
+      if (sx(SCN.coastX) > 0) {
+        ctx.fillStyle = "rgba(150,205,235,0.6)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
+        ctx.fillText(SCN.waterLabel || "COASTAL WATERS", 14, h * 0.5);
+      }
       drawContours();
     }
   }
@@ -3994,7 +4216,10 @@
       ctx.fillRect(-15, -4, 30, 8); ctx.strokeRect(-15, -4, 30, 8);
       ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke();
       ctx.rotate(0.35); ctx.translate(-ax, -ay);
-      placeLabel(`${airport.code} · ${airport.name}`, ax, ay - 12, "rgba(215,235,247,0.92)", "9px " + MONO, "center");
+      placeLabel(`${airport.code} \u00B7 ${airport.name}`, ax, ay - 12, "rgba(215,235,247,0.92)", "9px " + MONO, "center");
+      if (SCN.denseLaydown && S.mapView.zoom < 1.35 && airport.defenseSummary) {
+        placeLabel(airport.defenseSummary, ax, ay + 18, "rgba(108,213,155,0.9)", "bold 8px " + MONO, "center");
+      }
     }
     for (const station of (SCN.borderStations || [])) {
       const x = sx(station.x), y = sy(station.y);
@@ -4005,10 +4230,45 @@
     }
     for (const site of (SCN.protectedSites || [])) {
       const x = sx(site.x), y = sy(site.y);
-      ctx.fillStyle = "rgba(20,32,44,0.94)"; ctx.strokeStyle = "#8fb6d8"; ctx.lineWidth = 1.2;
-      ctx.fillRect(x - 7, y - 6, 14, 12); ctx.strokeRect(x - 7, y - 6, 14, 12);
+      const serviceColor = { USN: "#55a7ff", USAF: "#79d9ff", USMC: "#ffb34d" }[site.service] || "#8fb6d8";
+      const halfW = site.service ? 9 : 7, halfH = site.service ? 7 : 6;
+      ctx.fillStyle = "rgba(20,32,44,0.94)"; ctx.strokeStyle = serviceColor; ctx.lineWidth = site.service ? 1.8 : 1.2;
+      ctx.fillRect(x - halfW, y - halfH, halfW * 2, halfH * 2); ctx.strokeRect(x - halfW, y - halfH, halfW * 2, halfH * 2);
       ctx.beginPath(); ctx.moveTo(x - 4, y + 2); ctx.lineTo(x, y - 3); ctx.lineTo(x + 4, y + 2); ctx.stroke();
-      placeLabel(`PROTECTED \u00B7 ${site.name}`, x, y - 11, "#b8d7ee", "8px " + MONO, "center");
+      if (!site.detailOnly || S.mapView.zoom >= 1.35) {
+        placeLabel(site.service ? `${site.service} BASE \u00B7 ${site.name}` : `PROTECTED \u00B7 ${site.name}`, x, y - 12, serviceColor, (site.service ? "bold 9px " : "8px ") + MONO, "center");
+      }
+    }
+    if (SCN.siteSummary && S.mapView.zoom < 1.35) {
+      const summary = SCN.siteSummary, x = sx(summary.x), y = sy(summary.y), ax = sx(summary.anchorX), ay = sy(summary.anchorY);
+      const boxW = 218, boxH = 34;
+      ctx.strokeStyle = "rgba(110,188,230,0.8)"; ctx.fillStyle = "rgba(7,19,29,0.92)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(x - boxW / 2, y); ctx.stroke();
+      ctx.fillRect(x - boxW / 2, y - boxH / 2, boxW, boxH); ctx.strokeRect(x - boxW / 2, y - boxH / 2, boxW, boxH);
+      ctx.fillStyle = "#a9d9f4"; ctx.font = "bold 8px " + MONO; ctx.textAlign = "center"; ctx.fillText(summary.label, x, y - 3);
+      ctx.fillStyle = "#789bb2"; ctx.font = "7px " + MONO; ctx.fillText(summary.note, x, y + 10);
+    }
+    if (SCN.offshoreScreen) {
+      const screen = SCN.offshoreScreen, box = { x: 12, y: Math.max(180, VIEW.h - 178), w: 218, h: 74 };
+      ctx.fillStyle = "rgba(5,24,39,0.94)"; ctx.strokeStyle = "rgba(95,175,225,0.78)"; ctx.lineWidth = 1.2;
+      ctx.fillRect(box.x, box.y, box.w, box.h); ctx.strokeRect(box.x, box.y, box.w, box.h);
+      ctx.fillStyle = "#9edcff"; ctx.font = "bold 8px " + MONO; ctx.textAlign = "left";
+      ctx.fillText(screen.label, box.x + 9, box.y + 14);
+      ctx.fillStyle = "#789db8"; ctx.font = "7px " + MONO;
+      ctx.fillText(`OFF-COAST \u00B7 ${screen.distance}`, box.x + 9, box.y + 27);
+      ctx.strokeStyle = "#70b9e8"; ctx.lineWidth = 1;
+      for (const yy of [box.y + 39, box.y + 51]) {
+        ctx.beginPath();
+        for (let i = 0; i <= 32; i++) { const xx = box.x + 8 + i * 3.4, y = yy + Math.sin(i * 0.8) * 1.5; i ? ctx.lineTo(xx, y) : ctx.moveTo(xx, y); }
+        ctx.stroke();
+      }
+      for (const sx0 of [box.x + 132, box.x + 171]) {
+        ctx.fillStyle = "rgba(22,45,62,0.96)"; ctx.strokeStyle = "#8fd6ff";
+        ctx.beginPath(); ctx.moveTo(sx0 - 12, box.y + 45); ctx.lineTo(sx0 + 12, box.y + 45); ctx.lineTo(sx0 + 7, box.y + 52); ctx.lineTo(sx0 - 8, box.y + 52); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx0, box.y + 45); ctx.lineTo(sx0, box.y + 35); ctx.lineTo(sx0 + 5, box.y + 40); ctx.stroke();
+      }
+      ctx.fillStyle = "#b7d8ea"; ctx.font = "7px " + MONO; ctx.fillText(screen.note, box.x + 9, box.y + 66);
+      ctx.textAlign = "right"; ctx.fillStyle = "#ffd27a"; ctx.fillText("PAN WEST \u2190", box.x + box.w - 8, box.y + 14);
     }
     if (SCN.microwaveRelay && SCN.microwaveRelay.inset) {
       const relay = SCN.microwaveRelay, box = islandInsetGeometry();
@@ -5739,8 +5999,15 @@
       }
       // ambient civil picture from the start (airliners in the corridor and,
       // for coastal scenarios, boats in configured shipping lanes)
-      spawnCivAir();
-      if (rand() < 0.5) spawnCivAir();
+      const configuredTraffic = Number(SCN.civilAirport?.trafficCount || 0);
+      if (configuredTraffic > 0) {
+        // Keep at least one arrival and one departure visible in the scenarios
+        // where civil-air activity is part of the operational picture.
+        for (let i = 0; i < configuredTraffic; i++) spawnCivAir({ arriving: i % 2 === 0 });
+      } else {
+        spawnCivAir();
+        if (rand() < 0.5) spawnCivAir();
+      }
       if (SCN.terrain === "coast" || SCN.terrain === "island") {
         const vessels = SCN.civilVessels || [{}, {}];
         vessels.forEach((vessel) => spawnCivBoat(vessel));
@@ -5870,7 +6137,7 @@
     applySeg("wxSeg", "wx", ["CLEAR", "WIND", "RAIN"].includes(wxq) ? wxq : wxRoll);
     const todq = (qs.get("tod") || "").toUpperCase();
     if (["DAY", "NIGHT"].includes(todq)) applySeg("todSeg", "tod", todq);
-    // shareable presets: ?scn=sandiego|miramar|elpaso|norfolk|guam & ?arch=NETWORKED|HUB
+    // shareable presets: ?scn=sandiego|miramar|elpaso|norfolk|washington|guam & ?arch=NETWORKED|HUB
     const scnq = (qs.get("scn") || "").toLowerCase();
     if (SCENARIOS[scnq] && scnq !== S.scenario) applyScenario(scnq);
     const archq = (qs.get("arch") || "").toUpperCase();
