@@ -223,6 +223,10 @@ def test_fixed_site_desktop_layout_matrix(page, width, height):
     assert metrics["left"]["right"] <= metrics["plot"]["left"] + 1
     assert metrics["plot"]["right"] <= metrics["right"]["left"] + 1
     assert metrics["plot"]["width"] >= 600
+    if width == 1280:
+        assert metrics["left"]["width"] <= 270
+        assert metrics["right"]["width"] <= 290
+        assert metrics["plot"]["width"] >= 730
     assert metrics["gate"] is False
     assert metrics["command"] and metrics["trackList"]
     assert not errors

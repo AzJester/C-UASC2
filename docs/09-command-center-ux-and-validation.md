@@ -138,24 +138,34 @@ before any claim of operational or comparative validity.
 
 ## 8. Demonstration scenario extensions
 
-San Diego, El Paso, and Norfolk / Hampton Roads are selectable notional area-of-
-operations presets. San Diego models bidirectional civilian airport traffic with
+San Diego, El Paso, Norfolk / Hampton Roads, and Guam are selectable notional
+area-of-operations presets. San Diego models bidirectional civilian airport traffic with
 synthetic Mode-S / ADS-B callsign, ICAO address, squawk, quality, altitude, speed,
 and flight-plan fields. Its airport counter-UAS additions are soft-kill / capture
 illustrations constrained by the existing no-fire geometry. The 5G overlay also
 terminates at a visible, explicitly off-scale San Clemente Island inset. El Paso
 adds KELP arrivals/departures, local airport defenses, and three Border Patrol
-stations with paired sensors and non-kinetic effectors. Norfolk includes KORF
-traffic and defenses, multiple naval and commercial surface tracks, and a 5G
-backbone that terminates at a labeled terrestrial point on the land side of the
-configured coast. These lines are communications symbology, not statements of
-real coverage or infrastructure.
+stations with paired sensors and non-kinetic effectors. Every El Paso sensor,
+effector, and station marker remains physically north of the configured border.
+Norfolk includes KORF traffic and defenses, multiple naval and commercial
+surface tracks, and a 5G backbone terminating at a boxed, explicitly inland,
+notional terrestrial fiber handoff rather than an offshore tower or island. Guam
+adds PGUM traffic and airport defense plus dense, multi-axis sensor and effector
+layers around three additional notional protected sites. These lines are
+communications symbology, not statements of real coverage or infrastructure.
 
-The fixed-site layout separates the former wide decision rail into left and
-right operator wings around a center map that always scales the complete AO.
+5G infrastructure descriptions are hidden during normal map viewing. Selecting
+the gNB or terrestrial POP on the canvas opens its contextual information box;
+selecting elsewhere closes it.
+
+The fixed-site layout separates the former wide decision rail into compact left
+and right operator wings around a wider center map that always scales the
+complete AO. Rail typography and controls are slightly reduced at the minimum
+workstation width while remaining keyboard-operable and readable.
 Notifications use a single replace-in-place status line in workstation chrome,
-never a stack over the map. One monospace command-display family is used across
-the primary workstation, dialogs, controls, guided tour, and AAR.
+never a stack over the map. The latest-events strip has added vertical room for
+wrapped incoming messages. One monospace command-display family is used across
+the primary workstation, dialogs, controls, guided tour, AAR, and regional view.
 
 No scenario inventory, location, route, coverage envelope, performance value, or
 command relationship is authoritative. Operational use requires approved source
