@@ -193,7 +193,7 @@
   /* main grid: plot + rail */
   .main {
     display: grid;
-    grid-template-columns: 1fr 340px;
+    grid-template-columns: minmax(0, 1fr) clamp(500px, 36vw, 620px);
     min-height: 0;
   }
 
@@ -360,26 +360,70 @@
 
   /* right rail */
   .rail {
-    display: flex;
-    flex-direction: column;
+    position: relative;
+    display: grid;
+    grid-template-rows: 32px minmax(0, 1fr) 104px;
     min-height: 0;
     background: var(--panel);
   }
-  .rail-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: var(--pad); display: flex; flex-direction: column; gap: 14px; }
-  /* Audit Log is pinned to the bottom of the rail so it is always visible while
-     the controls/status cards above it scroll independently. */
-  .rail-pinned { flex: 0 0 auto; padding: 12px var(--pad) var(--pad); border-top: 1px solid var(--hair); background: var(--panel); }
+  .rail-toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 4px 8px; border-bottom: 1px solid var(--hair); background: #0c1118;
+  }
+  .rail-toolbar .context { color: var(--muted); font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+  .rail-tool {
+    border: 1px solid #304052; border-radius: 3px; background: #111822; color: #dbe6f2;
+    padding: 4px 8px; font: 700 10px var(--mono); letter-spacing: .04em; cursor: pointer;
+  }
+  .rail-tool:hover { background: #1a2633; border-color: #35667a; }
+  .rail-scroll {
+    min-height: 0; overflow: hidden; padding: 8px; display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+  .rail-scroll > .card { min-width: 0; min-height: 0; overflow: hidden; }
+  #cuas[data-workspace="COP"] .rail-scroll { grid-template-rows: auto minmax(0, 1fr); }
+  #cuas[data-workspace="COP"] #scoreboard { grid-column: 1 / -1; grid-row: 1; align-self: start; }
+  #cuas[data-workspace="COP"] #trackListCard { grid-column: 1; grid-row: 2; }
+  #cuas[data-workspace="COP"] #trackCard { grid-column: 2; grid-row: 2; }
+  #cuas[data-workspace="FIRES"] #queueCard { grid-column: 1; grid-row: 1; }
+  #cuas[data-workspace="FIRES"] #authorityCard { grid-column: 1; grid-row: 2; }
+  #cuas[data-workspace="FIRES"] #trackCard { grid-column: 2; grid-row: 1 / -1; }
+  #cuas[data-workspace="SENSORS"] #sensorPostureCard { grid-column: 1 / -1; grid-row: 1; }
+  #cuas[data-workspace="SENSORS"] .rail-scroll { grid-template-rows: auto minmax(0, 1fr); }
+  #cuas[data-workspace="SENSORS"] #trackListCard { grid-column: 1; grid-row: 2; }
+  #cuas[data-workspace="SENSORS"] #trackCard { grid-column: 2; grid-row: 2; }
+  #cuas[data-workspace="SUPERVISOR"] .rail-scroll { grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  .display-popover {
+    position: absolute; z-index: 30; top: 38px; right: 8px;
+    width: min(430px, calc(100% - 16px)); max-height: calc(100% - 150px); overflow-y: auto;
+    box-shadow: 0 18px 48px rgba(0,0,0,.65); border-color: #35667a;
+  }
+  .display-popover[hidden] { display: none; }
+  .event-strip {
+    min-height: 0; padding: 7px 8px; border-top: 1px solid var(--hair); background: #0c1118;
+    display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto minmax(0,1fr); gap: 4px 8px;
+  }
+  .event-strip h3 { margin: 0; color: var(--muted); font: 700 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+  .event-ticker { grid-column: 1; min-height: 0; display: grid; gap: 2px; align-content: start; }
+  .event-ticker .event-line { display: grid; grid-template-columns: 48px 58px 1fr; gap: 6px; font: 11px/1.35 var(--mono); }
+  .event-line .t { color: var(--faint); }
+  .event-line .d { color: var(--accent); font-weight: 700; }
+  .event-line.critical .d, .event-line.critical .m { color: var(--hostile); }
+  .event-line.warning .d { color: var(--suspect); }
+  .event-strip .rail-tool { grid-column: 2; grid-row: 1 / -1; align-self: center; }
 
   .card {
     background: var(--raised);
     border: 1px solid var(--hair);
     border-radius: 6px;
-    padding: 12px;
+    padding: 10px;
   }
   .card h3 {
     margin: 0 0 10px;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -398,19 +442,19 @@
     display: grid; grid-template-columns: minmax(92px, 1.15fr) 62px 48px 58px;
     align-items: center; gap: 6px;
   }
-  .track-list-head { color: var(--faint); font: 700 8px var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 0 6px 3px; }
+  .track-list-head { color: var(--muted); font: 700 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 0 6px 3px; }
   .track-list-row {
     width: 100%; border: 1px solid var(--hair); border-radius: 3px;
     background: #111822; color: var(--text); padding: 5px 6px; cursor: pointer;
-    font: 11px var(--mono); text-align: left;
+    font: 12px var(--mono); text-align: left;
   }
   .track-list-row:hover, .track-list-row[aria-current="true"] { background: #1a2633; border-color: #35667a; }
   .track-list-row .ident { font-weight: 700; }
   .track-list-row .num { text-align: right; font-variant-numeric: tabular-nums; }
   .track-list-note { margin-top: 7px; color: var(--faint); font-size: 10px; }
   .track-pager { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; margin-top: 7px; }
-  .track-pager span { text-align: center; color: var(--faint); font: 9px var(--mono); }
-  .track-pager button { border: 1px solid var(--hair); border-radius: 3px; background: #111822; color: var(--text); padding: 4px 8px; font: 9px var(--mono); cursor: pointer; }
+  .track-pager span { text-align: center; color: var(--muted); font: 10px var(--mono); }
+  .track-pager button { border: 1px solid var(--hair); border-radius: 3px; background: #111822; color: var(--text); padding: 4px 8px; font: 10px var(--mono); cursor: pointer; }
   .queue-select { min-width: 0; border: 0; background: transparent; color: inherit; padding: 0; text-align: left; cursor: pointer; }
   .queue-select:hover .nm, .queue-select:focus-visible .nm { color: #e7eef7; }
 
@@ -429,6 +473,37 @@
   .sensor-row { display: grid; grid-template-columns: 9px 1fr auto; gap: 7px; align-items: center; font: 10px var(--mono); }
   .sensor-row .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--neutral); }
   .sensor-row .meta { color: var(--faint); display: block; font-size: 9px; }
+  .decision-glance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-top: 7px; }
+  .decision-glance .g { border: 1px solid var(--hair); border-radius: 3px; background: #111822; padding: 5px 6px; }
+  .decision-glance .k { color: var(--muted); font: 700 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+  .decision-glance .v { color: #e7eef7; font: 700 13px var(--mono); margin-top: 2px; }
+  .decision-status { margin-top: 8px; padding: 7px; border: 1px solid #304052; border-radius: 4px; background: #111822; font-size: 12px; }
+  .decision-status.go { border-color: #1d5036; background: #0d1a12; color: #b6f0c8; }
+  .decision-status.hold { border-color: #6b4a18; background: #1a140a; color: #f3d59a; }
+  .decision-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-top: 7px; }
+  .decision-actions .btn { padding: 6px 4px; font-size: 10px; margin: 0; }
+  .decision-actions .full { background: #111822; }
+  .decision-actions .wide { grid-column: 1 / -1; }
+  #scoreboard .sb-detail { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; }
+  #scoreboard .sb-detail .sb-row { display: block; margin: 0; padding: 5px 6px; border: 1px solid var(--hair); border-radius: 3px; }
+  #scoreboard .sb-detail .l, #scoreboard .sb-detail .n { display: block; }
+  #cuas[data-workspace="COP"] #scoreboard .sb-detail,
+  #cuas[data-workspace="COP"] #scoreboard .sb-xv { display: none; }
+  #cuas[data-workspace="COP"] #scoreboard .sb-grid { margin-bottom: 0; }
+
+  @media (max-width: 1399px) {
+    .main { grid-template-columns: minmax(0, 1fr) 500px; }
+    .rail { grid-template-rows: 30px minmax(0, 1fr) 96px; }
+    .rail-scroll { padding: 6px; gap: 6px; }
+    .card { padding: 8px; }
+    .card h3 { margin-bottom: 5px; }
+    .sb-grid { gap: 6px 3px; margin-bottom: 6px; }
+    .sb-tile .n { font-size: 13px; }
+    .sb-tile .l { font-size: 8px; }
+    .track-list { gap: 3px; }
+    .track-list-row { padding: 4px 5px; font-size: 11px; }
+    .decision-glance { margin-top: 5px; }
+  }
 
   /* selected track detail */
   .trk-id {
@@ -809,7 +884,7 @@
   .workstation-gate p { color: var(--muted); line-height: 1.6; }
 </style>
 
-<div id="cuas">
+<div id="cuas" data-workspace="COP">
   <div class="classbar" id="classTop">UNCLASSIFIED // FOR DEMONSTRATION ONLY // NOT A FIELDED SYSTEM</div>
 
   <div class="statusbar">
@@ -873,10 +948,14 @@
     </div>
 
     <aside class="rail" aria-label="Workstation decision rail">
+      <div class="rail-toolbar">
+        <span class="context" id="railContext">COP decision view</span>
+        <button type="button" class="rail-tool" id="btnDisplaySettings" aria-expanded="false" aria-controls="displayCard">Display settings</button>
+      </div>
       <div class="rail-scroll">
         <div class="card" id="scoreboard" data-workspaces="COP SUPERVISOR"></div>
 
-        <div class="card" id="displayCard" data-workspaces="COP SUPERVISOR">
+        <div class="card display-popover" id="displayCard" hidden>
           <h3>COP View</h3>
           <div class="seg" id="viewSeg">
             <button data-v="ALL" aria-pressed="true">ALL</button>
@@ -924,7 +1003,7 @@
           </div>
         </div>
 
-        <div class="card" id="trackListCard" data-workspaces="COP FIRES SENSORS">
+        <div class="card" id="trackListCard" data-workspaces="COP SENSORS">
           <h3>Track List</h3>
           <div id="trackList" class="track-list"><p class="empty">No active tracks.</p></div>
         </div>
@@ -934,7 +1013,7 @@
           <div id="trackBody"><p class="empty">No track selected. Click a contact on the plot.</p></div>
         </div>
 
-        <div class="card" id="queueCard" data-workspaces="FIRES SUPERVISOR">
+        <div class="card" id="queueCard" data-workspaces="FIRES">
           <h3>Engagement Queue</h3>
           <div id="queueBody"><p class="empty">No active threats.</p></div>
         </div>
@@ -970,22 +1049,16 @@
           <div class="sensor-posture" id="sensorPosture"></div>
         </div>
 
-        <div class="card" id="effectorCard" data-workspaces="FIRES SUPERVISOR">
+        <div class="card" id="effectorCard" data-workspaces="SUPERVISOR">
           <h3>Effectors</h3>
           <div class="efflist" id="effList"></div>
         </div>
       </div>
 
-      <div class="rail-pinned">
-        <div class="card">
-          <h3>Audit Log</h3>
-          <div class="seg" id="logFmtSeg" style="margin-bottom:8px" title="Same event feed, two formats">
-            <button data-v="TEXT">LOG</button>
-            <button data-v="L16" aria-pressed="true" title="Stylized Link-16 J-series message format &mdash; for demonstration flavor, not certified TADIL-J">J-SERIES</button>
-          </div>
-          <div class="log" id="log" hidden></div>
-          <div class="log" id="logL16"></div>
-        </div>
+      <div class="event-strip" aria-label="Latest critical events">
+        <h3>Latest events</h3>
+        <div class="event-ticker" id="eventTicker" role="status" aria-live="polite"></div>
+        <button type="button" class="rail-tool" id="btnAuditHistory">Full history</button>
       </div>
     </aside>
   </div>
@@ -994,9 +1067,10 @@
     <div class="scenario">
       <div class="ctl-grp">
         <span class="glabel">AO</span>
-        <div class="seg" id="scnSeg" style="flex:0 0 auto;width:200px" title="Choose the area of operations">
+        <div class="seg" id="scnSeg" style="flex:0 0 auto;width:330px" title="Choose the area of operations">
           <button data-v="sandiego" aria-pressed="true" title="San Diego coast: Pacific to the west, Navy ships offshore, threats from the sea and the southern border">San Diego</button>
           <button data-v="elpaso" title="El Paso border: US-Mexico border to the south, TARS aerostat, threats from the south">El Paso</button>
+          <button data-v="norfolk" title="Norfolk and Hampton Roads: Atlantic and Chesapeake approaches, naval traffic, and dense civilian airspace">Norfolk</button>
         </div>
       </div>
       <span class="ctl-div"></span>
@@ -1147,12 +1221,14 @@
       <div class="aar-col">
         <div class="aar-h">Controls</div>
         <div class="help-list">
-          <div><b>AO</b> &mdash; switch scenario (San Diego coast / El Paso border)</div>
+          <div><b>AO</b> &mdash; switch scenario (San Diego coast / El Paso border / Norfolk and Hampton Roads)</div>
           <div><b>Time</b> &mdash; pause/resume and 0.5x / 1x / 2x speed</div>
           <div><b>Inject</b> &mdash; auto-play brief, a swarm, or a mass raid</div>
           <div><b>Operate</b> &mdash; swap a radar vendor, federate up-echelon, drop a C2 node</div>
           <div><b>Review</b> &mdash; the operational (theater) rollup and the After Action Review</div>
-          <div><b>Rail</b> &mdash; COP view filter, architecture (networked vs hub), transport, basemap, authority role + weapons-control, effectors, and the audit log</div>
+          <div><b>Rail</b> &mdash; no-scroll role view with six prioritized tracks, selected-track release summary, and the two latest actionable events. Display settings, full evidence, and audit history open separately.</div>
+          <div><b>San Diego airport</b> &mdash; notional KSAN arrivals/departures publish synthetic Mode-S / ADS-B callsign, ICAO address, squawk, quality, altitude, speed, and flight-plan fields. Nearby airport-defense effectors are soft-kill / capture demonstrations inside no-fire constraints.</div>
+          <div><b>San Clemente link</b> &mdash; the San Diego 5G overlay includes a labeled microwave backhaul toward an off-map island relay. It is illustrative communications symbology, not real infrastructure or coverage.</div>
           <div><b>Basemap</b> &mdash; SAT &middot; EXTERNAL is the default and requests public Esri World Imagery. TACTICAL &middot; LOCAL remains available manually and is used automatically when imagery is unreachable.</div>
           <div><b>Weather</b> &mdash; CLEAR / WIND / RAIN: wind slows small UAS, rain shortens EO/IR and directed-energy reach</div>
           <div><b>Time of day</b> &mdash; AUTO follows the scenario clock; NIGHT darkens the plot and cuts EO/IR to 55% (watch its ring shrink)</div>
@@ -1179,7 +1255,7 @@
           <div><b>Esc</b> &mdash; close any open panel</div>
           <div><b>?</b> &mdash; open this help</div>
           <div><b>?seed=N</b> &mdash; URL parameter: replay a run's laydown (the current seed is in the audit log)</div>
-          <div><b>Preset links</b> &mdash; combine <b>?scn=</b>sandiego|elpaso, <b>?arch=</b>HUB, <b>?wx=</b>RAIN, <b>?tod=</b>NIGHT, <b>?seed=</b>N to share an exact setup</div>
+          <div><b>Preset links</b> &mdash; combine <b>?scn=</b>sandiego|elpaso|norfolk, <b>?arch=</b>HUB, <b>?wx=</b>RAIN, <b>?tod=</b>NIGHT, <b>?seed=</b>N to share an exact setup</div>
           <div><b>AAR replay</b> &mdash; the After Action Review includes a timeline scrubber of the whole fight</div>
         </div>
       </div>
@@ -1189,6 +1265,49 @@
       <span class="grow"></span>
       <button class="sbtn" id="helpTour">Replay the tour</button>
       <button class="sbtn primary" id="helpDone">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div class="aar-back" id="decisionBack" hidden>
+  <div class="aar" role="dialog" aria-modal="true" aria-labelledby="decisionDialogTitle">
+    <div class="aar-head">
+      <div>
+        <div class="aar-kicker">OPERATOR DECISION SUPPORT</div>
+        <div class="aar-title" id="decisionDialogTitle">Selected track details</div>
+        <div class="aar-sub">Supporting evidence, feasible effectors, policy gates, and lifecycle state.</div>
+      </div>
+      <button class="aar-x" id="decisionClose" aria-label="Close">&times;</button>
+    </div>
+    <div id="decisionDetailBody" style="margin-top:14px"></div>
+    <div class="aar-foot">
+      <span class="aar-note">The rail retains the release-critical summary while this expanded evidence view is open.</span>
+      <span class="grow"></span>
+      <button class="sbtn primary" id="decisionDone">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="aar-back" id="auditBack" hidden>
+  <div class="aar" role="dialog" aria-modal="true" aria-labelledby="auditTitle">
+    <div class="aar-head">
+      <div>
+        <div class="aar-kicker">IMMUTABLE EVENT FEED &middot; DEMONSTRATION</div>
+        <div class="aar-title" id="auditTitle">Audit history</div>
+        <div class="aar-sub">The operator rail shows only the two latest actionable events.</div>
+      </div>
+      <button class="aar-x" id="auditClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="seg" id="logFmtSeg" style="margin:14px 0 8px" title="Same event feed, two formats">
+      <button data-v="TEXT">LOG</button>
+      <button data-v="L16" aria-pressed="true" title="Stylized Link-16 J-series message format &mdash; for demonstration flavor, not certified TADIL-J">J-SERIES</button>
+    </div>
+    <div class="log" id="log" hidden style="max-height:55vh"></div>
+    <div class="log" id="logL16" style="max-height:55vh"></div>
+    <div class="aar-foot">
+      <span class="aar-note">Complete history remains available without consuming the primary decision rail.</span>
+      <span class="grow"></span>
+      <button class="sbtn primary" id="auditDone">Close</button>
     </div>
   </div>
 </div>
@@ -1232,7 +1351,7 @@
   const AO_RADIUS = 6200;            // meters shown to edge
   const RINGS = [2000, 4000, 6000];
 
-  // Two selectable scenarios. Each is a self-contained joint laydown (Army/Navy/
+  // Selectable scenarios. Each is a self-contained joint laydown (Army/Navy/
   // Marine/Air Force) with its own geography. Positions and vendors are notional.
   const SCENARIOS = {
     sandiego: {
@@ -1241,6 +1360,19 @@
       grid: "GRID 11S MS \u00B7 WGS84 \u00B7 1 km",
       terrain: "coast",
       coastX: -2000,                                     // water (Pacific) west of this meters-X
+      waterLabel: "PACIFIC OCEAN",
+      primaryService: "USN",
+      approachLabel: "Pacific approaches w/ USINDOPACOM",
+      civilAirVia: { x: 1690, y: 3660 },
+      civilAirport: {
+        name: "SAN DIEGO INTL", code: "KSAN", x: 1690, y: 3660,
+        routes: [
+          { inbound: { x: -5900, y: 3500 }, outbound: { x: 5900, y: 3750 }, origin: "KLAX", destination: "KSAN" },
+          { inbound: { x: 5900, y: 3850 }, outbound: { x: -5900, y: 3450 }, origin: "KPHX", destination: "KSAN" },
+        ],
+      },
+      microwaveRelay: { label: "SAN CLEMENTE IS. RELAY", x: -5700, y: 3900, note: "OFF-MAP MICROWAVE BACKHAUL" },
+      shippingLanes: [-5400, -4900],
       // San Diego is also on the border: threats arrive from the sea (west) AND
       // from the south (Mexico). Spawns pick one of these axes per contact.
       threat: { angle: Math.PI, spread: 1.0, axes: [Math.PI, -Math.PI / 2] },
@@ -1256,6 +1388,8 @@
         { sensorId: "SEN-SHIP-04", sensorType: "RADAR", vendor: "Vendor J", service: "USN",  x: -4700, y: -3400,  range: 6500 },
         { sensorId: "SEN-SHIP-10", sensorType: "RADAR", vendor: "Vendor M", service: "USN",  x: -5300, y: -900,   range: 6500 },
         { sensorId: "SEN-SHIP-11", sensorType: "RADAR", vendor: "Vendor N", service: "USN",  x: -3200, y: -4400, range: 6000 },
+        { sensorId: "SEN-AIR-RAD-12", sensorType: "RADAR", vendor: "Vendor P", service: "USA", x: 2050, y: 3300, range: 5200 },
+        { sensorId: "SEN-AIR-EO-13", sensorType: "EO_IR", vendor: "Vendor Q", service: "USA", x: 1150, y: 3900, range: 3000 },
       ],
       effectors: [
         { effectorId: "EFF-EW-01",     effectorType: "EW_JAMMER",           vendor: "Vendor D", service: "USA",  x: 350,   y: 300,   maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
@@ -1269,6 +1403,8 @@
         { effectorId: "EFF-LMADIS-09", effectorType: "EW_JAMMER",           vendor: "Vendor K", service: "USMC", x: 500,   y: -1000, maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
         { effectorId: "EFF-DELE-10",   effectorType: "DIRECTED_ENERGY",     vendor: "Vendor M", service: "USN",  x: -5300, y: -900,   maxRange: 3400, mag: 100, cap: 100, unit: "%",   auto: true, weapon: "HELIOS DE" },
         { effectorId: "EFF-CRAM-11",   effectorType: "KINETIC_GUN",         vendor: "Vendor N", service: "USN",  x: -3200, y: -4400, maxRange: 2600, mag: 300, cap: 300, unit: "rds", auto: true, weapon: "C-RAM Phalanx" },
+        { effectorId: "EFF-AIR-EW-12", effectorType: "EW_JAMMER",           vendor: "Vendor P", service: "USA",  x: 2150, y: 3250, maxRange: 3600, mag: 100, cap: 100, unit: "sec", airportDefense: true },
+        { effectorId: "EFF-AIR-NET-13",effectorType: "NET_CAPTURE",         vendor: "Vendor Q", service: "USA",  x: 1200, y: 3900, maxRange: 1500, mag: 6, cap: 6, unit: "nets", airportDefense: true },
       ],
       hubPair: { "SEN-RAD-01": "EFF-GUN-06", "SEN-EO-03": "EFF-LAS-05", "SEN-MADIS-05": "EFF-LMADIS-09" },
       blue: [
@@ -1289,6 +1425,7 @@
       asset: { name: "FORT BLISS", sub: "DEFENDED ASSET \u00B7 EL PASO SECTOR", lat: 31.813, lon: -106.421 },
       grid: "GRID 13R FU \u00B7 WGS84 \u00B7 1 km",
       terrain: "border",
+      primaryService: "USA",
       borderY: -2000,                                    // Mexico south of this meters-Y
       threat: { angle: -Math.PI / 2, spread: 1.1 },     // inbound from the south (border)
       // collateral geometry: kinetic fires prohibited over these (soft-kill only)
@@ -1323,6 +1460,53 @@
         { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: -500, oy: -1400, orad: 1400, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 3200 },
         { identity: "FRIEND", platform: "AH-64E", service: "USA", cls: "ROTARY", alt: 200, ox: -1900, oy: -1100, orad: 700, ospeed: 0.28, speed: 80, armed: true, weapon: "MISSILE", weaponRange: 3500, weaponCooldown: 3.0 },
         { identity: "FRIEND", platform: "UH-72A", service: "USA", cls: "ROTARY", alt: 250, ox: 2600, oy: 600, orad: 550, ospeed: 0.26, speed: 65 },
+      ],
+    },
+    norfolk: {
+      id: "norfolk", label: "Norfolk / Hampton Roads",
+      asset: { name: "NAVAL STATION NORFOLK", sub: "DEFENDED ASSET \u00B7 HAMPTON ROADS", lat: 36.946, lon: -76.301 },
+      grid: "GRID 18S \u00B7 WGS84 \u00B7 1 km",
+      terrain: "coast",
+      coastX: -2200,
+      waterLabel: "CHESAPEAKE BAY \u00B7 ATLANTIC APPROACHES",
+      primaryService: "USN",
+      approachLabel: "Atlantic and Chesapeake approaches",
+      civilAirVia: { x: 2600, y: 3000 },
+      shippingLanes: [-5450, -4650],
+      threat: { angle: Math.PI, spread: 1.0, axes: [Math.PI, Math.PI / 2] },
+      noFire: [
+        { x: 3900, y: -700, r: 2300, label: "NORFOLK / PORTSMOUTH" },
+        { x: 2500, y: 3300, r: 1700, label: "CIVIL AIR CORRIDOR" },
+        { x: -4100, y: 600, r: 900, label: "COMMERCIAL SHIPPING" },
+      ],
+      sensors: [
+        { sensorId: "SEN-RAD-01",   sensorType: "RADAR", vendor: "Vendor A", service: "USN",  x: -300,  y: 250,   range: 6200 },
+        { sensorId: "SEN-EO-03",    sensorType: "EO_IR", vendor: "Vendor C", service: "USN",  x: 2100,  y: -900,  range: 3600 },
+        { sensorId: "SEN-RF-05",    sensorType: "RF",    vendor: "Vendor K", service: "USMC", x: 900,   y: -1500, range: 4700 },
+        { sensorId: "SEN-SHIP-04",  sensorType: "RADAR", vendor: "Vendor J", service: "USN",  x: -4800, y: -2600, range: 6500 },
+        { sensorId: "SEN-SHIP-10",  sensorType: "RADAR", vendor: "Vendor M", service: "USN",  x: -5200, y: 1100,  range: 6500 },
+        { sensorId: "SEN-AF-11",    sensorType: "RADAR", vendor: "Vendor N", service: "USAF", x: 3300,  y: 2200,  range: 6000 },
+      ],
+      effectors: [
+        { effectorId: "EFF-EW-01",     effectorType: "EW_JAMMER",           vendor: "Vendor D", service: "USN",  x: 250,   y: 300,   maxRange: 5200, mag: 100, cap: 100, unit: "sec" },
+        { effectorId: "EFF-RF-02",     effectorType: "RF_TAKEOVER",         vendor: "Vendor F", service: "USMC", x: 900,   y: -1500, maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
+        { effectorId: "EFF-INT-03",    effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor H", service: "USN",  x: 800,   y: -200,  maxRange: 4600, mag: 8,   cap: 8,   unit: "rounds" },
+        { effectorId: "EFF-HPM-04",    effectorType: "DIRECTED_ENERGY",     vendor: "Vendor G", service: "USN",  x: 1900,  y: -700,  maxRange: 2800, mag: 100, cap: 100, unit: "%" },
+        { effectorId: "EFF-LAS-05",    effectorType: "DIRECTED_ENERGY",     vendor: "Vendor B", service: "USAF", x: 3300,  y: 2200,  maxRange: 3200, mag: 100, cap: 100, unit: "%" },
+        { effectorId: "EFF-GUN-06",    effectorType: "KINETIC_GUN",         vendor: "Vendor E", service: "USN",  x: -200,  y: -450,  maxRange: 2400, mag: 240, cap: 240, unit: "rds" },
+        { effectorId: "EFF-NET-07",    effectorType: "NET_CAPTURE",         vendor: "Vendor I", service: "USMC", x: 650,   y: -1100, maxRange: 1800, mag: 6,   cap: 6,   unit: "nets" },
+        { effectorId: "EFF-SEARAM-08", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor J", service: "USN",  x: -4800, y: -2600, maxRange: 4200, mag: 11,  cap: 11,  unit: "rounds", auto: true, weapon: "SeaRAM" },
+        { effectorId: "EFF-DELE-10",   effectorType: "DIRECTED_ENERGY",     vendor: "Vendor M", service: "USN",  x: -5200, y: 1100,  maxRange: 3400, mag: 100, cap: 100, unit: "%", auto: true, weapon: "HELIOS DE" },
+      ],
+      hubPair: { "SEN-RAD-01": "EFF-GUN-06", "SEN-EO-03": "EFF-HPM-04", "SEN-RF-05": "EFF-RF-02" },
+      blue: [
+        { identity: "FRIEND", platform: "MH-60R", service: "USN", cls: "ROTARY", alt: 300, ox: -3100, oy: -500, orad: 650, ospeed: 0.28, speed: 70, armed: true, weapon: "GUN", weaponRange: 1900 },
+        { identity: "FRIEND", platform: "F/A-18E", service: "USN", cls: "FIXED_WING", alt: 6500, ox: -2400, oy: 900, orad: 1500, ospeed: 0.20, speed: 180, armed: true, weapon: "AAM", weaponRange: 4200, weaponCooldown: 2.0 },
+        { identity: "FRIEND", platform: "E-2D", service: "USN", cls: "FIXED_WING", alt: 7800, ox: -1700, oy: 2600, orad: 1700, ospeed: 0.13, speed: 150 },
+        { identity: "FRIEND", platform: "MV-22B", service: "USMC", cls: "ROTARY", alt: 900, ox: 1200, oy: -2100, orad: 700, ospeed: 0.22, speed: 120 },
+        { identity: "ASSUMED_FRIEND", platform: "RQ-21A", service: "USMC", cls: "UAS_GROUP_3", alt: 1500, ox: 2100, oy: 1900, orad: 900, ospeed: 0.18, speed: 40 },
+        { identity: "FRIEND", platform: "F-22A", service: "USAF", cls: "FIXED_WING", alt: 9200, ox: 2500, oy: 1500, orad: 1600, ospeed: 0.16, speed: 210, armed: true, weapon: "AAM", weaponRange: 4500, weaponCooldown: 2.2 },
+        { identity: "FRIEND", platform: "C-2A", service: "USN", cls: "FIXED_WING", alt: 1800, ox: 2900, oy: -900, orad: 800, ospeed: 0.19, speed: 110 },
       ],
     },
   };
@@ -1401,7 +1585,7 @@
     pendingEng: new Map(),                 // LIVE: engagementId -> {trackId, t0, firstSeen}
     autoplay: { running: false, timer: null },
     view: "ALL",                            // ALL | RED | BLUE COP filter
-    scenario: "sandiego",                    // sandiego | elpaso
+    scenario: "sandiego",                    // sandiego | elpaso | norfolk
     echelon: { bn: false, rgt: false },     // up-echelon federation state
     arch: "NETWORKED",                       // NETWORKED | HUB (any-shooter vs legacy)
     coverage: null,                          // cached {netPct, hubPct, gap:[{x,y}]}
@@ -1571,29 +1755,60 @@
     return nt;
   }
 
-  // civilian traffic: ADS-B airliners/GA in the corridor and (San Diego) AIS
-  // boat traffic in the coastal lanes. NEUTRAL and never engageable; they make
+  // civilian traffic: ADS-B airliners/GA in the corridor and AIS boat traffic
+  // in configured coastal lanes. NEUTRAL and never engageable; they make
   // the COP look like real airspace, not a sterile range.
   const CIV_AIR = ["A320", "B737", "E175", "C172", "CIVIL HELO"];
   const CIV_BOAT = ["FERRY", "SAILBOAT", "FISHING VESSEL", "CARGO"];
+  const CIV_CALLSIGNS = ["SWA", "AAL", "DAL", "UAL", "ASA", "JBU"];
+  const civHex = () => (0xA00000 + randi(0, 0x0FFFFF)).toString(16).toUpperCase().padStart(6, "0");
+  const civSquawk = () => Array.from({ length: 4 }, () => randi(0, 7)).join("");
   function civCount() {
     let n = 0;
     for (const t of S.tracks.values()) if (t.civil) n++;
     return n;
   }
   function spawnCivAir() {
-    const via = S.scenario === "sandiego" ? { x: 1690, y: 3660 } : { x: 0, y: 3000 };
-    const vx = via.x + (rand() - 0.5) * 1400, vy = via.y + (rand() - 0.5) * 1200;
-    const dir = rand() < 0.5 ? 1 : -1;
-    const hdg = (dir > 0 ? 0 : Math.PI) + (rand() - 0.5) * 0.25;
+    const via = SCN.civilAirVia || { x: 0, y: 3000 };
     const plat = CIV_AIR[(rand() * CIV_AIR.length) | 0];
     const ga = plat === "C172" || plat === "CIVIL HELO";
     const t = spawnHostile({ identity: "NEUTRAL", cls: plat === "CIVIL HELO" ? "ROTARY" : "FIXED_WING", intent: "transit",
-      speed: ga ? 40 + rand() * 20 : 75 + rand() * 35, alt: ga ? 300 + randi(0, 500) : 900 + randi(0, 2100), emitting: true, tq: 12 });
+      speed: ga ? 40 + rand() * 20 : 75 + rand() * 35, alt: ga ? 300 + randi(0, 500) : 900 + randi(0, 2100), emitting: true, tq: 15 });
     if (t) {
-      t.x = vx + Math.cos(hdg + Math.PI) * (AO_RADIUS - 300);
-      t.y = vy + Math.sin(hdg + Math.PI) * (AO_RADIUS - 300);
-      t.heading = hdg; t.platform = plat; t.civil = true;
+      const flightNo = String(randi(100, 2899));
+      const callsign = CIV_CALLSIGNS[(rand() * CIV_CALLSIGNS.length) | 0] + flightNo;
+      t.platform = plat; t.civil = true;
+      t.transponder = {
+        callsign, icao24: civHex(), squawk: civSquawk(), mode: "MODE S / ADS-B",
+        nacp: randi(9, 11), sil: randi(2, 3), source: "1090ES", status: "VALID",
+      };
+      t.contributingSensors = SCN.civilAirport ? ["SEN-AIR-RAD-12", "SEN-RAD-01"] : ["SEN-RAD-01"];
+      if (SCN.civilAirport) {
+        const airport = SCN.civilAirport;
+        const route = airport.routes[(rand() * airport.routes.length) | 0];
+        const arriving = rand() < 0.5;
+        const endpoint = arriving ? route.inbound : route.outbound;
+        t.x = arriving ? endpoint.x : airport.x;
+        t.y = arriving ? endpoint.y : airport.y;
+        t.civilRoute = [arriving ? { x: airport.x, y: airport.y } : { x: endpoint.x, y: endpoint.y }];
+        t.civilArrival = arriving;
+        t.civilAirport = airport.code;
+        t.flightPlan = arriving ? `${route.origin} \u2192 ${airport.code}` : `${airport.code} \u2192 ${route.origin}`;
+        t.altMeters = arriving ? (ga ? 700 : 1700) : (ga ? 120 : 350);
+        t.targetAltitude = arriving ? 30 : (ga ? 900 : 2400);
+      } else {
+        const vx = via.x + (rand() - 0.5) * 1400, vy = via.y + (rand() - 0.5) * 1200;
+        const dir = rand() < 0.5 ? 1 : -1;
+        const hdg = (dir > 0 ? 0 : Math.PI) + (rand() - 0.5) * 0.25;
+        t.x = vx + Math.cos(hdg + Math.PI) * (AO_RADIUS - 300);
+        t.y = vy + Math.sin(hdg + Math.PI) * (AO_RADIUS - 300);
+        t.heading = hdg;
+        t.flightPlan = "CIVIL TRANSIT";
+      }
+      if (t.civilRoute && t.civilRoute.length) t.heading = Math.atan2(t.civilRoute[0].y - t.y, t.civilRoute[0].x - t.x);
+      t.transponder.baroAltitudeM = Math.round(t.altMeters);
+      t.transponder.groundSpeedMps = Math.round(t.speed);
+      t.identityEvidence = `${t.transponder.mode} ${t.transponder.icao24} \u00b7 ${t.transponder.callsign} \u00b7 squawk ${t.transponder.squawk}`;
     }
     return t;
   }
@@ -1601,11 +1816,11 @@
     const t = spawnHostile({ identity: "NEUTRAL", cls: "SURFACE", intent: "transit", speed: 3.5 + rand() * 6, alt: 0, emitting: true, tq: 12 });
     if (t) {
       const north = rand() < 0.5;
-      // shipping lanes in the open Pacific, >=500 m clear of the Point Loma
-      // shoreline on real imagery. laneX anchors a lane-keeping clamp in the
-      // movement model so slow boats cannot drift ashore over a long transit.
+      // Scenario-configured shipping lanes remain offshore. laneX anchors a
+      // lane-keeping clamp so slow boats cannot drift ashore over a long transit.
       const outer = rand() < 0.5;
-      t.laneX = (outer ? -5400 : -4900) + (rand() - 0.5) * 400;
+      const lanes = SCN.shippingLanes || [-5400, -4900];
+      t.laneX = (outer ? lanes[0] : lanes[1]) + (rand() - 0.5) * 400;
       t.x = t.laneX;
       t.y = (north ? -1 : 1) * ((outer ? 2400 : 3400) * rand());
       t.heading = (north ? Math.PI / 2 : -Math.PI / 2) + (rand() - 0.5) * 0.04;
@@ -1668,13 +1883,17 @@
     if (name === "AAR") { showAAR(); return; }
     if (!WORKSPACES.has(name)) return;
     S.workspace = name;
+    $("cuas").dataset.workspace = name;
     document.querySelectorAll("#workspaceNav [data-workspace]").forEach((b) =>
       b.setAttribute("aria-selected", b.dataset.workspace === name ? "true" : "false"));
     document.querySelectorAll("[data-workspaces]").forEach((el) => {
       el.hidden = !el.dataset.workspaces.split(/\s+/).includes(name);
     });
-    const rail = document.querySelector(".rail-scroll");
-    if (rail) rail.scrollTop = 0;
+    const contexts = { COP: "COP decision view", FIRES: "Fire-control decision view", SENSORS: "Sensor-management view", SUPERVISOR: "Supervisor posture view" };
+    $("railContext").textContent = contexts[name] || "Decision view";
+    $("btnDisplaySettings").hidden = !(name === "COP" || name === "SUPERVISOR");
+    $("displayCard").hidden = true;
+    $("btnDisplaySettings").setAttribute("aria-expanded", "false");
     renderRail();
   }
 
@@ -1775,7 +1994,7 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "385843b1";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "c9705cf0";   // stamped by scripts/build_cop.py (content hash)
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
@@ -1890,13 +2109,13 @@
             nt.declareAt = 7000 + rand() * 11000;
           }
         } else if (roll < 0.8 && civCount() < 7) {
-          nt = (S.scenario === "sandiego" && rand() < 0.45) ? spawnCivBoat() : spawnCivAir();
+          nt = (SCN.terrain === "coast" && rand() < 0.45) ? spawnCivBoat() : spawnCivAir();
         } else if (roll < 0.92) {
           nt = spawnClutter();
         } else {
           nt = spawnHostile({ identity: "NEUTRAL", cls: rand() < 0.5 ? "FIXED_WING" : "MULTIROTOR", intent: "transit", speed: 18 + rand() * 20, alt: 150 + randi(0, 600) });
         }
-        if (nt) logEvent("INFO", "INFO", `New contact ${nt.trackId} \u00b7 ${nt.identity} ${nt.platform || nt.classificationType}${nt.emitting === false ? " \u00b7 no RF signature" : ""}`);
+        if (nt) logEvent("INFO", "INFO", `New contact ${nt.trackId} \u00b7 ${nt.transponder?.callsign ? nt.transponder.callsign + " \u00b7 " : ""}${nt.identity} ${nt.platform || nt.classificationType}${nt.transponder ? ` \u00b7 Mode S ${nt.transponder.icao24} \u00b7 squawk ${nt.transponder.squawk}` : nt.emitting === false ? " \u00b7 no RF signature" : ""}`);
       }
     }
     for (const t of S.tracks.values()) {
@@ -1954,6 +2173,32 @@
         t.orbit = (t.orbit || 0) + dt * (t.ospeed || 0.25);
         t.x = (t.ox || 0) + Math.cos(t.orbit) * (t.orad || 700);
         t.y = (t.oy || 0) + Math.sin(t.orbit) * (t.orad || 700);
+      } else if (t.civilRoute && t.civilRoute.length) {
+        // Airport arrivals and departures follow an explicit route instead of a
+        // generic crossing course. Transponder fields remain current as the
+        // aircraft climbs or descends through the terminal area.
+        const target = t.civilRoute[0];
+        const desired = Math.atan2(target.y - t.y, target.x - t.x);
+        t.heading += clamp(((desired - t.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI, -0.35 * dt, 0.35 * dt);
+        t.x += Math.cos(t.heading) * t.speed * dt;
+        t.y += Math.sin(t.heading) * t.speed * dt;
+        const altDelta = (t.targetAltitude || t.altMeters) - t.altMeters;
+        t.altMeters += clamp(altDelta, -8 * dt, 8 * dt);
+        if (t.transponder) {
+          t.transponder.baroAltitudeM = Math.round(t.altMeters);
+          t.transponder.groundSpeedMps = Math.round(t.speed);
+          t.transponder.trackDeg = Math.round(((Math.PI / 2 - t.heading) * 180 / Math.PI + 360) % 360);
+          t.transponder.lastUpdateMs = missionNow();
+        }
+        if (dist(t.x, t.y, target.x, target.y) < 120) {
+          t.civilRoute.shift();
+          if (!t.civilRoute.length) {
+            logEvent("INFO", "INFO", `${t.transponder?.callsign || t.trackId} ${t.civilArrival ? "arrived" : "departed"} ${t.civilAirport || "terminal area"} \u00b7 transponder track closed normally`);
+            S.tracks.delete(t.trackId);
+            if (S.selected === t.trackId) selectTrack(null);
+            continue;
+          }
+        }
       } else if (t.intent === "transit") {
         // crossing traffic holds course and exits the AO
         const weave = Math.sin(missionNow() / 900 + t.jitter) * (t.clutter ? 0.5 : t.surface ? 0.02 : 0.08);
@@ -3147,7 +3392,7 @@
           ctx.fillText("MEXICO \u00b7 INTERNATIONAL BORDER", 14, clamp(by + 16, 24, h - 6));
         } else {
           ctx.fillStyle = "rgba(150,205,235,0.5)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
-          ctx.fillText("PACIFIC OCEAN", 14, h * 0.5);
+          ctx.fillText(SCN.waterLabel || "COASTAL WATERS", 14, h * 0.5);
         }
         ctx.fillStyle = "rgba(120,150,180,0.35)"; ctx.font = "9px " + MONO; ctx.textAlign = "center";
         ctx.fillText("IMAGERY \u00a9 ESRI \u00b7 MAXAR \u00b7 EARTHSTAR GEOGRAPHICS", VIEW.cx, h - 20);
@@ -3170,7 +3415,7 @@
       ctx.fillText("MEXICO \u00B7 INTERNATIONAL BORDER", 14, clamp(by + 16, 24, h - 6));
       drawContours();
     } else {
-      // coast: Pacific Ocean to the WEST, coastline anchored in the meters frame so
+      // coast: water to the WEST, coastline anchored in the meters frame so
       // the Navy ship offshore stays in the water at any window size/aspect. The
       // ocean is filled a distinctly bluer tone than the tan/green land so naval
       // assets read unambiguously as being in the water.
@@ -3201,7 +3446,7 @@
       for (let i = 0; i <= steps; i++) { const tt = i / steps; i ? ctx.lineTo(cpx(tt), h * tt) : ctx.moveTo(cpx(tt), h * tt); }
       ctx.stroke();
       ctx.fillStyle = "rgba(150,205,235,0.6)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
-      ctx.fillText("PACIFIC OCEAN", 14, h * 0.5);
+      ctx.fillText(SCN.waterLabel || "COASTAL WATERS", 14, h * 0.5);
       drawContours();
     }
   }
@@ -3288,6 +3533,19 @@
       ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, 30); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = "#b08cff"; ctx.textAlign = "left";
       ctx.fillText("5G BACKHAUL \u2192 BN/RGT", gx + 6, 34);
+      if (SCN.microwaveRelay) {
+        const relay = SCN.microwaveRelay;
+        const rx = sx(relay.x), ry = sy(relay.y);
+        ctx.strokeStyle = "rgba(255,210,122,0.75)"; ctx.lineWidth = 1.8; ctx.setLineDash([10, 4, 2, 4]);
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(rx, ry); ctx.stroke(); ctx.setLineDash([]);
+        const pulse = (perf() / 1800) % 1;
+        ctx.fillStyle = "#ffd27a"; ctx.beginPath(); ctx.arc(gx + (rx - gx) * pulse, gy + (ry - gy) * pulse, 2.2, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#ffd27a"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(rx - 5, ry + 6); ctx.lineTo(rx, ry - 7); ctx.lineTo(rx + 5, ry + 6); ctx.stroke();
+        ctx.fillStyle = "#ffd27a"; ctx.font = "8px " + MONO; ctx.textAlign = "left";
+        ctx.fillText("MICROWAVE BACKHAUL", Math.min(rx + 8, VIEW.w - 145), Math.max(18, ry - 2));
+        ctx.fillText(relay.label, Math.min(rx + 8, VIEW.w - 145), Math.max(28, ry + 10));
+      }
       ctx.restore();
     }
   }
@@ -3410,7 +3668,7 @@
     // label: blue tracks show platform + altitude; threats show id + track quality
     if (t.state !== "NEUTRALIZED") {
       const label = isBlue(t) && t.platform
-        ? `${t.platform}${(t.altMeters || 0) >= 5 ? " " + Math.round(t.altMeters) + "m" : ""}`
+        ? `${t.civil && t.transponder ? t.transponder.callsign + " " : ""}${t.platform}${(t.altMeters || 0) >= 5 ? " " + Math.round(t.altMeters) + "m" : ""}`
         : `${t.trackId.replace("TRK-", "")} TQ${Math.floor(t.tq)}`;
       placeLabel(label, x + 10, y + 3, isBlue(t) ? "#86b9e8" : "#9fb0c4", "9px " + MONO, "left");
     }
@@ -3434,15 +3692,20 @@
     $("sReady").textContent = S.effectors.filter((e) => e.mag > 0).length + "/" + S.effectors.length;
     $("sEng").textContent = S.engaged;
 
-    // effector list
-    stableHTML($("effList"), S.effectors.map((e) => {
+    // Supervisor glance view: show the six effectors requiring the most attention.
+    const effOrdered = S.effectors.slice().sort((a, b) => {
+      const rank = (e) => (S.live && (e.readiness !== "READY" || e.geometryUnknown)) ? 0 : e.rearmT ? 1 : e.mag <= 0 ? 2 : 3;
+      return rank(a) - rank(b) || (a.mag / Math.max(1, a.cap)) - (b.mag / Math.max(1, b.cap));
+    });
+    const effShown = effOrdered.slice(0, 6);
+    stableHTML($("effList"), effShown.map((e) => {
       const liveUnavailable = S.live && (e.readiness !== "READY" || e.geometryUnknown);
       const c = liveUnavailable ? "var(--hostile)" : e.rearmT ? "var(--suspect)" : e.mag > 0 ? "var(--neutral)" : "var(--faint)";
       const pct = Math.round((e.mag / e.cap) * 100);
       return `<div class="eff"><span class="dot" style="background:${c}"></span>
         <span class="nm">${esc(e.effectorId)}<small>${esc(e.effectorType.replace(/_/g, " "))} &middot; ${esc(e.vendor)} &middot; ${esc(e.service || "USA")} &middot; ${fmtCost(SHOT_COST[e.effectorType] || 10000)}/shot</small></span>
         <span class="mag">${liveUnavailable ? esc(e.geometryUnknown ? "NO GEO" : e.readiness) : e.rearmT ? "REARM" : pct + "%"}</span></div>`;
-    }).join(""));
+    }).join("") + (S.effectors.length > effShown.length ? `<div class="track-list-note">Showing 6 priority effectors of ${S.effectors.length}. Full inventory remains in AAR and the source feed.</div>` : ""));
 
     const t = S.selected && S.tracks.get(S.selected);
     const body = $("trackBody");
@@ -3484,6 +3747,7 @@
     const age = S.live
       ? Math.max(0, Number(t.sourceAgeAtReceipt || 0) + (perf() - (t.receivedAt != null ? t.receivedAt : perf())) / 1000)
       : Math.max(0, (missionNow() - (t.lastUpdate != null ? t.lastUpdate : t.firstSeen || missionNow())) / 1000);
+    const xpdr = t.civil && t.transponder ? t.transponder : null;
     const uncertainty = Number.isFinite(t.positionUncertainty) ? Math.round(t.positionUncertainty) : Math.round(25 + Math.max(0, 15 - tqi) * 35 + (S.degraded ? 180 : 0));
     const sensors = (t.contributingSensors || []).map((id) => {
       const s = SENSORS.find((x) => x.sensorId === id);
@@ -3515,7 +3779,7 @@
       [!!bestEffector(t), `Track quality ${tqi} / 15`],
       [linkReady, S.live ? `C2 link ${S.connectionState}` : "Local simulation control"],
     ];
-    const html = `
+    const detailHtml = `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span class="trk-id">${esc(t.trackId)}</span>
         <span style="display:flex;gap:6px">
@@ -3526,9 +3790,12 @@
       </div>
       <dl class="kv">
         <dt>Platform</dt><dd>${esc(t.platform || (t.classificationType || "UNKNOWN").replace(/_/g, " "))}</dd>
+        ${xpdr ? `<dt>Callsign / flight plan</dt><dd>${esc(xpdr.callsign)} \u00b7 ${esc(t.flightPlan || "CIVIL TRANSIT")}</dd>
+        <dt>Mode S / ICAO address</dt><dd>${esc(xpdr.mode)} \u00b7 ${esc(xpdr.icao24)}</dd>
+        <dt>Squawk / ADS-B quality</dt><dd>${esc(xpdr.squawk)} \u00b7 NACp ${esc(xpdr.nacp)} \u00b7 SIL ${esc(xpdr.sil)}</dd>` : ""}
         <dt>Service</dt><dd>${esc(t.service || "\u2014")}</dd>
         <dt>Altitude</dt><dd>${Math.round(t.altMeters || 0)} m \u00b7 ${esc(t.altitudeDatum || "datum unspecified")}</dd>
-        <dt>Signature</dt><dd>${isBlue(t) ? (t.civil ? "ADS-B / AIS" : "IFF / cooperative") : t.emitting === false ? "comms-silent (RF-blind)" : "RF emitting"}</dd>
+        <dt>Signature</dt><dd>${isBlue(t) ? (t.civil ? (xpdr ? `${esc(xpdr.source)} \u00b7 ${esc(xpdr.status)}` : "ADS-B / AIS") : "IFF / cooperative") : t.emitting === false ? "comms-silent (RF-blind)" : "RF emitting"}</dd>
         <dt>Flight profile</dt><dd>${isBlue(t) ? (t.civil ? (t.surface ? "surface transit (AIS)" : "civil corridor (ADS-B)") : "patrol") : ({ direct: "direct attack", lowIngress: "low ingress", cruise: "cruise / OWA", isr: "ISR standoff orbit", clutter: "erratic / low-slow" }[t.profile] || "\u2014")}</dd>
         <dt>Range to asset</dt><dd>${(rng / 1000).toFixed(1)} km</dd>
         <dt>Predicted intercept</dt><dd style="${etaColor}">${etaStr}</dd>
@@ -3544,13 +3811,41 @@
       <div class="decision-section"><div class="decision-h">Supporting evidence</div><div class="evidence">${evidence.map((x) => `<span>${esc(x)}</span>`).join("")}</div></div>
       <div class="decision-section"><div class="decision-h">Candidate effectors \u00b7 feasibility / quality / range</div><div class="candidate-list">${candidates}</div></div>
       <div class="decision-section"><div class="decision-h">Release criteria</div><div class="auth-checks">${authChecks.map(([ok,label]) => `<div class="auth-check ${ok ? "" : "fail"}"><b>${ok ? "\u2713" : "\u00d7"}</b><span>${esc(label)}</span></div>`).join("")}</div>${a.ok ? '<div class="tq-note">All local criteria satisfied; LIVE mode is revalidated by c2-core.</div>' : `<div class="tq-note">Hold reason: ${esc(a.detail || a.code || "not releasable")}</div>`}</div>
-      <div style="margin-top:13px"><button class="btn task" id="btnTask" ${canTask ? "" : "disabled"}>Task sensor \u00b7 DWELL</button><button class="btn engage" id="btnEngage" ${canEngage ? "" : "disabled"}>${esc(engLabel)}</button>${t.state === "AUTHORIZING" && S.live ? '<button class="btn abort" id="btnReconcile">RECONCILE ORDER \u00b7 SAME REQUEST</button>' : ""}${t.state === "ENGAGING" || t.state === "ASSESSING" ? `<button class="btn abort" id="btnAbort">${t.abortRequestPending ? "ABORT PENDING \u00b7 RECONCILE" : "HOLD / ABORT ENGAGEMENT"}</button>` : ""}</div>`;
+    `;
+    stableHTML($("decisionDetailBody"), detailHtml);
+    const releaseStatus = a.ok
+      ? `RELEASE CRITERIA SATISFIED \u00b7 ${a.eff.effectorId}`
+      : `HOLD \u00b7 ${a.detail || a.code || "not releasable"}`;
+    const html = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span class="trk-id">${esc(xpdr ? xpdr.callsign : t.trackId)}</span>
+        <span class="idpill" style="color:${col};background:${col}22;border:1px solid ${col}55">${esc(t.identity)}</span>
+      </div>
+      <div class="decision-glance">
+        <div class="g"><div class="k">Range</div><div class="v">${(rng / 1000).toFixed(1)} km</div></div>
+        <div class="g"><div class="k">Intercept</div><div class="v" style="${etaColor}">${etaStr}</div></div>
+        <div class="g"><div class="k">Track quality</div><div class="v">${tqi} / 15</div></div>
+        <div class="g"><div class="k">Data age</div><div class="v" style="color:${age >= 5 ? "var(--hostile)" : age >= 2 ? "var(--suspect)" : "var(--neutral)"}">${age.toFixed(age < 10 ? 1 : 0)} s</div></div>
+        <div class="g"><div class="k">Lifecycle</div><div class="v">${esc(t.engagementState || t.state)}</div></div>
+        <div class="g"><div class="k">Recommended</div><div class="v">${isBlue(t) ? "PROTECTED" : (eff ? esc(eff.effectorId) : "NONE")}</div></div>
+      </div>
+      <div class="tq"><div class="tq-bar">${segs}</div></div>
+      <div class="decision-status ${a.ok ? "go" : "hold"}">${esc(releaseStatus)}</div>
+      <div class="tq-note">${esc(threatText)} \u00b7 ${esc(idBasis)}</div>
+      <div class="decision-actions">
+        <button class="btn task" id="btnTask" ${canTask ? "" : "disabled"}>Task sensor</button>
+        <button class="btn engage" id="btnEngage" ${canEngage ? "" : "disabled"}>${canEngage ? "Authorize release" : "Release unavailable"}</button>
+        ${t.state === "AUTHORIZING" && S.live ? '<button class="btn abort wide" id="btnReconcile">RECONCILE ORDER \u00b7 SAME REQUEST</button>' : ""}
+        ${t.state === "ENGAGING" || t.state === "ASSESSING" ? `<button class="btn abort wide" id="btnAbort">${t.abortRequestPending ? "ABORT PENDING \u00b7 RECONCILE" : "HOLD / ABORT ENGAGEMENT"}</button>` : ""}
+        <button class="btn full" id="btnDecisionDetails">Full details</button>
+      </div>`;
     const stateKey = `${t.trackId}|${t.state}|${t.engagementState || ""}`;
     const stateChanged = !!body.dataset.decisionState && body.dataset.decisionState !== stateKey;
     if (stableHTML(body, html, stateChanged)) {
       body.dataset.decisionState = stateKey;
       $("btnTask").onclick = taskSensor;
       $("btnEngage").onclick = engage;
+      $("btnDecisionDetails").onclick = showDecisionDetails;
       if ($("btnAbort")) $("btnAbort").onclick = () => abortEngagement(t);
       if ($("btnReconcile")) $("btnReconcile").onclick = () => liveEngage(t);
       if (stateChanged) requestAnimationFrame(() => ($("btnAbort") || $("btnReconcile") || $("trackCard")).focus());
@@ -3560,14 +3855,20 @@
   function renderTrackList(force = false) {
     const priority = { HOSTILE: 0, SUSPECT: 1, UNKNOWN: 2, FRIEND: 3, ASSUMED_FRIEND: 3, NEUTRAL: 4 };
     const all = [...S.tracks.values()].filter((t) => t.state !== "NEUTRALIZED" && trackVisible(t));
-    const ordered = all.slice().sort((a, b) => (priority[a.identity] ?? 5) - (priority[b.identity] ?? 5) || dist(a.x,a.y,0,0) - dist(b.x,b.y,0,0));
-    const pageSize = 18, pages = Math.max(1, Math.ceil(ordered.length / pageSize));
+    const decisionRank = (t) => (t.state === "ENGAGING" || t.state === "ASSESSING" || t.state === "AUTHORIZING") ? -1 : (priority[t.identity] ?? 5);
+    const urgency = (t) => trackPrediction(t).interceptSec ?? (dist(t.x,t.y,0,0) / Math.max(1, t.speed || 1));
+    const ordered = all.slice().sort((a, b) => decisionRank(a) - decisionRank(b) || urgency(a) - urgency(b) || dist(a.x,a.y,0,0) - dist(b.x,b.y,0,0));
+    const pageSize = 6, pages = Math.max(1, Math.ceil(ordered.length / pageSize));
     S.trackPage = clamp(S.trackPage || 0, 0, pages - 1);
     const tracks = ordered.slice(S.trackPage * pageSize, (S.trackPage + 1) * pageSize);
     const el = $("trackList");
     if (!tracks.length) { stableHTML(el, '<p class="empty">No active tracks.</p>'); return; }
     const html = '<div class="track-list-head" aria-hidden="true"><span>Track / identity</span><span>Class</span><span style="text-align:right">TQ</span><span style="text-align:right">Range</span></div>' +
-      tracks.map((t) => `<button type="button" class="track-list-row" data-track-select="${esc(t.trackId)}" aria-current="${S.selected === t.trackId ? "true" : "false"}" aria-label="Select ${esc(t.trackId)}, ${esc(t.identity)}, ${esc((t.classificationType || "unknown").replace(/_/g," "))}, track quality ${Math.floor(t.tq)}, range ${(dist(t.x,t.y,0,0)/1000).toFixed(1)} kilometers"><span class="ident" style="color:${COLORS[t.identity] || COLORS.UNKNOWN}">${esc(t.trackId)} \u00b7 ${esc(t.identity)}</span><span>${esc((t.classificationType || "UNK").replace(/UAS_GROUP_/g,"G"))}</span><span class="num">${Math.floor(t.tq)}</span><span class="num">${(dist(t.x,t.y,0,0)/1000).toFixed(1)}km</span></button>`).join("") +
+      tracks.map((t) => {
+        const ident = t.civil && t.transponder ? `${t.transponder.callsign} \u00b7 ${t.identity}` : `${t.trackId} \u00b7 ${t.identity}`;
+        const transponder = t.civil && t.transponder ? `, Mode S ${t.transponder.icao24}, squawk ${t.transponder.squawk}` : "";
+        return `<button type="button" class="track-list-row" data-track-select="${esc(t.trackId)}" aria-current="${S.selected === t.trackId ? "true" : "false"}" aria-label="Select ${esc(t.trackId)}, ${esc(t.identity)}, ${esc((t.classificationType || "unknown").replace(/_/g," "))}${esc(transponder)}, track quality ${Math.floor(t.tq)}, range ${(dist(t.x,t.y,0,0)/1000).toFixed(1)} kilometers"><span class="ident" style="color:${COLORS[t.identity] || COLORS.UNKNOWN}">${esc(ident)}</span><span>${esc((t.classificationType || "UNK").replace(/UAS_GROUP_/g,"G"))}</span><span class="num">${Math.floor(t.tq)}</span><span class="num">${(dist(t.x,t.y,0,0)/1000).toFixed(1)}km</span></button>`;
+      }).join("") +
       `<div class="track-pager"><button type="button" data-page-delta="-1" ${S.trackPage === 0 ? "disabled" : ""}>Previous</button><span>Tracks ${S.trackPage * pageSize + 1}\u2013${S.trackPage * pageSize + tracks.length} of ${all.length} \u00b7 page ${S.trackPage + 1}/${pages}</span><button type="button" data-page-delta="1" ${S.trackPage >= pages - 1 ? "disabled" : ""}>Next</button></div>`;
     stableHTML(el, html, force);
   }
@@ -3796,6 +4097,16 @@
     container.scrollTop = container.scrollHeight;
     while (container.children.length > 200) container.removeChild(container.firstChild);
   }
+  function renderEventTicker() {
+    const ticker = $("eventTicker");
+    if (!ticker || !S.events) return;
+    const actionable = S.events.filter((e) => e.decision !== "INFO");
+    const rows = (actionable.length ? actionable : S.events).slice(-2).reverse();
+    ticker.innerHTML = rows.length ? rows.map((e) => {
+      const severity = e.decision === "LEAKER" ? "critical" : e.decision === "DENY" || e.decision === "MISS" ? "warning" : "";
+      return `<div class="event-line ${severity}"><span class="t">${esc(e.clock)}</span><span class="d">${esc(e.decision)}</span><span class="m">${esc(e.msg)}</span></div>`;
+    }).join("") : '<div class="empty">No recorded events.</div>';
+  }
   function logEvent(decision, cls, msg) {
     const clock = nowClock();
     const log = $("log");
@@ -3812,6 +4123,23 @@
       S.events.push({ clock, t: missionNow(), decision, cls, msg });
       while (S.events.length > 400) S.events.shift();
     }
+    renderEventTicker();
+  }
+
+  function showAuditHistory() {
+    openModal("auditBack", "auditClose");
+  }
+  function hideAuditHistory() {
+    closeModal("auditBack");
+  }
+  function showDecisionDetails() {
+    const t = S.selected && S.tracks.get(S.selected);
+    if (!t) return;
+    $("decisionDialogTitle").textContent = `${t.trackId} \u00b7 decision details`;
+    openModal("decisionBack", "decisionClose");
+  }
+  function hideDecisionDetails() {
+    closeModal("decisionBack");
   }
   function toast(kind, msg) {
     const wrap = $("toasts");
@@ -3995,7 +4323,7 @@
   }
   function closeModal(backId) {
     $(backId).hidden = true;
-    const anotherOpen = ["aarBack", "regBack", "helpBack"].some((id) => !$(id).hidden);
+    const anotherOpen = ["aarBack", "regBack", "helpBack", "decisionBack", "auditBack"].some((id) => !$(id).hidden);
     if (!anotherOpen) {
       $("cuas").inert = false;
       $("cuas").removeAttribute("aria-hidden");
@@ -4003,7 +4331,7 @@
       if (target && target.isConnected) requestAnimationFrame(() => target.focus());
     }
   }
-  function openModalBack() { return ["aarBack", "regBack", "helpBack"].map($).find((el) => !el.hidden) || null; }
+  function openModalBack() { return ["aarBack", "regBack", "helpBack", "decisionBack", "auditBack"].map($).find((el) => !el.hidden) || null; }
   function trapModalFocus(event) {
     if (_tourEl && event.key === "Tab") {
       const focusable = [..._tourEl.querySelectorAll("button:not([disabled])")];
@@ -4082,7 +4410,7 @@
     } else {
       poo = (Math.atan2(Math.cos(SCN.threat.angle), Math.sin(SCN.threat.angle)) * 180 / Math.PI + 360) % 360;
     }
-    const svc = SCN.id === "sandiego" ? "USN" : "USA";
+    const svc = SCN.primaryService || (SCN.terrain === "coast" ? "USN" : "USA");
     return { name: ASSET.name, svc, inbound, wReady, wTot, sustain, poo,
              defeated: S.stats.defeated, leakers: S.stats.leakers,
              status: inbound > 0 ? "UNDER ATTACK" : "NOMINAL" };
@@ -4106,11 +4434,11 @@
       alert.textContent = `ALL CLEAR \u2014 ${a.name} nominal \u2014 no active tracks. Theater posture green.`;
     }
 
-    // USNORTHCOM owns homeland defense of the western US; the coast scenario also
-    // fronts the USINDOPACOM Pacific approaches. WADS is the air-defense sector.
-    const pacific = SCN.id === "sandiego";
+    // Scenario metadata labels the relevant approach without implying a validated
+    // command relationship or operational laydown.
+    const approach = SCN.approachLabel ? ` \u00b7 ${SCN.approachLabel}` : "";
     $("regTitle").textContent = "USNORTHCOM \u00b7 Peterson SFB \u2014 homeland air-defense picture";
-    $("regSub").textContent = `Operational rollup of the site fight \u00b7 ${a.name} (${a.svc}) \u00b7 sector: WADS${pacific ? " \u00b7 Pacific approaches w/ USINDOPACOM" : ""} \u00b7 ${nowClock()} Z`;
+    $("regSub").textContent = `Operational rollup of the site fight \u00b7 ${a.name} (${a.svc})${approach} \u00b7 ${nowClock()} Z`;
 
     $("regHq").innerHTML =
       `<span class="badge">NORTHCOM</span><span class="name">Operational HQ \u00b7 Peterson SFB, CO</span>` +
@@ -4222,6 +4550,12 @@
   $("btnDelegated").onclick = () => setDelegatedDefense();
   $("btnHelpTop").onclick = showHelp;
   $("btnRegionalTop").onclick = showRegional;
+  $("btnDisplaySettings").onclick = () => {
+    const open = $("displayCard").hidden;
+    $("displayCard").hidden = !open;
+    $("btnDisplaySettings").setAttribute("aria-expanded", open ? "true" : "false");
+  };
+  $("btnAuditHistory").onclick = showAuditHistory;
 
   function onArchChange() {
     computeCoverage();
@@ -4323,6 +4657,12 @@
   $("helpDone").onclick = hideHelp;
   $("helpTour").onclick = () => { hideHelp(); startTour(); };
   $("helpBack").addEventListener("click", (e) => { if (e.target === $("helpBack")) hideHelp(); });
+  $("decisionClose").onclick = hideDecisionDetails;
+  $("decisionDone").onclick = hideDecisionDetails;
+  $("decisionBack").addEventListener("click", (e) => { if (e.target === $("decisionBack")) hideDecisionDetails(); });
+  $("auditClose").onclick = hideAuditHistory;
+  $("auditDone").onclick = hideAuditHistory;
+  $("auditBack").addEventListener("click", (e) => { if (e.target === $("auditBack")) hideAuditHistory(); });
   document.addEventListener("keydown", (e) => {
     if (trapModalFocus(e)) return;
     if (e.key === "Escape") {
@@ -4330,6 +4670,9 @@
       else if (!$("aarBack").hidden) hideAAR();
       else if (!$("regBack").hidden) hideRegional();
       else if (!$("helpBack").hidden) hideHelp();
+      else if (!$("decisionBack").hidden) hideDecisionDetails();
+      else if (!$("auditBack").hidden) hideAuditHistory();
+      else if (!$("displayCard").hidden) { $("displayCard").hidden = true; $("btnDisplaySettings").setAttribute("aria-expanded", "false"); $("btnDisplaySettings").focus(); }
       return;
     }
     const interactive = e.target && e.target.closest && e.target.closest("button, input, textarea, select, a[href], [contenteditable='true'], [role='button'], [role='tab']");
@@ -4436,9 +4779,11 @@
       tile("", `${eng}/${S.stats.misses || 0}`, "Attempts/misses") +
       tile(S.stats.airKills ? "good" : "", S.stats.airKills || 0, "Air defeats") +
       '</div>' +
-      `<div class="sb-row"><span class="l">2D geometric overlap (net/hub)</span><span class="n"><span style="color:var(--neutral)">${(S.coverage || {}).netPct ?? 0}%</span> / <span style="color:var(--hostile)">${(S.coverage || {}).hubPct ?? 0}%</span></span></div>` +
-      `<div class="sb-row"><span class="l">Configured effectors (net/hub)</span><span class="n"><span style="color:var(--neutral)">${S.effectors.length}</span> / <span style="color:var(--hostile)">${HUB_EFFECTORS.size}</span></span></div>` +
-      `<div class="sb-row"><span class="l">Notional cost committed / threat value</span><span class="n">${fmtCost(S.stats.costSpent || 0)} / <span style="color:${(S.stats.threatValue || 0) >= (S.stats.costSpent || 0) ? "var(--neutral)" : "var(--hostile)"}">${fmtCost(S.stats.threatValue || 0)}</span></span></div>` +
+      '<div class="sb-detail">' +
+      `<div class="sb-row"><span class="l">2D overlap (net/hub)</span><span class="n"><span style="color:var(--neutral)">${(S.coverage || {}).netPct ?? 0}%</span> / <span style="color:var(--hostile)">${(S.coverage || {}).hubPct ?? 0}%</span></span></div>` +
+      `<div class="sb-row"><span class="l">Effectors (net/hub)</span><span class="n"><span style="color:var(--neutral)">${S.effectors.length}</span> / <span style="color:var(--hostile)">${HUB_EFFECTORS.size}</span></span></div>` +
+      `<div class="sb-row"><span class="l">Committed / threat value</span><span class="n">${fmtCost(S.stats.costSpent || 0)} / <span style="color:${(S.stats.threatValue || 0) >= (S.stats.costSpent || 0) ? "var(--neutral)" : "var(--hostile)"}">${fmtCost(S.stats.threatValue || 0)}</span></span></div>` +
+      '</div>' +
       '<div class="sb-xv"><div class="l">Mixed-vendor provenance (illustrative)</div>' +
       `<div class="big">${pct}%</div>` +
       `<div class="sub">${xv} of ${eng} attempts reference different configured vendor metadata</div></div>`;
@@ -4629,11 +4974,11 @@
           t0.declareAt = 6000 + rand() * 12000;
         }
       }
-      // ambient civil picture from the start (airliners in the corridor, boats
-      // in the San Diego lanes)
+      // ambient civil picture from the start (airliners in the corridor and,
+      // for coastal scenarios, boats in configured shipping lanes)
       spawnCivAir();
       if (rand() < 0.5) spawnCivAir();
-      if (S.scenario === "sandiego") { spawnCivBoat(); spawnCivBoat(); }
+      if (SCN.terrain === "coast") { spawnCivBoat(); spawnCivBoat(); }
       S.ambT = 6 + rand() * 10;   // first ambient arrival
     }
     S.chatT = 8 + rand() * 12;   // first routine chatter line
@@ -4662,6 +5007,7 @@
     `<span><i style="background:#46c66e;transform:rotate(45deg);border-radius:1px"></i>Effector</span>` +
     `<span><i style="background:#78c8ff;border-radius:1px"></i>MANET</span>` +
     `<span><i style="background:#b08cff;border-radius:1px"></i>5G</span>` +
+    `<span><i style="background:#ffd27a;border-radius:1px"></i>Microwave backhaul</span>` +
     `<span><i style="background:#ff425622;border:1px dashed #ff4256aa;border-radius:1px"></i>No-fire</span>` +
     `<span><i style="background:repeating-linear-gradient(45deg,#6e829b33,#6e829b33 2px,transparent 2px,transparent 5px);border-radius:1px"></i>Terrain mask</span>` +
     `<span style="opacity:.85">Joint: USA \u00B7 USN \u00B7 USMC \u00B7 USAF</span>`;
@@ -4756,7 +5102,7 @@
     applySeg("wxSeg", "wx", ["CLEAR", "WIND", "RAIN"].includes(wxq) ? wxq : wxRoll);
     const todq = (qs.get("tod") || "").toUpperCase();
     if (["DAY", "NIGHT"].includes(todq)) applySeg("todSeg", "tod", todq);
-    // shareable presets: ?scn=sandiego|elpaso & ?arch=NETWORKED|HUB
+    // shareable presets: ?scn=sandiego|elpaso|norfolk & ?arch=NETWORKED|HUB
     const scnq = (qs.get("scn") || "").toLowerCase();
     if (SCENARIOS[scnq] && scnq !== S.scenario) applyScenario(scnq);
     const archq = (qs.get("arch") || "").toUpperCase();
@@ -4790,7 +5136,7 @@
     setInterval(renderRail, 750);   // preserve workstation focus while command state remains current
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
     if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
-      window.__CUAS__ = { S, selectTrack, setWorkspace, taskSensor, engage, abortEngagement, liveTask, liveEngage, liveAbortEngagement, livePollEngagements, processLiveEngagementStatus, persistentRequestKey, setDelegatedDefense, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, trackPrediction, engageTrack, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay, latchAlert, acknowledgeAlert, setConnectionState, plotPoint: (track) => ({ x: sx(track.dx != null ? track.dx : track.x), y: sy(track.dy != null ? track.dy : track.y) }) };
+      window.__CUAS__ = { S, selectTrack, setWorkspace, taskSensor, engage, abortEngagement, liveTask, liveEngage, liveAbortEngagement, livePollEngagements, processLiveEngagementStatus, persistentRequestKey, setDelegatedDefense, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, trackPrediction, engageTrack, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay, latchAlert, acknowledgeAlert, setConnectionState, currentScenario: () => SCN, plotPoint: (track) => ({ x: sx(track.dx != null ? track.dx : track.x), y: sy(track.dy != null ? track.dy : track.y) }) };
     }
     // first-visit tour (skipped in automated/debug runs; ?tour=1 forces it)
     let tourDone = true;

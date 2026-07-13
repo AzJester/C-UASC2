@@ -201,10 +201,66 @@ def test_dense_track_list_is_keyboard_pageable(page):
     }"""
     )
     page.wait_for_timeout(850)
-    assert page.locator("#trackList button[data-track-select]").count() == 18
+    assert page.locator("#trackList button[data-track-select]").count() == 6
     assert page.locator("#trackList button[data-page-delta='1']").is_enabled()
     page.locator("#trackList button[data-page-delta='1']").click()
     assert "page 2/" in page.locator("#trackList .track-pager span").text_content().lower()
+
+
+def test_norfolk_scenario_is_selectable_and_complete(page):
+    out = page.evaluate(
+        """() => {
+      const C = window.__CUAS__;
+      C.applyScenario('norfolk');
+      const scn = C.currentScenario();
+      return {id:C.S.scenario, asset:scn.asset.name, sensors:scn.sensors.length,
+        effectors:scn.effectors.length, water:scn.waterLabel};
+    }"""
+    )
+    assert out["id"] == "norfolk"
+    assert "NORFOLK" in out["asset"]
+    assert out["sensors"] >= 6 and out["effectors"] >= 8
+    assert "CHESAPEAKE" in out["water"]
+
+
+def test_san_diego_airport_tracks_publish_transponder_data(page):
+    out = page.evaluate(
+        """() => {
+      const C = window.__CUAS__;
+      C.applyScenario('sandiego');
+      const t = C.spawnCivAir();
+      C.selectTrack(t.trackId);
+      const scn = C.currentScenario();
+      return {civil:t.civil, route:t.civilRoute.length, plan:t.flightPlan,
+        callsign:t.transponder.callsign, icao:t.transponder.icao24,
+        squawk:t.transponder.squawk, quality:[t.transponder.nacp,t.transponder.sil],
+        airportSensors:t.contributingSensors.includes('SEN-AIR-RAD-12'),
+        airportEffectors:scn.effectors.filter(e => e.airportDefense).map(e => e.effectorType),
+        details:document.getElementById('decisionDetailBody').textContent};
+    }"""
+    )
+    assert out["civil"] and out["route"] == 1
+    assert "KSAN" in out["plan"]
+    assert len(out["icao"]) == 6 and len(out["squawk"]) == 4
+    assert out["quality"][0] >= 9 and out["quality"][1] >= 2
+    assert out["airportSensors"]
+    assert set(out["airportEffectors"]) == {"EW_JAMMER", "NET_CAPTURE"}
+    assert out["callsign"] in out["details"] and out["icao"] in out["details"]
+
+
+def test_san_diego_5g_overlay_has_island_microwave_backhaul(page):
+    out = page.evaluate(
+        """() => {
+      const C = window.__CUAS__;
+      C.applyScenario('sandiego');
+      const relay = C.currentScenario().microwaveRelay;
+      return {label:relay.label, note:relay.note,
+        legend:document.getElementById('legend').textContent};
+    }"""
+    )
+    assert "SAN CLEMENTE" in out["label"]
+    assert "MICROWAVE" in out["note"]
+    assert "Microwave backhaul" in out["legend"]
 
 
 def test_tewa_queue_ranks_and_approves(page):
@@ -229,6 +285,9 @@ def test_bda_assesses_before_confirming(page):
     page.evaluate(
         """() => {
       const C = window.__CUAS__;
+      for (const e of C.S.effectors) {
+        if (["EW_JAMMER", "RF_TAKEOVER", "NET_CAPTURE"].includes(e.effectorType)) e.mag = 0;
+      }
       const t = C.spawnHostile({r: 1500, tq: 15, alt: 300});
       C.engageTrack(t, false);
     }"""

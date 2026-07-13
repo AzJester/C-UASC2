@@ -64,7 +64,19 @@ human-in/on-the-loop consent, battle damage assessment, no-fire collateral zones
 threat profiles (low ingress, OWA cruise, ISR orbiters, decoys), civilian
 air and boat traffic, seeded weather and time of day, a degraded-comms
 inject, a notional cost-exchange ledger, and an AAR replay scrubber.
-Preset links: `?scn=elpaso&arch=HUB&wx=RAIN&tod=NIGHT&seed=N`.
+Preset links: `?scn=norfolk&arch=HUB&wx=RAIN&tod=NIGHT&seed=N`.
+
+The embedded simulation includes San Diego, El Paso, and Norfolk / Hampton
+Roads area-of-operations presets. San Diego includes notional civilian
+arrivals and departures at KSAN with Mode-S / ADS-B identity fields, a
+soft-kill counter-UAS layer around the airport, and a visually distinct
+microwave extension from the 5G transport overlay toward an off-map San
+Clemente Island relay. Geography, inventory, coverage, and performance remain
+illustrative and are not suitable for operational decisions.
+
+The workstation rail is organized by role and keeps release-critical data in a
+bounded, no-scroll glance view. Complete decision evidence and audit history
+open in dedicated dialogs instead of competing with the primary operator view.
 
 The COP is designed for a fixed command-center workstation, not a phone. The
 supported effective-display target is 1280x720 or larger (1920x1080, 4K, 5K,
