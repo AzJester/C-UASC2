@@ -377,6 +377,98 @@ def test_washington_ncr_has_layered_multi_site_protection(page):
     assert any(track["arrival"] is False and "KDCA" in track["plan"] for track in out["civilAir"])
 
 
+def test_washington_airports_coast_and_every_effector_share_the_data_mesh(page):
+    out = page.evaluate(
+        """() => {
+          const C = window.__CUAS__; C.applyScenario('washington'); C.setPaused(true);
+          const scn = C.currentScenario();
+          const airports = scn.regionalAirports.map(airport => ({
+            code:airport.code,
+            sensors:scn.sensors.filter(s => airport.sensorIds.includes(s.sensorId)).length,
+            effectors:scn.effectors.filter(e => airport.effectorIds.includes(e.effectorId)).length,
+          }));
+          const paths = scn.effectors.map(e => C.systemDataPath(e));
+          const coastSensor = scn.sensors.find(s => s.coastalInset);
+          const airportEffector = scn.effectors.find(e => e.airportInset);
+          const coastPoint = C.systemScreenPoints('sensor', coastSensor);
+          const airportPoint = C.systemScreenPoints('effector', airportEffector);
+          const canvas=document.getElementById('plot'), rect=canvas.getBoundingClientRect();
+          const clickPlot=(point) => canvas.dispatchEvent(new MouseEvent('click',{bubbles:true,
+            clientX:rect.left+point.x*(rect.width/canvas.clientWidth),
+            clientY:rect.top+point.y*(rect.height/canvas.clientHeight)}));
+          clickPlot(coastPoint.find(p => p.inset));
+          const sensorCard = document.getElementById('trackBody').innerText;
+          clickPlot(airportPoint.find(p => p.inset));
+          const effectorCard = document.getElementById('trackBody').innerText;
+          const version = document.getElementById('appVersion');
+          const result = {
+            sensors:scn.sensors.length, effectors:scn.effectors.length,
+            airports, noFire:scn.noFire.map(z => z.label),
+            coastalSensors:scn.sensors.filter(s => s.coastalInset).length,
+            coastalEffectors:scn.effectors.filter(e => e.coastalInset).length,
+            mesh:scn.dataMesh, allPaths:paths.every(Boolean), paths:[...new Set(paths)],
+            civilAir:[...C.S.tracks.values()].filter(t => t.civil && !t.surface).map(t => ({airport:t.civilAirport, arrival:t.civilArrival, plan:t.flightPlan, callsign:t.transponder?.callsign})),
+            coastInset:coastPoint.some(p => p.inset), airportInset:airportPoint.some(p => p.inset),
+            sensorCard, effectorCard, selected:C.S.selectedAsset,
+            version:version.textContent, versionPx:parseFloat(getComputedStyle(version).fontSize),
+          };
+          C.setPaused(false); return result;
+        }"""
+    )
+    assert out["sensors"] >= 38 and out["effectors"] >= 48
+    assert {a["code"] for a in out["airports"]} == {"KIAD", "KBWI", "KHEF", "KCGS", "KGAI"}
+    assert all(a["sensors"] >= 2 and a["effectors"] >= 2 for a in out["airports"])
+    assert all(any(code in zone for zone in out["noFire"]) for code in ("KIAD", "KBWI", "KHEF", "KCGS", "KGAI"))
+    assert out["coastalSensors"] >= 6 and out["coastalEffectors"] >= 8
+    assert len(out["mesh"]["gateways"]) >= 5
+    assert "5G" in out["mesh"]["localMedium"] and "FIBER" in out["mesh"]["airportMedium"]
+    assert "MICROWAVE" in out["mesh"]["coastalMedium"]
+    assert out["allPaths"] and len(out["paths"]) >= 3
+    for code in ("KDCA", "KIAD"):
+        traffic = [track for track in out["civilAir"] if track["airport"] == code]
+        assert len(traffic) >= 4
+        assert any(track["arrival"] is True and code in track["plan"] for track in traffic)
+        assert any(track["arrival"] is False and code in track["plan"] for track in traffic)
+        assert all(track["callsign"] for track in traffic)
+    assert out["coastInset"] and out["airportInset"]
+    assert "DATA-SHARING PATH" in out["sensorCard"] and "SHARED COP" in out["sensorCard"]
+    assert "MAGAZINE DEPTH" in out["effectorCard"] and "COMMS LINK" in out["effectorCard"]
+    assert out["selected"]["kind"] == "effector"
+    assert out["version"].startswith("v1.0.0") and out["versionPx"] <= 8
+
+
+def test_washington_joint_air_package_joins_a_ground_started_weapons_free_mission(page):
+    out = page.evaluate(
+        """() => {
+          const C=window.__CUAS__; C.applyScenario('washington'); C.setPaused(true);
+          for (const t of C.S.tracks.values()) if (t.identity === 'HOSTILE') t.state='NEUTRALIZED';
+          const military=[...C.S.tracks.values()].filter(t => !t.civil && !t.surface &&
+            (t.identity === 'FRIEND' || t.identity === 'ASSUMED_FRIEND'));
+          const armed=military.filter(t => t.armed), support=military.filter(t => !t.armed);
+          military.forEach((a,i) => { a.x=7600+(i%5)*80; a.y=11600+Math.floor(i/5)*80; a.cool=0; if (a.armed) a.weaponRange=12000; });
+          const target=C.spawnHostile({target:{name:'FEDERAL CORE',x:0,y:0},bearing:1,r:15000,
+            tq:15,identity:'HOSTILE',cls:'UAS_GROUP_2'});
+          target.x=8000; target.y=12000; target.heading=Math.atan2(-target.y,-target.x);
+          target.state='ENGAGING'; target.engEff=C.currentScenario().effectors[0].effectorId; target.engAir=false;
+          C.S.wcs='WEAPONS_FREE'; C.S.autoReleaseArmed=true; C.S.role='FIRE_CONTROL_AUTHORITY';
+          const safe=!C.noFireZoneAt(target.x,target.y);
+          C.airDefense(0.2);
+          const result={safe, armed:armed.length, fighters:armed.filter(t => /^F-/.test(t.platform || '')).length,
+            mq9:armed.filter(t => /^MQ-9/.test(t.platform || '')).length,
+            volley:(target.airVolley || []).length,
+            armedActions:armed.filter(t => t.actionRole === 'AIR WEAPONS VOLLEY' && t.actionTarget === target.trackId).length,
+            support:support.length,
+            supportActions:support.filter(t => t.actionTarget === target.trackId &&
+              ['SENSOR / C2 RELAY','PROTECTED-AIRSPACE REPOSITION'].includes(t.actionRole)).length};
+          C.setPaused(false); return result;
+        }"""
+    )
+    assert out["safe"]
+    assert out["fighters"] >= 8 and out["mq9"] >= 2
+    assert out["volley"] == out["armed"] == out["armedActions"]
+    assert out["support"] >= 6 and out["supportActions"] == out["support"]
+
+
 def test_guam_scenario_has_layered_site_protection(page):
     out = page.evaluate(
         """() => {

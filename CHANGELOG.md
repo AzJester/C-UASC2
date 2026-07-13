@@ -6,6 +6,31 @@ changes are listed first. For the exact code-level history, see the
 
 ## 2026-07-13
 
+### Washington joint-defense and data-mesh expansion
+
+- Expanded the Washington / National Capital Region picture to 38 illustrative
+  sensors and 48 illustrative effectors, including a six-sensor / eight-effector
+  Atlantic and Chesapeake coastal screen.
+- Added defended airport nodes for Dulles (KIAD), Baltimore/Washington (KBWI),
+  Manassas (KHEF), College Park (KCGS), and Montgomery County Airpark (KGAI),
+  alongside the existing Reagan National and Joint Base Andrews coverage.
+- Added persistent civilian arrivals and departures at both Reagan National and
+  Dulles, with distinct Mode-S / ADS-B identities and airport flight plans.
+- Connected every NCR sensor and effector into a visible joint data mesh using
+  notional 5G, MANET, hardened metro fiber, and microwave relay paths. Coastal
+  and regional-airport inset nodes remain individually selectable.
+- Made sensor and effector symbols and inventory rows selectable. The decision
+  panel now reports status, operator/service, range, current assignment,
+  magazine depth, C2 gateway, data interface, communications state, and the
+  path into the shared COP.
+- Expanded the persistent military air picture with additional fighter patrols,
+  MQ-9A orbits, ISR/C2 aircraft, helicopters, and transport shuttles. Under
+  confirmed WEAPONS FREE, armed aircraft reposition and join coordinated air
+  volleys even when a ground effector opened the engagement; unarmed aircraft
+  receive explicit support tasks.
+- Added a small application version and content-build identifier beside the
+  product title.
+
 ### West Coast maps and map navigation
 
 - Split the former combined West Coast view into two independent areas:
