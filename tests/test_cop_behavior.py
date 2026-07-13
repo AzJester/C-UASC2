@@ -226,14 +226,41 @@ def test_norfolk_scenario_is_selectable_and_complete(page):
     assert "CHESAPEAKE" in out["water"]
     assert "FIBER" in out["backhaul"]["medium"]
     assert out["backhaul"]["x"] > -2200, "Norfolk 5G endpoint must remain landward of the configured coast"
+    assert out["backhaul"]["y"] < 0, "Norfolk 5G endpoint must be positioned inland, south of Sewells Point"
+    assert "LAND SITE" in out["backhaul"]["description"]
+    assert "NO OFFSHORE TOWER" in out["backhaul"]["description"]
     assert out["naval"] >= 4 and out["commercial"] >= 4
+
+
+def test_guam_scenario_has_layered_site_protection(page):
+    out = page.evaluate(
+        """() => {
+          const C = window.__CUAS__; C.applyScenario('guam');
+          const scn = C.currentScenario();
+          return {id:C.S.scenario, terrain:scn.terrain, airport:scn.civilAirport.code,
+            protectedSites:scn.protectedSites.length, sensors:scn.sensors.length,
+            effectors:scn.effectors.length,
+            protectedSensors:scn.sensors.filter(s => s.protectedSite).length,
+            protectedEffectors:scn.effectors.filter(e => e.protectedSite).length,
+            effectorTypes:[...new Set(scn.effectors.map(e => e.effectorType))],
+            axes:scn.threat.axes.length, backhaul:scn.networkBackhaul};
+        }"""
+    )
+    assert out["id"] == "guam" and out["terrain"] == "island"
+    assert out["airport"] == "PGUM"
+    assert out["protectedSites"] >= 3
+    assert out["sensors"] >= 10 and out["effectors"] >= 14
+    assert out["protectedSensors"] >= 6 and out["protectedEffectors"] >= 8
+    assert {"EW_JAMMER", "RF_TAKEOVER", "DIRECTED_ENERGY", "KINETIC_GUN", "KINETIC_INTERCEPTOR", "NET_CAPTURE"}.issubset(set(out["effectorTypes"]))
+    assert out["axes"] >= 4
+    assert "ON-ISLAND" in out["backhaul"]["description"]
 
 
 def test_every_scenario_airport_has_local_defenses_and_traffic(page):
     out = page.evaluate(
         """() => {
           const C = window.__CUAS__;
-          return ['sandiego', 'elpaso', 'norfolk'].map(id => {
+          return ['sandiego', 'elpaso', 'norfolk', 'guam'].map(id => {
             C.applyScenario(id);
             const scn = C.currentScenario(), airport = scn.civilAirport;
             const near = (item) => Math.hypot(item.x-airport.x, item.y-airport.y) <= 1200;
@@ -267,6 +294,57 @@ def test_el_paso_border_patrol_network_is_distributed(page):
     assert all(station["name"].startswith("USBP") for station in out)
     assert all(station["sensor"] and station["effector"] for station in out)
     assert max(station["x"] for station in out) - min(station["x"] for station in out) >= 8000
+
+
+def test_el_paso_all_sensor_and_effector_sites_are_in_the_united_states(page):
+    out = page.evaluate(
+        """() => {
+          const C = window.__CUAS__; C.applyScenario('elpaso');
+          const scn = C.currentScenario();
+          return {borderY:scn.borderY,
+            sensors:scn.sensors.map(s => ({id:s.sensorId, y:s.y})),
+            effectors:scn.effectors.map(e => ({id:e.effectorId, y:e.y})),
+            stations:scn.borderStations.map(s => ({name:s.name, y:s.y}))};
+        }"""
+    )
+    positioned = out["sensors"] + out["effectors"] + out["stations"]
+    assert all(item["y"] > out["borderY"] for item in positioned), positioned
+
+
+def test_event_panel_is_taller_and_regional_view_uses_alert_font(page):
+    out = page.evaluate(
+        """() => {
+          const alert = document.querySelector('.reg-alert');
+          const title = document.querySelector('.reg-title');
+          const note = document.querySelector('.reg-note');
+          const button = document.querySelector('.reg-foot .sbtn');
+          const ticker = document.querySelector('.event-ticker');
+          return {eventHeight:document.querySelector('.event-strip').getBoundingClientRect().height,
+            eventColumns:getComputedStyle(document.querySelector('.event-line')).gridTemplateColumns,
+            tickerOverflow:getComputedStyle(ticker).overflow,
+            alertFont:getComputedStyle(alert).fontFamily,
+            titleFont:getComputedStyle(title).fontFamily,
+            noteFont:getComputedStyle(note).fontFamily,
+            buttonFont:getComputedStyle(button).fontFamily};
+        }"""
+    )
+    assert out["eventHeight"] >= 130
+    assert out["tickerOverflow"] == "hidden"
+    assert len(out["eventColumns"].split()) == 2
+    assert out["titleFont"] == out["alertFont"]
+    assert out["noteFont"] == out["alertFont"]
+    assert out["buttonFont"] == out["alertFont"]
+
+
+def test_5g_details_open_only_when_a_transport_node_is_clicked(page):
+    page.evaluate("window.__CUAS__.applyScenario('norfolk')")
+    point = page.evaluate("window.__CUAS__.transportPoints().backhaul")
+    assert page.evaluate("window.__CUAS__.S.transportInfoOpen") is False
+    page.locator("#plot").click(position={"x": point["x"], "y": point["y"]})
+    assert page.evaluate("window.__CUAS__.S.transportInfoOpen") is True
+    box = page.locator("#plot").bounding_box()
+    page.locator("#plot").click(position={"x": box["width"] * 0.9, "y": box["height"] * 0.2})
+    assert page.evaluate("window.__CUAS__.S.transportInfoOpen") is False
 
 
 def test_san_diego_airport_tracks_publish_transponder_data(page):
@@ -335,8 +413,12 @@ def test_bda_assesses_before_confirming(page):
       for (const e of C.S.effectors) {
         if (["EW_JAMMER", "RF_TAKEOVER", "NET_CAPTURE"].includes(e.effectorType)) e.mag = 0;
       }
-      const t = C.spawnHostile({r: 1500, tq: 15, alt: 300});
-      C.engageTrack(t, false);
+      // Exercise several independent 90%-Pk interceptor outcomes so this test
+      // validates the BDA lifecycle rather than depending on one random roll.
+      for (let i=0; i<6; i++) {
+        const t = C.spawnHostile({r: 1400 + i*80, tq: 15, alt: 300, bearing:-2.8 + i*0.12});
+        C.engageTrack(t, false);
+      }
     }"""
     )
     page.wait_for_timeout(9000)

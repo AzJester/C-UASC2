@@ -64,25 +64,35 @@ human-in/on-the-loop consent, battle damage assessment, no-fire collateral zones
 threat profiles (low ingress, OWA cruise, ISR orbiters, decoys), civilian
 air and boat traffic, seeded weather and time of day, a degraded-comms
 inject, a notional cost-exchange ledger, and an AAR replay scrubber.
-Preset links: `?scn=norfolk&arch=HUB&wx=RAIN&tod=NIGHT&seed=N`.
+Preset links: `?scn=guam&arch=NETWORKED&wx=WIND&tod=NIGHT&seed=N`.
 
-The embedded simulation includes San Diego, El Paso, and Norfolk / Hampton
-Roads area-of-operations presets. San Diego includes notional civilian
+The embedded simulation includes San Diego, El Paso, Norfolk / Hampton Roads,
+and Guam area-of-operations presets. San Diego includes notional civilian
 arrivals and departures at KSAN with Mode-S / ADS-B identity fields, a
 soft-kill counter-UAS layer around the airport, and a visually distinct
 microwave extension from the 5G transport overlay to a visible off-scale San
 Clemente Island inset. El Paso adds KELP traffic and airport defense plus three
-distributed Border Patrol sensor/effector sites. Norfolk adds KORF traffic and
-airport defense, a land-terminated 5G backbone, and a denser naval/commercial
-surface picture. Geography, inventory, coverage, and performance remain
+distributed Border Patrol sensor/effector sites, all physically sited north of
+the international border. Norfolk adds KORF traffic and airport defense, an
+explicitly boxed inland terrestrial 5G fiber handoff, and a denser naval/
+commercial surface picture. Guam adds a dense, multi-axis joint-defense sector
+with layered sensing and effectors around PGUM plus three additional notional
+protected sites. Geography, inventory, coverage, and performance remain
 illustrative and are not suitable for operational decisions.
 
-The workstation uses a split-wing layout: priority tracks and posture remain in
-a bounded left wing, decision support remains in a bounded right wing, and the
-complete tactical AO scales into the unobstructed center map. Routine notices
+5G endpoint descriptions are contextual: the map shows compact gNB and POP
+nodes during normal operation, and clicking either 5G node opens the boxed site
+description. Clicking elsewhere dismisses it.
+
+The workstation uses a compact split-wing layout: priority tracks and posture
+remain in a narrow bounded left wing, decision support remains in a narrow
+bounded right wing, and the complete tactical AO receives most of the screen.
+Routine notices
 replace one compact status line instead of stacking over the map. Complete
 decision evidence and audit history open in dedicated dialogs, and the entire
-interface—including the AAR—uses one command-screen monospace typeface.
+interface—including the AAR and regional rollup—uses one command-screen
+monospace typeface. The latest-events strip is tall enough to show wrapped
+incoming messages without clipping its two-event summary.
 
 The COP is designed for a fixed command-center workstation, not a phone. The
 supported effective-display target is 1280x720 or larger (1920x1080, 4K, 5K,

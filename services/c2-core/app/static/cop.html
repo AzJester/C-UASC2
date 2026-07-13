@@ -194,7 +194,7 @@
   /* main grid: plot + rail */
   .main {
     display: grid;
-    grid-template-columns: clamp(300px, 21vw, 360px) minmax(0, 1fr) clamp(320px, 22vw, 400px);
+    grid-template-columns: clamp(260px, 18vw, 320px) minmax(0, 1fr) clamp(280px, 19vw, 350px);
     min-height: 0;
   }
 
@@ -366,9 +366,10 @@
     display: grid;
     min-height: 0;
     background: var(--panel);
+    font-size: 13px;
   }
   .rail-left { grid-template-rows: 32px minmax(0, 1fr); border-right: 1px solid var(--hair); }
-  .rail-right { grid-template-rows: 32px minmax(0, 1fr) 104px; border-left: 1px solid var(--hair); }
+  .rail-right { grid-template-rows: 32px minmax(0, 1fr) 144px; border-left: 1px solid var(--hair); }
   .rail-toolbar {
     display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center; gap: 8px;
@@ -406,13 +407,14 @@
     display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto minmax(0,1fr); gap: 4px 8px;
   }
   .event-strip h3 { margin: 0; color: var(--muted); font: 700 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
-  .event-ticker { grid-column: 1; min-height: 0; display: grid; gap: 2px; align-content: start; }
-  .event-ticker .event-line { display: grid; grid-template-columns: 48px 58px 1fr; gap: 6px; font: 11px/1.35 var(--mono); }
+  .event-ticker { grid-column: 1 / -1; min-height: 0; overflow: hidden; display: grid; gap: 4px; align-content: start; }
+  .event-ticker .event-line { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 1px 7px; font: 11px/1.3 var(--mono); }
   .event-line .t { color: var(--faint); }
   .event-line .d { color: var(--accent); font-weight: 700; }
+  .event-line .m { grid-column: 1 / -1; color: var(--text); }
   .event-line.critical .d, .event-line.critical .m { color: var(--hostile); }
   .event-line.warning .d { color: var(--suspect); }
-  .event-strip .rail-tool { grid-column: 2; grid-row: 1 / -1; align-self: center; }
+  .event-strip .rail-tool { grid-column: 2; grid-row: 1; align-self: center; padding: 3px 6px; font-size: 9px; }
 
   .card {
     background: var(--raised);
@@ -439,14 +441,14 @@
   /* accessible, keyboard-operable companion to the canvas COP */
   .track-list { display: grid; gap: 4px; }
   .track-list-head, .track-list-row {
-    display: grid; grid-template-columns: minmax(78px, 1fr) 58px 34px 50px;
-    align-items: center; gap: 6px;
+    display: grid; grid-template-columns: minmax(68px, 1fr) 50px 24px 42px;
+    align-items: center; gap: 4px;
   }
-  .track-list-head { color: var(--muted); font: 700 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 0 6px 3px; }
+  .track-list-head { color: var(--muted); font: 700 9px var(--mono); letter-spacing: .04em; text-transform: uppercase; padding: 0 5px 3px; }
   .track-list-row {
     width: 100%; border: 1px solid var(--hair); border-radius: 3px;
     background: #111822; color: var(--text); padding: 5px 6px; cursor: pointer;
-    font: 12px var(--mono); text-align: left;
+    font: 11px var(--mono); text-align: left;
   }
   .track-list-row:hover, .track-list-row[aria-current="true"] { background: #1a2633; border-color: #35667a; }
   .track-list-row .ident { font-weight: 700; }
@@ -492,9 +494,9 @@
   #cuas[data-workspace="COP"] #scoreboard .sb-grid { margin-bottom: 0; }
 
   @media (max-width: 1399px) {
-    .main { grid-template-columns: 300px minmax(0, 1fr) 320px; }
+    .main { grid-template-columns: 260px minmax(0, 1fr) 280px; }
     .rail-left { grid-template-rows: 30px minmax(0, 1fr); }
-    .rail-right { grid-template-rows: 30px minmax(0, 1fr) 96px; }
+    .rail-right { grid-template-rows: 30px minmax(0, 1fr) 132px; }
     .rail-right .rail-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
     .rail-right .rail-toolbar > .context { display: none; }
     .rail-scroll { padding: 6px; gap: 6px; }
@@ -504,7 +506,12 @@
     .sb-tile .n { font-size: 13px; }
     .sb-tile .l { font-size: 8px; }
     .track-list { gap: 3px; }
-    .track-list-row { padding: 4px 5px; font-size: 11px; }
+    .track-list-row { padding: 4px 4px; font-size: 10px; }
+    .track-pager { gap: 3px; }
+    .track-pager span, .track-pager button { font-size: 9px; }
+    .track-pager button { padding: 3px 5px; }
+    .rail-tool { font-size: 9px; padding: 4px 6px; }
+    .event-ticker .event-line { font-size: 10px; }
     .decision-glance { margin-top: 5px; }
   }
 
@@ -824,7 +831,9 @@
     background: linear-gradient(180deg, #0f1622, var(--panel));
     border: 1px solid #2a3645; border-radius: 8px;
     box-shadow: 0 24px 70px rgba(0,0,0,0.7); padding: 0 0 14px;
+    font-family: var(--mono);
   }
+  .reg button { font-family: inherit; }
   .reg-alert {
     background: #4a121b; color: #ffd7dc; border-bottom: 1px solid #6b1e2a;
     font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
@@ -1089,10 +1098,11 @@
     <div class="scenario">
       <div class="ctl-grp">
         <span class="glabel">AO</span>
-        <div class="seg" id="scnSeg" style="flex:0 0 auto;width:330px" title="Choose the area of operations">
+        <div class="seg" id="scnSeg" style="flex:0 0 auto;width:440px" title="Choose the area of operations">
           <button data-v="sandiego" aria-pressed="true" title="San Diego coast: Pacific to the west, Navy ships offshore, threats from the sea and the southern border">San Diego</button>
           <button data-v="elpaso" title="El Paso border: US-Mexico border to the south, TARS aerostat, threats from the south">El Paso</button>
           <button data-v="norfolk" title="Norfolk and Hampton Roads: Atlantic and Chesapeake approaches, naval traffic, and dense civilian airspace">Norfolk</button>
+          <button data-v="guam" title="Guam joint-defense sector: layered counter-UAS protection for air, port, logistics, and communications sites">Guam</button>
         </div>
       </div>
       <span class="ctl-div"></span>
@@ -1243,7 +1253,7 @@
       <div class="aar-col">
         <div class="aar-h">Controls</div>
         <div class="help-list">
-          <div><b>AO</b> &mdash; switch scenario (San Diego coast / El Paso border / Norfolk and Hampton Roads)</div>
+          <div><b>AO</b> &mdash; switch scenario (San Diego coast / El Paso border / Norfolk and Hampton Roads / Guam joint-defense sector)</div>
           <div><b>Time</b> &mdash; pause/resume and 0.5x / 1x / 2x speed</div>
           <div><b>Inject</b> &mdash; auto-play brief, a swarm, or a mass raid</div>
           <div><b>Operate</b> &mdash; swap a radar vendor, federate up-echelon, drop a C2 node</div>
@@ -1254,6 +1264,7 @@
           <div><b>Airport defense</b> &mdash; every scenario airport has arriving/departing transponder traffic, nearby sensors, and soft-kill / capture effectors inside its no-fire constraints.</div>
           <div><b>El Paso border</b> &mdash; three labeled Border Patrol stations distribute paired sensors and non-kinetic effectors along the boundary.</div>
           <div><b>Norfolk maritime</b> &mdash; naval and commercial surface tracks share Hampton Roads; the 5G backbone terminates at a labeled terrestrial point on land.</div>
+          <div><b>Guam joint defense</b> &mdash; a dense, layered sensor and effector network protects the civilian airport plus notional air-defense, port/logistics, and power/communications sites.</div>
           <div><b>Basemap</b> &mdash; SAT &middot; EXTERNAL is the default and requests public Esri World Imagery. TACTICAL &middot; LOCAL remains available manually and is used automatically when imagery is unreachable.</div>
           <div><b>Weather</b> &mdash; CLEAR / WIND / RAIN: wind slows small UAS, rain shortens EO/IR and directed-energy reach</div>
           <div><b>Time of day</b> &mdash; AUTO follows the scenario clock; NIGHT darkens the plot and cuts EO/IR to 55% (watch its ring shrink)</div>
@@ -1466,9 +1477,9 @@
         ],
       },
       borderStations: [
-        { name: "USBP SANTA TERESA", x: -4300, y: -2050, sensorId: "SEN-BP-RF-10", effectorId: "EFF-BP-EW-10" },
-        { name: "USBP EL PASO", x: 0, y: -2050, sensorId: "SEN-BP-RAD-11", effectorId: "EFF-BP-RF-11" },
-        { name: "USBP YSLETA", x: 4300, y: -2050, sensorId: "SEN-BP-EO-12", effectorId: "EFF-BP-NET-12" },
+        { name: "USBP SANTA TERESA", x: -4300, y: -1740, sensorId: "SEN-BP-RF-10", effectorId: "EFF-BP-EW-10" },
+        { name: "USBP EL PASO", x: 0, y: -1740, sensorId: "SEN-BP-RAD-11", effectorId: "EFF-BP-RF-11" },
+        { name: "USBP YSLETA", x: 4300, y: -1740, sensorId: "SEN-BP-EO-12", effectorId: "EFF-BP-NET-12" },
       ],
       threat: { angle: -Math.PI / 2, spread: 1.1 },     // inbound from the south (border)
       // collateral geometry: kinetic fires prohibited over these (soft-kill only)
@@ -1483,9 +1494,9 @@
         { sensorId: "SEN-EO-03",   sensorType: "EO_IR", vendor: "Vendor C", service: "USA",  x: 1600,  y: 700,   range: 3600 },
         { sensorId: "SEN-TARS-04", sensorType: "RADAR", vendor: "Vendor L", service: "USA",  x: 0,     y: 2400,  range: 7000 },
         { sensorId: "SEN-MADIS-05",sensorType: "RF",    vendor: "Vendor K", service: "USMC", x: -300,  y: -1600, range: 4500 },
-        { sensorId: "SEN-BP-RF-10", sensorType: "RF",    vendor: "Vendor R", service: "DHS", x: -4470, y: -1930, range: 3600, borderStation: true },
-        { sensorId: "SEN-BP-RAD-11",sensorType: "RADAR", vendor: "Vendor S", service: "DHS", x: -170,  y: -1930, range: 4400, borderStation: true },
-        { sensorId: "SEN-BP-EO-12", sensorType: "EO_IR", vendor: "Vendor T", service: "DHS", x: 4130,  y: -1930, range: 3000, borderStation: true },
+        { sensorId: "SEN-BP-RF-10", sensorType: "RF",    vendor: "Vendor R", service: "DHS", x: -4470, y: -1810, range: 3600, borderStation: true },
+        { sensorId: "SEN-BP-RAD-11",sensorType: "RADAR", vendor: "Vendor S", service: "DHS", x: -170,  y: -1810, range: 4400, borderStation: true },
+        { sensorId: "SEN-BP-EO-12", sensorType: "EO_IR", vendor: "Vendor T", service: "DHS", x: 4130,  y: -1810, range: 3000, borderStation: true },
         { sensorId: "SEN-KELP-RAD-20", sensorType: "RADAR", vendor: "Vendor U", service: "USA", x: 2450, y: -550, range: 5000, airportDefense: true },
         { sensorId: "SEN-KELP-EO-21",  sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: 3250, y: -950, range: 2800, airportDefense: true },
       ],
@@ -1498,9 +1509,9 @@
         { effectorId: "EFF-GUN-06",    effectorType: "KINETIC_GUN",         vendor: "Vendor E", service: "USA",  x: -450,  y: -350,  maxRange: 2400, mag: 240, cap: 240, unit: "rds" },
         { effectorId: "EFF-NET-07",    effectorType: "NET_CAPTURE",         vendor: "Vendor I", service: "USA",  x: -300,  y: -900,  maxRange: 1800, mag: 6,   cap: 6,   unit: "nets" },
         { effectorId: "EFF-LMADIS-09", effectorType: "EW_JAMMER",           vendor: "Vendor K", service: "USMC", x: -300,  y: -1600, maxRange: 4000, mag: 100, cap: 100, unit: "sec" },
-        { effectorId: "EFF-BP-EW-10",  effectorType: "EW_JAMMER",           vendor: "Vendor R", service: "DHS", x: -4130, y: -2170, maxRange: 3200, mag: 100, cap: 100, unit: "sec", borderStation: true },
-        { effectorId: "EFF-BP-RF-11",  effectorType: "RF_TAKEOVER",         vendor: "Vendor S", service: "DHS", x: 170,   y: -2170, maxRange: 3000, mag: 100, cap: 100, unit: "sec", borderStation: true },
-        { effectorId: "EFF-BP-NET-12", effectorType: "NET_CAPTURE",         vendor: "Vendor T", service: "DHS", x: 4470,  y: -2170, maxRange: 1500, mag: 6,   cap: 6,   unit: "nets", borderStation: true },
+        { effectorId: "EFF-BP-EW-10",  effectorType: "EW_JAMMER",           vendor: "Vendor R", service: "DHS", x: -4130, y: -1660, maxRange: 3200, mag: 100, cap: 100, unit: "sec", borderStation: true },
+        { effectorId: "EFF-BP-RF-11",  effectorType: "RF_TAKEOVER",         vendor: "Vendor S", service: "DHS", x: 170,   y: -1660, maxRange: 3000, mag: 100, cap: 100, unit: "sec", borderStation: true },
+        { effectorId: "EFF-BP-NET-12", effectorType: "NET_CAPTURE",         vendor: "Vendor T", service: "DHS", x: 4470,  y: -1660, maxRange: 1500, mag: 6,   cap: 6,   unit: "nets", borderStation: true },
         { effectorId: "EFF-KELP-EW-20",effectorType: "EW_JAMMER",           vendor: "Vendor U", service: "USA", x: 2500,  y: -500,  maxRange: 3400, mag: 100, cap: 100, unit: "sec", airportDefense: true },
         { effectorId: "EFF-KELP-NET-21",effectorType: "NET_CAPTURE",        vendor: "Vendor V", service: "USA", x: 3200,  y: -1000, maxRange: 1500, mag: 6,   cap: 6,   unit: "nets", airportDefense: true },
       ],
@@ -1535,7 +1546,10 @@
         ],
       },
       gnb: { x: 2800, y: 900 },
-      networkBackhaul: { x: 4600, y: 4700, label: "NAVFAC TERRESTRIAL POP", medium: "FIBER BACKBONE" },
+      networkBackhaul: {
+        x: 3500, y: -3300, label: "NORFOLK INLAND NETWORK POP",
+        medium: "TERRESTRIAL FIBER HANDOFF", description: "NOTIONAL LAND SITE \u00B7 NO OFFSHORE TOWER",
+      },
       shippingLanes: [-5450, -4650],
       civilVessels: [
         { platform: "CONTAINER SHIP", laneX: -5450, y: -3300, north: true },
@@ -1585,6 +1599,87 @@
         { identity: "FRIEND", platform: "LPD-17 AMPHIB", service: "USN", cls: "SURFACE", alt: 0, ox: -5100, oy: -1200, orad: 160, ospeed: 0.04, speed: 7 },
         { identity: "FRIEND", platform: "LCS PATROL", service: "USN", cls: "SURFACE", alt: 0, ox: -4200, oy: 1500, orad: 220, ospeed: 0.06, speed: 10 },
         { identity: "FRIEND", platform: "USCG CUTTER", service: "USCG", cls: "SURFACE", alt: 0, ox: -5000, oy: 3500, orad: 190, ospeed: 0.05, speed: 9 },
+      ],
+    },
+    guam: {
+      id: "guam", label: "Guam Joint Defense",
+      asset: { name: "GUAM JOINT DEFENSE SECTOR", sub: "DEFENDED ISLAND INFRASTRUCTURE \u00B7 INDOPACOM", lat: 13.500, lon: 144.800 },
+      grid: "GRID 55P \u00B7 WGS84 \u00B7 1 km",
+      terrain: "island",
+      waterLabel: "PHILIPPINE SEA \u00B7 WESTERN PACIFIC",
+      primaryService: "JTF",
+      approachLabel: "Multi-axis western Pacific approaches",
+      civilAirVia: { x: 1550, y: -500 },
+      civilAirport: {
+        name: "GUAM INTL", code: "PGUM", x: 1550, y: -500,
+        sensorIds: ["SEN-PGUM-RAD-20", "SEN-PGUM-EO-21"],
+        routes: [
+          { inbound: { x: -5900, y: -900 }, outbound: { x: 5900, y: -300 }, origin: "PHNL", destination: "PGUM" },
+          { inbound: { x: 4800, y: 4400 }, outbound: { x: -5200, y: 3900 }, origin: "RJAA", destination: "PGUM" },
+        ],
+      },
+      gnb: { x: 700, y: 500 },
+      networkBackhaul: {
+        x: 2700, y: 1900, label: "GUAM TERRESTRIAL NETWORK POP",
+        medium: "HARDENED FIBER HANDOFF", description: "NOTIONAL ON-ISLAND SITE",
+      },
+      protectedSites: [
+        { name: "NORTH AIR DEFENSE NODE", x: 500, y: 3900, kind: "AIR" },
+        { name: "PORT / LOGISTICS NODE", x: -2600, y: -2600, kind: "PORT" },
+        { name: "POWER / COMMS NODE", x: 3200, y: 1500, kind: "C2" },
+      ],
+      shippingLanes: [-5450, 5000],
+      civilVessels: [
+        { platform: "CONTAINER SHIP", laneX: -5450, y: -3100, north: true },
+        { platform: "TANKER", laneX: -5200, y: 2200, north: false },
+        { platform: "FREIGHTER", laneX: 5000, y: -1200, north: true },
+      ],
+      threat: { angle: Math.PI, spread: 1.25, axes: [Math.PI, 0, Math.PI / 2, -Math.PI / 2] },
+      noFire: [
+        { x: 1550, y: -500, r: 1500, label: "PGUM APPROACH" },
+        { x: -500, y: -1200, r: 1700, label: "HAGATNA / CIVIL AREA" },
+        { x: -2900, y: -2600, r: 900, label: "COMMERCIAL PORT" },
+      ],
+      sensors: [
+        { sensorId: "SEN-RAD-01", sensorType: "RADAR", vendor: "Vendor A", service: "USAF", x: 0, y: 200, range: 6500 },
+        { sensorId: "SEN-RF-02", sensorType: "RF", vendor: "Vendor B", service: "USMC", x: -1400, y: 900, range: 5400 },
+        { sensorId: "SEN-EO-03", sensorType: "EO_IR", vendor: "Vendor C", service: "USA", x: 1800, y: 1300, range: 3800 },
+        { sensorId: "SEN-NORTH-RAD-04", sensorType: "RADAR", vendor: "Vendor D", service: "USAF", x: 350, y: 4000, range: 6200, protectedSite: true },
+        { sensorId: "SEN-NORTH-RF-05", sensorType: "RF", vendor: "Vendor E", service: "USMC", x: 900, y: 3700, range: 4700, protectedSite: true },
+        { sensorId: "SEN-PORT-RAD-06", sensorType: "RADAR", vendor: "Vendor F", service: "USN", x: -2850, y: -2450, range: 5700, protectedSite: true },
+        { sensorId: "SEN-PORT-EO-07", sensorType: "EO_IR", vendor: "Vendor G", service: "USN", x: -2350, y: -2850, range: 3300, protectedSite: true },
+        { sensorId: "SEN-C2-RF-08", sensorType: "RF", vendor: "Vendor H", service: "USSF", x: 2950, y: 1650, range: 4800, protectedSite: true },
+        { sensorId: "SEN-C2-EO-09", sensorType: "EO_IR", vendor: "Vendor I", service: "USA", x: 3450, y: 1250, range: 3200, protectedSite: true },
+        { sensorId: "SEN-PGUM-RAD-20", sensorType: "RADAR", vendor: "Vendor U", service: "USA", x: 1250, y: -250, range: 5200, airportDefense: true },
+        { sensorId: "SEN-PGUM-EO-21", sensorType: "EO_IR", vendor: "Vendor V", service: "USA", x: 1850, y: -750, range: 3000, airportDefense: true },
+      ],
+      effectors: [
+        { effectorId: "EFF-EW-01", effectorType: "EW_JAMMER", vendor: "Vendor D", service: "USAF", x: 300, y: 450, maxRange: 5600, mag: 100, cap: 100, unit: "sec" },
+        { effectorId: "EFF-RF-02", effectorType: "RF_TAKEOVER", vendor: "Vendor F", service: "USMC", x: -1100, y: 700, maxRange: 4300, mag: 100, cap: 100, unit: "sec" },
+        { effectorId: "EFF-INT-03", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor H", service: "USA", x: 800, y: 1000, maxRange: 4700, mag: 12, cap: 12, unit: "rounds" },
+        { effectorId: "EFF-DE-04", effectorType: "DIRECTED_ENERGY", vendor: "Vendor G", service: "USAF", x: -400, y: -300, maxRange: 3300, mag: 100, cap: 100, unit: "%" },
+        { effectorId: "EFF-GUN-05", effectorType: "KINETIC_GUN", vendor: "Vendor E", service: "USA", x: 600, y: -900, maxRange: 2500, mag: 300, cap: 300, unit: "rds" },
+        { effectorId: "EFF-NORTH-EW-06", effectorType: "EW_JAMMER", vendor: "Vendor J", service: "USMC", x: 700, y: 4050, maxRange: 4200, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-NORTH-DE-07", effectorType: "DIRECTED_ENERGY", vendor: "Vendor K", service: "USAF", x: 200, y: 3650, maxRange: 3200, mag: 100, cap: 100, unit: "%", protectedSite: true },
+        { effectorId: "EFF-NORTH-INT-08", effectorType: "KINETIC_INTERCEPTOR", vendor: "Vendor L", service: "USA", x: 1050, y: 3500, maxRange: 4400, mag: 10, cap: 10, unit: "rounds", protectedSite: true },
+        { effectorId: "EFF-PORT-EW-09", effectorType: "EW_JAMMER", vendor: "Vendor M", service: "USN", x: -3000, y: -2700, maxRange: 4000, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-PORT-DE-10", effectorType: "DIRECTED_ENERGY", vendor: "Vendor N", service: "USN", x: -2350, y: -2350, maxRange: 3100, mag: 100, cap: 100, unit: "%", protectedSite: true },
+        { effectorId: "EFF-PORT-GUN-11", effectorType: "KINETIC_GUN", vendor: "Vendor P", service: "USN", x: -2600, y: -3100, maxRange: 2400, mag: 280, cap: 280, unit: "rds", protectedSite: true },
+        { effectorId: "EFF-C2-RF-12", effectorType: "RF_TAKEOVER", vendor: "Vendor Q", service: "USSF", x: 3050, y: 1300, maxRange: 3700, mag: 100, cap: 100, unit: "sec", protectedSite: true },
+        { effectorId: "EFF-C2-DE-13", effectorType: "DIRECTED_ENERGY", vendor: "Vendor R", service: "USA", x: 3500, y: 1750, maxRange: 3000, mag: 100, cap: 100, unit: "%", protectedSite: true },
+        { effectorId: "EFF-PGUM-EW-20", effectorType: "EW_JAMMER", vendor: "Vendor U", service: "USA", x: 1200, y: -200, maxRange: 3600, mag: 100, cap: 100, unit: "sec", airportDefense: true },
+        { effectorId: "EFF-PGUM-NET-21", effectorType: "NET_CAPTURE", vendor: "Vendor V", service: "USA", x: 1900, y: -800, maxRange: 1600, mag: 8, cap: 8, unit: "nets", airportDefense: true },
+      ],
+      hubPair: { "SEN-RAD-01": "EFF-GUN-05", "SEN-EO-03": "EFF-DE-04", "SEN-RF-02": "EFF-RF-02" },
+      blue: [
+        { identity: "FRIEND", platform: "F-35A", service: "USAF", cls: "FIXED_WING", alt: 8500, ox: -1200, oy: 2600, orad: 1500, ospeed: 0.17, speed: 205, armed: true, weapon: "AAM", weaponRange: 4500, weaponCooldown: 2.2 },
+        { identity: "FRIEND", platform: "F/A-18E", service: "USN", cls: "FIXED_WING", alt: 7000, ox: -2500, oy: 500, orad: 1400, ospeed: 0.20, speed: 185, armed: true, weapon: "AAM", weaponRange: 4300 },
+        { identity: "FRIEND", platform: "E-2D", service: "USN", cls: "FIXED_WING", alt: 8200, ox: 1800, oy: 2400, orad: 1800, ospeed: 0.12, speed: 150 },
+        { identity: "FRIEND", platform: "MH-60R", service: "USN", cls: "ROTARY", alt: 350, ox: -2200, oy: -1800, orad: 650, ospeed: 0.27, speed: 72, armed: true, weapon: "GUN", weaponRange: 1900 },
+        { identity: "FRIEND", platform: "MQ-9", service: "USAF", cls: "FIXED_WING", alt: 7600, ox: 2600, oy: -1800, orad: 1400, ospeed: 0.14, speed: 90, armed: true, weapon: "MISSILE", weaponRange: 3300 },
+        { identity: "ASSUMED_FRIEND", platform: "RQ-21A", service: "USMC", cls: "UAS_GROUP_3", alt: 1500, ox: -800, oy: -2500, orad: 850, ospeed: 0.18, speed: 40 },
+        { identity: "FRIEND", platform: "DDG-51 DESTROYER", service: "USN", cls: "SURFACE", alt: 0, ox: -5000, oy: -3400, orad: 170, ospeed: 0.05, speed: 8 },
+        { identity: "FRIEND", platform: "USCG CUTTER", service: "USCG", cls: "SURFACE", alt: 0, ox: 4900, oy: 2400, orad: 180, ospeed: 0.05, speed: 9 },
       ],
     },
   };
@@ -1663,11 +1758,12 @@
     pendingEng: new Map(),                 // LIVE: engagementId -> {trackId, t0, firstSeen}
     autoplay: { running: false, timer: null },
     view: "ALL",                            // ALL | RED | BLUE COP filter
-    scenario: "sandiego",                    // sandiego | elpaso | norfolk
+    scenario: "sandiego",                    // sandiego | elpaso | norfolk | guam
     echelon: { bn: false, rgt: false },     // up-echelon federation state
     arch: "NETWORKED",                       // NETWORKED | HUB (any-shooter vs legacy)
     coverage: null,                          // cached {netPct, hubPct, gap:[{x,y}]}
     transport: "BOTH",                       // BOTH | MANET | 5G | OFF (data transport overlay)
+    transportInfoOpen: false,                // contextual 5G node details, opened from the map
     basemap: "SAT",                          // SAT default | TAC manual/offline fallback
     wx: "CLEAR",                             // CLEAR | WIND | RAIN (seeded per run)
     tod: "AUTO",                             // AUTO (scenario clock) | DAY | NIGHT
@@ -2079,7 +2175,7 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_BUILD = "5a5f945c";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "7071ad7b";   // stamped by scripts/build_cop.py (content hash)
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
 
@@ -2194,7 +2290,7 @@
             nt.declareAt = 7000 + rand() * 11000;
           }
         } else if (roll < 0.8 && civCount() < 7) {
-          nt = (SCN.terrain === "coast" && rand() < 0.45) ? spawnCivBoat() : spawnCivAir();
+          nt = ((SCN.terrain === "coast" || SCN.terrain === "island") && rand() < 0.45) ? spawnCivBoat() : spawnCivAir();
         } else if (roll < 0.92) {
           nt = spawnClutter();
         } else {
@@ -3503,6 +3599,27 @@
       ctx.fillText("UNITED STATES", 14, clamp(by - 8, 14, h - 20));
       ctx.fillText("MEXICO \u00B7 INTERNATIONAL BORDER", 14, clamp(by + 16, 24, h - 6));
       drawContours();
+    } else if (SCN.terrain === "island") {
+      // Guam fallback: a clearly bounded island sector surrounded by water.
+      // Satellite mode supplies the real shoreline; this synthetic shape is
+      // intentionally schematic and keeps site relationships legible offline.
+      ctx.fillStyle = "#0a2740"; ctx.fillRect(0, 0, w, h);
+      const ix = VIEW.cx, iy = VIEW.cy, iw = Math.min(w * 0.34, 210), ih = Math.min(h * 0.82, 440);
+      ctx.save(); ctx.translate(ix, iy); ctx.rotate(-0.22);
+      const island = () => {
+        ctx.beginPath();
+        ctx.moveTo(-iw * 0.12, -ih * 0.50); ctx.bezierCurveTo(iw * 0.22, -ih * 0.45, iw * 0.30, -ih * 0.22, iw * 0.18, -ih * 0.05);
+        ctx.bezierCurveTo(iw * 0.34, ih * 0.16, iw * 0.20, ih * 0.44, -iw * 0.04, ih * 0.50);
+        ctx.bezierCurveTo(-iw * 0.30, ih * 0.38, -iw * 0.26, ih * 0.12, -iw * 0.18, -ih * 0.05);
+        ctx.bezierCurveTo(-iw * 0.33, -ih * 0.23, -iw * 0.30, -ih * 0.42, -iw * 0.12, -ih * 0.50); ctx.closePath();
+      };
+      island(); ctx.fillStyle = "#12251a"; ctx.fill(); ctx.strokeStyle = "rgba(130,195,225,0.65)"; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "rgba(150,205,235,0.62)"; ctx.font = "10px " + MONO; ctx.textAlign = "left";
+      ctx.fillText(SCN.waterLabel, 14, h * 0.5);
+      ctx.fillStyle = "rgba(190,220,195,0.45)"; ctx.font = "bold 11px " + MONO; ctx.textAlign = "center";
+      ctx.fillText("GUAM \u00B7 NOTIONAL JOINT-DEFENSE SECTOR", ix, Math.max(18, iy - ih * 0.38));
+      drawContours();
     } else {
       // coast: water to the WEST, coastline anchored in the meters frame so
       // the Navy ship offshore stays in the water at any window size/aspect. The
@@ -3603,6 +3720,13 @@
       ctx.beginPath(); ctx.moveTo(x - 3, y); ctx.lineTo(x + 3, y); ctx.moveTo(x, y - 3); ctx.lineTo(x, y + 3); ctx.stroke();
       placeLabel(station.name, x, y - 10, "#9be7b4", "8px " + MONO, "center");
     }
+    for (const site of (SCN.protectedSites || [])) {
+      const x = sx(site.x), y = sy(site.y);
+      ctx.fillStyle = "rgba(20,32,44,0.94)"; ctx.strokeStyle = "#8fb6d8"; ctx.lineWidth = 1.2;
+      ctx.fillRect(x - 7, y - 6, 14, 12); ctx.strokeRect(x - 7, y - 6, 14, 12);
+      ctx.beginPath(); ctx.moveTo(x - 4, y + 2); ctx.lineTo(x, y - 3); ctx.lineTo(x + 4, y + 2); ctx.stroke();
+      placeLabel(`PROTECTED \u00B7 ${site.name}`, x, y - 11, "#b8d7ee", "8px " + MONO, "center");
+    }
     if (SCN.microwaveRelay && SCN.microwaveRelay.inset) {
       const relay = SCN.microwaveRelay, box = islandInsetGeometry();
       ctx.fillStyle = "rgba(6,24,39,0.92)"; ctx.strokeStyle = "rgba(120,185,220,0.7)"; ctx.lineWidth = 1;
@@ -3668,10 +3792,22 @@
       if (SCN.networkBackhaul) {
         const backhaul = SCN.networkBackhaul, bx = sx(backhaul.x), by = sy(backhaul.y);
         ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
-        ctx.strokeStyle = "#b08cff"; ctx.strokeRect(bx - 4, by - 4, 8, 8);
-        ctx.fillStyle = "#b08cff"; ctx.textAlign = "right";
-        ctx.fillText(backhaul.medium || "TERRESTRIAL BACKBONE", Math.min(VIEW.w - 6, bx - 7), Math.max(14, by - 5));
-        ctx.fillText(backhaul.label, Math.min(VIEW.w - 6, bx - 7), Math.max(24, by + 6));
+        ctx.fillStyle = "rgba(22,14,34,0.94)"; ctx.strokeStyle = "#b08cff"; ctx.lineWidth = 1.3;
+        ctx.fillRect(bx - 5, by - 5, 10, 10); ctx.strokeRect(bx - 5, by - 5, 10, 10);
+        ctx.fillStyle = "#b08cff"; ctx.font = "7px " + MONO; ctx.textAlign = "center";
+        ctx.fillText("5G POP", bx, by - 9);
+        if (S.transportInfoOpen) {
+          const bw = 174, bh = 48;
+          const boxX = clamp(bx - bw / 2, 8, VIEW.w - bw - 8), boxY = clamp(by + 14, 8, VIEW.h - bh - 8);
+          ctx.fillStyle = "rgba(22,14,34,0.96)"; ctx.strokeStyle = "#b08cff"; ctx.lineWidth = 1.3;
+          ctx.fillRect(boxX, boxY, bw, bh); ctx.strokeRect(boxX, boxY, bw, bh);
+          ctx.fillStyle = "#d5c2ff"; ctx.font = "bold 8px " + MONO; ctx.textAlign = "center";
+          ctx.fillText(backhaul.medium || "TERRESTRIAL BACKBONE", boxX + bw / 2, boxY + 13);
+          ctx.fillStyle = "#b08cff"; ctx.font = "8px " + MONO;
+          ctx.fillText(backhaul.label, boxX + bw / 2, boxY + 27);
+          ctx.fillStyle = "#9484b0"; ctx.font = "7px " + MONO;
+          ctx.fillText(backhaul.description || "NOTIONAL LAND SITE", boxX + bw / 2, boxY + 40);
+        }
       } else {
         ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, 30); ctx.stroke(); ctx.setLineDash([]);
         ctx.fillStyle = "#b08cff"; ctx.textAlign = "left";
@@ -4088,11 +4224,24 @@
     document.querySelectorAll("[data-track-select]").forEach((b) => b.setAttribute("aria-current", b.dataset.trackSelect === id ? "true" : "false"));
     renderRail();
   }
+  function transportNodeHit(px, py) {
+    if (!(S.transport === "BOTH" || S.transport === "5G")) return false;
+    const gnb = SCN.gnb || { x: 900, y: -900 };
+    if (dist(px, py, sx(gnb.x), sy(gnb.y)) <= 18) return true;
+    const backhaul = SCN.networkBackhaul;
+    return !!backhaul && dist(px, py, sx(backhaul.x), sy(backhaul.y)) <= 18;
+  }
   canvas.addEventListener("click", (ev) => {
     if (S.autoplay.running) stopAutoplay();   // manual takeover stops the brief
     const rect = canvas.getBoundingClientRect();
     const px = (ev.clientX - rect.left) * (canvas.clientWidth / rect.width);
     const py = (ev.clientY - rect.top) * (canvas.clientHeight / rect.height);
+    if (transportNodeHit(px, py)) {
+      S.transportInfoOpen = !S.transportInfoOpen;
+      selectTrack(null);
+      return;
+    }
+    S.transportInfoOpen = false;
     let best = null, bd = 22;
     for (const t of S.tracks.values()) {
       if (t.state === "NEUTRALIZED") continue;
@@ -4100,6 +4249,12 @@
       if (d < bd) { bd = d; best = t.trackId; }
     }
     selectTrack(best);
+  });
+  canvas.addEventListener("mousemove", (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const px = (ev.clientX - rect.left) * (canvas.clientWidth / rect.width);
+    const py = (ev.clientY - rect.top) * (canvas.clientHeight / rect.height);
+    canvas.style.cursor = transportNodeHit(px, py) ? "pointer" : "default";
   });
 
   // ---- audio: synthesized alert tones (Web Audio, no assets) ----
@@ -5100,6 +5255,7 @@
 
   function resetScenario() {
     S.simTimeMs = 0; S.simEvents = []; S.simEventSeq = 0; S.trackPage = 0;
+    S.transportInfoOpen = false;
     S.alerts = []; S.alertSeq = 0;
     S.requestKeys = { task: new Map(), engage: new Map(), abort: new Map() };
     S.delegatedDefense = { armed: false, expiresAt: 0, minTq: 12, classes: ["MULTIROTOR", "UAS_GROUP_1", "UAS_GROUP_2", "FIXED_WING"] };
@@ -5134,7 +5290,7 @@
       // for coastal scenarios, boats in configured shipping lanes)
       spawnCivAir();
       if (rand() < 0.5) spawnCivAir();
-      if (SCN.terrain === "coast") {
+      if (SCN.terrain === "coast" || SCN.terrain === "island") {
         const vessels = SCN.civilVessels || [{}, {}];
         vessels.forEach((vessel) => spawnCivBoat(vessel));
       }
@@ -5262,7 +5418,7 @@
     applySeg("wxSeg", "wx", ["CLEAR", "WIND", "RAIN"].includes(wxq) ? wxq : wxRoll);
     const todq = (qs.get("tod") || "").toUpperCase();
     if (["DAY", "NIGHT"].includes(todq)) applySeg("todSeg", "tod", todq);
-    // shareable presets: ?scn=sandiego|elpaso|norfolk & ?arch=NETWORKED|HUB
+    // shareable presets: ?scn=sandiego|elpaso|norfolk|guam & ?arch=NETWORKED|HUB
     const scnq = (qs.get("scn") || "").toLowerCase();
     if (SCENARIOS[scnq] && scnq !== S.scenario) applyScenario(scnq);
     const archq = (qs.get("arch") || "").toUpperCase();
@@ -5296,7 +5452,7 @@
     setInterval(renderRail, 750);   // preserve workstation focus while command state remains current
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
     if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
-      window.__CUAS__ = { S, selectTrack, setWorkspace, taskSensor, engage, abortEngagement, liveTask, liveEngage, liveAbortEngagement, livePollEngagements, processLiveEngagementStatus, persistentRequestKey, setDelegatedDefense, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, trackPrediction, engageTrack, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay, toast, latchAlert, acknowledgeAlert, setConnectionState, currentScenario: () => SCN, plotPoint: (track) => ({ x: sx(track.dx != null ? track.dx : track.x), y: sy(track.dy != null ? track.dy : track.y) }) };
+      window.__CUAS__ = { S, selectTrack, setWorkspace, taskSensor, engage, abortEngagement, liveTask, liveEngage, liveAbortEngagement, livePollEngagements, processLiveEngagementStatus, persistentRequestKey, setDelegatedDefense, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, trackPrediction, engageTrack, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay, toast, latchAlert, acknowledgeAlert, setConnectionState, currentScenario: () => SCN, plotPoint: (track) => ({ x: sx(track.dx != null ? track.dx : track.x), y: sy(track.dy != null ? track.dy : track.y) }), transportPoints: () => { const g = SCN.gnb || { x: 900, y: -900 }, b = SCN.networkBackhaul; return { gnb: { x: sx(g.x), y: sy(g.y) }, backhaul: b ? { x: sx(b.x), y: sy(b.y) } : null }; } };
     }
     // first-visit tour (skipped in automated/debug runs; ?tour=1 forces it)
     let tourDone = true;
