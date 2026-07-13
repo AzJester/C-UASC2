@@ -117,6 +117,41 @@ def test_role_workspaces_and_exercise_controls_are_separated(page):
     page.click("#btnExercise")
 
 
+def test_operator_notices_replace_in_place_and_use_screen_type(page):
+    page.evaluate(
+        """() => {
+          window.__CUAS__.toast('ok', 'FIRST EVENT');
+          window.__CUAS__.toast('ok', 'SECOND EVENT');
+          window.__CUAS__.toast('deny', 'LATEST EVENT');
+          window.__CUAS__.showAAR();
+        }"""
+    )
+    notice = page.evaluate(
+        """() => {
+          const slot = document.querySelector('#toasts');
+          const root = document.querySelector('#cuas');
+          const aar = document.querySelector('.aar');
+          return {
+            inRail: !!slot.closest('.rail-toolbar'),
+            inMap: !!slot.closest('.plotwrap'),
+            count: slot.children.length,
+            text: slot.textContent,
+            nowrap: getComputedStyle(slot.querySelector('.toast-message')).whiteSpace,
+            rootFont: getComputedStyle(root).fontFamily,
+            aarFont: getComputedStyle(aar).fontFamily,
+          };
+        }"""
+    )
+    assert notice["inRail"] is True
+    assert notice["inMap"] is False
+    assert notice["count"] == 1
+    assert "LATEST EVENT" in notice["text"]
+    assert "FIRST EVENT" not in notice["text"]
+    assert notice["nowrap"] == "nowrap"
+    assert notice["rootFont"] == notice["aarFont"]
+    page.keyboard.press("Escape")
+
+
 def test_modal_focus_moves_and_returns(page):
     page.focus("#btnHelpTop")
     page.click("#btnHelpTop")
@@ -163,18 +198,28 @@ def test_fixed_site_desktop_layout_matrix(page, width, height):
     desktop.set_viewport_size({"width": width, "height": height})
     desktop.goto(f"file://{COP}?basemap=tac&seed=11")
     desktop.wait_for_timeout(500)
+    first_track = desktop.locator("#trackList button[data-track-select]").first
+    if first_track.count():
+        first_track.click()
     metrics = desktop.evaluate(
         "() => ({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,"
         "sh:document.documentElement.scrollHeight,ch:document.documentElement.clientHeight,"
         "rootSw:document.querySelector('#cuas').scrollWidth,rootCw:document.querySelector('#cuas').clientWidth,"
-        "railSh:document.querySelector('.rail-scroll').scrollHeight,railCh:document.querySelector('.rail-scroll').clientHeight,"
+        "leftSh:document.querySelector('.rail-left-scroll').scrollHeight,leftCh:document.querySelector('.rail-left-scroll').clientHeight,"
+        "rightSh:document.querySelector('.rail-right-scroll').scrollHeight,rightCh:document.querySelector('.rail-right-scroll').clientHeight,"
+        "left:document.querySelector('.rail-left').getBoundingClientRect(),plot:document.querySelector('.plotwrap').getBoundingClientRect(),"
+        "right:document.querySelector('.rail-right').getBoundingClientRect(),"
         "gate:!!document.querySelector('.workstation-gate'),command:!!document.querySelector('.commandbar'),"
         "trackList:!!document.querySelector('#trackList')})"
     )
     assert metrics["sw"] <= metrics["cw"] + 1
     assert metrics["sh"] <= metrics["ch"] + 1
     assert metrics["rootSw"] <= metrics["rootCw"] + 1
-    assert metrics["railSh"] <= metrics["railCh"] + 1
+    assert metrics["leftSh"] <= metrics["leftCh"] + 1
+    assert metrics["rightSh"] <= metrics["rightCh"] + 1
+    assert metrics["left"]["right"] <= metrics["plot"]["left"] + 1
+    assert metrics["plot"]["right"] <= metrics["right"]["left"] + 1
+    assert metrics["plot"]["width"] >= 600
     assert metrics["gate"] is False
     assert metrics["command"] and metrics["trackList"]
     assert not errors

@@ -213,14 +213,60 @@ def test_norfolk_scenario_is_selectable_and_complete(page):
       const C = window.__CUAS__;
       C.applyScenario('norfolk');
       const scn = C.currentScenario();
+      const tracks = [...C.S.tracks.values()];
       return {id:C.S.scenario, asset:scn.asset.name, sensors:scn.sensors.length,
-        effectors:scn.effectors.length, water:scn.waterLabel};
+        effectors:scn.effectors.length, water:scn.waterLabel,
+        backhaul:scn.networkBackhaul, naval:tracks.filter(t => t.identity === 'FRIEND' && t.classificationType === 'SURFACE').length,
+        commercial:tracks.filter(t => t.identity === 'NEUTRAL' && t.classificationType === 'SURFACE').length};
     }"""
     )
     assert out["id"] == "norfolk"
     assert "NORFOLK" in out["asset"]
     assert out["sensors"] >= 6 and out["effectors"] >= 8
     assert "CHESAPEAKE" in out["water"]
+    assert "FIBER" in out["backhaul"]["medium"]
+    assert out["backhaul"]["x"] > -2200, "Norfolk 5G endpoint must remain landward of the configured coast"
+    assert out["naval"] >= 4 and out["commercial"] >= 4
+
+
+def test_every_scenario_airport_has_local_defenses_and_traffic(page):
+    out = page.evaluate(
+        """() => {
+          const C = window.__CUAS__;
+          return ['sandiego', 'elpaso', 'norfolk'].map(id => {
+            C.applyScenario(id);
+            const scn = C.currentScenario(), airport = scn.civilAirport;
+            const near = (item) => Math.hypot(item.x-airport.x, item.y-airport.y) <= 1200;
+            const aircraft = C.spawnCivAir();
+            return {id, code:airport.code, plan:aircraft.flightPlan,
+              sensors:scn.sensors.filter(s => airport.sensorIds.includes(s.sensorId) && near(s)).length,
+              effectors:scn.effectors.filter(e => e.airportDefense && near(e)).map(e => e.effectorType)};
+          });
+        }"""
+    )
+    for scenario in out:
+        assert scenario["code"] in scenario["plan"]
+        assert scenario["sensors"] >= 2
+        assert {"EW_JAMMER", "NET_CAPTURE"}.issubset(set(scenario["effectors"]))
+
+
+def test_el_paso_border_patrol_network_is_distributed(page):
+    out = page.evaluate(
+        """() => {
+          const C = window.__CUAS__; C.applyScenario('elpaso');
+          const scn = C.currentScenario();
+          return scn.borderStations.map(station => ({
+            name:station.name,
+            sensor:scn.sensors.some(s => s.sensorId === station.sensorId && s.borderStation),
+            effector:scn.effectors.some(e => e.effectorId === station.effectorId && e.borderStation),
+            x:station.x,
+          }));
+        }"""
+    )
+    assert len(out) >= 3
+    assert all(station["name"].startswith("USBP") for station in out)
+    assert all(station["sensor"] and station["effector"] for station in out)
+    assert max(station["x"] for station in out) - min(station["x"] for station in out) >= 8000
 
 
 def test_san_diego_airport_tracks_publish_transponder_data(page):
@@ -254,11 +300,12 @@ def test_san_diego_5g_overlay_has_island_microwave_backhaul(page):
       const C = window.__CUAS__;
       C.applyScenario('sandiego');
       const relay = C.currentScenario().microwaveRelay;
-      return {label:relay.label, note:relay.note,
+      return {label:relay.label, island:relay.island, inset:relay.inset, note:relay.note,
         legend:document.getElementById('legend').textContent};
     }"""
     )
     assert "SAN CLEMENTE" in out["label"]
+    assert out["island"] == "SAN CLEMENTE ISLAND" and out["inset"] is True
     assert "MICROWAVE" in out["note"]
     assert "Microwave backhaul" in out["legend"]
 
