@@ -196,11 +196,14 @@ def test_fixed_site_desktop_layout_matrix(page, width, height):
     errors: list[str] = []
     desktop.on("pageerror", lambda error: errors.append(str(error)))
     desktop.set_viewport_size({"width": width, "height": height})
-    desktop.goto(f"file://{COP}?basemap=tac&seed=11")
-    desktop.wait_for_timeout(500)
-    first_track = desktop.locator("#trackList button[data-track-select]").first
-    if first_track.count():
-        first_track.click()
+    desktop.goto(f"file://{COP}?debug=1&basemap=tac&seed=11")
+    desktop.wait_for_function("() => !!window.__CUAS__")
+    desktop.evaluate(
+        """() => {
+          const first = [...window.__CUAS__.S.tracks.values()][0];
+          if (first) window.__CUAS__.selectTrack(first.trackId);
+        }"""
+    )
     metrics = desktop.evaluate(
         "() => ({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,"
         "sh:document.documentElement.scrollHeight,ch:document.documentElement.clientHeight,"
