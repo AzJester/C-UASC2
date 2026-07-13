@@ -36,6 +36,7 @@ descend for the engineering reference.
 | Roadmap | [`docs/07-roadmap.md`](docs/07-roadmap.md) | Program managers |
 | Standards crosswalk | [`docs/08-standards-crosswalk.md`](docs/08-standards-crosswalk.md) | Standards / interoperability leads |
 | Command-center UX & validation | [`docs/09-command-center-ux-and-validation.md`](docs/09-command-center-ux-and-validation.md) | Operators, human-factors engineers, testers |
+| Change history | [`CHANGELOG.md`](CHANGELOG.md) | Everyone |
 | Decisions (ADRs) | [`docs/decisions/`](docs/decisions/) | All |
 
 ## Public COP demo
@@ -74,21 +75,27 @@ WEAPONS FREE, fires eligible joint effectors, and adds bounded waves until the
 selected time limit before presenting outcomes.
 Preset links: `?scn=guam&arch=NETWORKED&wx=WIND&tod=NIGHT&seed=N`.
 
-The embedded simulation includes San Diego, El Paso, Norfolk / Hampton Roads,
-and Guam area-of-operations presets. San Diego includes notional civilian
-arrivals and departures at KSAN with Mode-S / ADS-B identity fields, a
-soft-kill counter-UAS layer around the airport, and a second defended target at
-MCAS Miramar with dedicated sensors, six effector types, and an armed USMC air
-patrol. Threats can ingress toward either North Island or Miramar. A visually
-distinct microwave extension connects the 5G transport overlay to a visible
-off-scale San Clemente Island inset. El Paso adds KELP traffic and airport defense plus three
+The embedded simulation includes separate San Diego / North Island and MCAS
+Miramar maps plus El Paso, Norfolk / Hampton Roads, Washington / National
+Capital Region, and Guam area-of-operations presets. North Island includes
+notional civilian arrivals and departures at KSAN with Mode-S / ADS-B identity
+fields, a soft-kill counter-UAS layer around the airport, and an off-scale San
+Clemente Island microwave-backhaul inset. Miramar has its own local satellite
+map, dedicated sensors, six effector types, armed USMC air patrols, multi-axis
+threats, and an offshore Navy screen. El Paso adds KELP traffic and airport defense plus three
 distributed Border Patrol sensor/effector sites, all physically sited north of
 the international border. Norfolk adds KORF traffic and airport defense, an
 explicitly boxed inland terrestrial 5G fiber handoff, and a denser naval/
-commercial surface picture. Guam opens at whole-island scale with satellite
+commercial surface picture. Washington opens as a satellite-preferred
+National Capital Region view with layered illustrative protection around the
+federal core, Pentagon, Joint Base Myer-Henderson Hall, Fort McNair, Joint Base
+Andrews, Fort Belvoir, the Mark Center, and Reagan National Airport. It includes
+360-degree multi-site approaches, KDCA civil arrivals/departures, three no-fire
+areas, and an on-land hardened metro-fiber backhaul. Guam opens at whole-island scale with satellite
 imagery preferred, a simplified public Census island boundary, FAA-referenced
-PGUM/PGUA anchors, and layered sensing and effectors around PGUM plus four
-additional notional protected sites. All fixed Guam nodes and the sampled 5G
+PGUM/PGUA anchors, four simultaneous civil arrival/departure tracks, and a
+four-sensor/four-effector airport-defense ring around PGUM plus four additional
+notional protected sites. All fixed Guam nodes and the sampled 5G
 fiber route are constrained to the island; only maritime tracks occupy the sea.
 Guam's Regional view uses an INDOPACOM roster anchored at Camp H.M. Smith with
 Pearl Harbor-Hickam, Kadena, and MCAS Iwakuni instead of continental peers.

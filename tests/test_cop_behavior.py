@@ -324,6 +324,59 @@ def test_norfolk_scenario_is_selectable_and_complete(page):
     assert out["naval"] >= 4 and out["commercial"] >= 4
 
 
+def test_washington_ncr_has_layered_multi_site_protection(page):
+    out = page.evaluate(
+        """() => {
+          const C = window.__CUAS__; C.applyScenario('washington');
+          const scn = C.currentScenario();
+          const near = (site, item) => Math.hypot(item.x-site.x, item.y-site.y) <= 1400;
+          const coverage = scn.protectedSites.map(site => ({
+            name:site.name,
+            sensors:scn.sensors.filter(sensor => near(site, sensor)).length,
+            effectors:scn.effectors.filter(effector => near(site, effector)).length,
+          }));
+          return {id:C.S.scenario, asset:scn.asset.name, terrain:scn.terrain,
+            preferred:scn.preferredBasemap, dense:scn.denseLaydown, aoRadius:scn.aoRadius,
+            airport:scn.civilAirport.code, trafficCount:scn.civilAirport.trafficCount,
+            protectedSites:scn.protectedSites.map(site => site.name), coverage,
+            sensors:scn.sensors.length, effectors:scn.effectors.length,
+            jba:{s:scn.sensors.filter(s => s.sensorId.includes('-JBA-')).length,
+              e:scn.effectors.filter(e => e.effectorId.includes('-JBA-')).length},
+            belvoir:{s:scn.sensors.filter(s => s.sensorId.includes('-BEL-')).length,
+              e:scn.effectors.filter(e => e.effectorId.includes('-BEL-')).length},
+            types:[...new Set(scn.effectors.map(e => e.effectorType))],
+            axes:scn.threat.axes.length,
+            uniqueAxes:new Set(scn.threat.axes.map(a => Math.round((((a % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI))*1000))).size,
+            targets:scn.threatTargets.map(t => t.name), ringFromCenter:scn.threatRingFromCenter,
+            noFire:scn.noFire.length, backhaul:scn.networkBackhaul,
+            armedF16:[...C.S.tracks.values()].filter(t => t.armed && t.platform === 'F-16C').length,
+            civilAir:[...C.S.tracks.values()].filter(t => t.civil && !t.surface).map(t => ({arrival:t.civilArrival, plan:t.flightPlan})),
+          };
+        }"""
+    )
+    assert out["id"] == "washington" and "NATIONAL CAPITAL REGION" in out["asset"]
+    assert out["terrain"] == "inland" and out["preferred"] == "SAT" and out["dense"] is True
+    assert out["aoRadius"] >= 25000 and out["airport"] == "KDCA"
+    assert out["trafficCount"] >= 4
+    assert out["sensors"] >= 22 and out["effectors"] >= 30
+    for name in (
+        "WHITE HOUSE", "U.S. CAPITOL", "PENTAGON", "JOINT BASE MYER-HENDERSON HALL",
+        "FORT McNAIR", "JOINT BASE ANDREWS", "FORT BELVOIR", "MARK CENTER",
+    ):
+        assert any(name in site for site in out["protectedSites"])
+    assert all(site["sensors"] >= 1 and site["effectors"] >= 1 for site in out["coverage"])
+    assert out["jba"]["s"] >= 4 and out["jba"]["e"] >= 6
+    assert out["belvoir"]["s"] >= 4 and out["belvoir"]["e"] >= 6
+    assert {"EW_JAMMER", "RF_TAKEOVER", "DIRECTED_ENERGY", "KINETIC_GUN", "KINETIC_INTERCEPTOR", "NET_CAPTURE"}.issubset(set(out["types"]))
+    assert out["axes"] >= 8 and out["uniqueAxes"] == 8 and out["ringFromCenter"] is True
+    assert len(out["targets"]) >= 9 and out["noFire"] >= 3
+    assert "ON-LAND" in out["backhaul"]["description"] and "NO OFFSHORE" in out["backhaul"]["description"]
+    assert out["armedF16"] >= 3
+    assert len(out["civilAir"]) >= 4
+    assert any(track["arrival"] is True and "KDCA" in track["plan"] for track in out["civilAir"])
+    assert any(track["arrival"] is False and "KDCA" in track["plan"] for track in out["civilAir"])
+
+
 def test_guam_scenario_has_layered_site_protection(page):
     out = page.evaluate(
         """() => {
@@ -351,12 +404,28 @@ def test_guam_scenario_has_layered_site_protection(page):
             aoRadius:scn.aoRadius, rings:scn.rings, preferred:scn.preferredBasemap,
             basemap:C.S.basemap,
             polygon:scn.landPolygon.length, source:scn.landPolygonSource,
+            serviceBases:scn.protectedSites.filter(s => s.service).map(s => `${s.service}:${s.name}`),
             protectedSites:scn.protectedSites.length, sensors:scn.sensors.length,
             effectors:scn.effectors.length,
             protectedSensors:scn.sensors.filter(s => s.protectedSite).length,
             protectedEffectors:scn.effectors.filter(e => e.protectedSite).length,
+            baseLayers:{
+              andersen:{s:scn.sensors.filter(s => s.sensorId.includes('-AND-')).length,
+                e:scn.effectors.filter(e => e.effectorId.includes('-AND-')).length},
+              navy:{s:scn.sensors.filter(s => /-(PORT|NBG)-/.test(s.sensorId)).length,
+                e:scn.effectors.filter(e => /-(PORT|NBG)-/.test(e.effectorId)).length},
+              blaz:{s:scn.sensors.filter(s => s.sensorId.includes('-BLAZ-')).length,
+                e:scn.effectors.filter(e => e.effectorId.includes('-BLAZ-')).length}},
             effectorTypes:[...new Set(scn.effectors.map(e => e.effectorType))],
-            axes:scn.threat.axes.length, backhaul:scn.networkBackhaul,
+            axes:scn.threat.axes.length,
+            uniqueAxes:new Set(scn.threat.axes.map(a => Math.round((((a % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI))*1000))).size,
+            targets:scn.threatTargets.map(t => t.name), ringFromCenter:scn.threatRingFromCenter,
+            fighters:[...C.S.tracks.values()].filter(t => t.armed && ((t.platform || '').startsWith('F-') || (t.platform || '').startsWith('F/A-'))).length,
+            mq9:[...C.S.tracks.values()].filter(t => t.armed && (t.platform || '').startsWith('MQ-9')).length,
+            airportSensors:scn.sensors.filter(s => s.airportDefense && Math.hypot(s.x-scn.civilAirport.x,s.y-scn.civilAirport.y) <= 1800).length,
+            airportEffectors:scn.effectors.filter(e => e.airportDefense && Math.hypot(e.x-scn.civilAirport.x,e.y-scn.civilAirport.y) <= 1800).length,
+            civilAir:[...C.S.tracks.values()].filter(t => t.civil && !t.surface).map(t => ({arrival:t.civilArrival, plan:t.flightPlan, transponder:t.transponder})),
+            backhaul:scn.networkBackhaul,
             offLand:fixed.filter(p => !C.scenarioPointOnLand(p.x,p.y)).map(p => p.name),
             pathOnLand:pathSamples.every(p => C.scenarioPointOnLand(p.x,p.y))};
         }"""
@@ -368,13 +437,61 @@ def test_guam_scenario_has_layered_site_protection(page):
     assert out["basemap"] == "TAC", "an explicit Tactical selection must override Guam's satellite preference"
     assert "CENSUS" in out["source"]
     assert out["protectedSites"] >= 4
-    assert out["sensors"] >= 12 and out["effectors"] >= 16
-    assert out["protectedSensors"] >= 8 and out["protectedEffectors"] >= 10
+    assert any("USAF:ANDERSEN AIR FORCE BASE" in base for base in out["serviceBases"])
+    assert any("USN:NAVAL BASE GUAM" in base for base in out["serviceBases"])
+    assert any("USMC:MARINE CORPS BASE CAMP BLAZ" in base for base in out["serviceBases"])
+    assert out["sensors"] >= 23 and out["effectors"] >= 31
+    assert out["protectedSensors"] >= 16 and out["protectedEffectors"] >= 22
+    assert all(layer["s"] >= 4 and layer["e"] >= 6 for layer in out["baseLayers"].values())
     assert {"EW_JAMMER", "RF_TAKEOVER", "DIRECTED_ENERGY", "KINETIC_GUN", "KINETIC_INTERCEPTOR", "NET_CAPTURE"}.issubset(set(out["effectorTypes"]))
-    assert out["axes"] >= 4
+    assert out["axes"] >= 8 and out["uniqueAxes"] == 8 and out["ringFromCenter"] is True
+    for target in ("ANDERSEN AIR FORCE BASE", "NAVAL BASE GUAM", "MARINE CORPS BASE CAMP BLAZ", "GUAM INTL", "CENTRAL POWER"):
+        assert any(target in name for name in out["targets"])
+    assert out["fighters"] >= 6 and out["mq9"] >= 4
+    assert out["airportSensors"] >= 4 and out["airportEffectors"] >= 4
+    assert len(out["civilAir"]) >= 4
+    assert any(track["arrival"] is True and "PGUM" in track["plan"] for track in out["civilAir"])
+    assert any(track["arrival"] is False and "PGUM" in track["plan"] for track in out["civilAir"])
+    assert all(track["transponder"]["callsign"] and track["transponder"]["icao24"] for track in out["civilAir"])
     assert "ON-ISLAND" in out["backhaul"]["description"]
     assert out["offLand"] == [], f"Guam fixed sites plotted offshore: {out['offLand']}"
     assert out["pathOnLand"], "every sampled Guam 5G backbone point must stay on land"
+
+
+def test_guam_full_perimeter_targets_all_bases_and_air_shooters_join_weapons_free(page):
+    out = page.evaluate(
+        """() => {
+          const C=window.__CUAS__; C.applyScenario('guam'); C.setPaused(true);
+          const scn=C.currentScenario();
+          const probes=scn.threatTargets.map((target,i) => {
+            const t=C.spawnThreat(0.1,{target,bearing:scn.threat.axes[i % scn.threat.axes.length],r:28000,tq:15});
+            return {target:t.targetName, originRange:Math.hypot(t.x,t.y)};
+          });
+          for (const t of C.S.tracks.values()) if (t.identity === 'HOSTILE') t.state='NEUTRALIZED';
+          const air=[...C.S.tracks.values()].filter(t => t.armed && t.classificationType !== 'SURFACE');
+          air.forEach((a,i) => { a.x=(i%4)*120-180; a.y=11200+Math.floor(i/4)*100; a.weaponRange=12000; a.cool=0; });
+          const hostiles=air.map((a,i) => {
+            const t=C.spawnHostile({target:{name:'GUAM JOINT DEFENSE SECTOR',x:0,y:0},bearing:Math.PI/2,r:12000,
+              tq:15,identity:'HOSTILE',cls:['MULTIROTOR','UAS_GROUP_1','UAS_GROUP_2','FIXED_WING'][i%4]});
+            t.x=(i%4)*120-180; t.y=11800+Math.floor(i/4)*100; t.heading=Math.atan2(-t.y,-t.x); return t;
+          });
+          C.S.wcs='WEAPONS_FREE'; C.S.autoReleaseArmed=true; C.S.role='FIRE_CONTROL_AUTHORITY';
+          C.airDefense(0.2);
+          const shooterById=new Map(air.map(a => [a.trackId,a]));
+          const engaged=hostiles.filter(t => t.engAir).map(t => shooterById.get(t.engEff)?.platform).filter(Boolean);
+          const result={probes,air:air.length,engaged:engaged.length,
+            fighters:air.filter(t => (t.platform || '').startsWith('F-') || (t.platform || '').startsWith('F/A-')).length,
+            fighterShots:engaged.filter(p => p.startsWith('F-') || p.startsWith('F/A-')).length,
+            mq9:air.filter(t => (t.platform || '').startsWith('MQ-9')).length,
+            mq9Shots:engaged.filter(p => p.startsWith('MQ-9')).length};
+          C.setPaused(false); return result;
+        }"""
+    )
+    assert all(27990 <= probe["originRange"] <= 28010 for probe in out["probes"])
+    assert len({probe["target"] for probe in out["probes"]}) >= 5
+    assert out["engaged"] == out["air"]
+    assert out["fighters"] >= 6 and out["fighterShots"] == out["fighters"]
+    assert out["mq9"] >= 4 and out["mq9Shots"] == out["mq9"]
 
 
 def test_guam_defaults_to_satellite_without_an_explicit_basemap(page):
@@ -427,6 +544,13 @@ def test_west_coast_is_split_into_local_north_island_and_miramar_areas(page):
             preferred:scn.preferredBasemap, lat:scn.asset.lat, lon:scn.asset.lon,
             sensors:sensors.length, effectors:effectors.length,
             types:[...new Set(effectors.map(e => e.effectorType))],
+            targets:scn.threatTargets.map(t => t.name),
+            uniqueAxes:new Set(scn.threat.axes.map(a => Math.round((((a % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI))*1000))).size,
+            westAxes:scn.threat.axes.filter(a => Math.cos(a) < -0.5).length,
+            totalAxes:scn.threat.axes.length, offshoreScreen:scn.offshoreScreen,
+            offshoreSensors:scn.sensors.filter(s => s.offshore && s.x < -15000).length,
+            offshoreEffectors:scn.effectors.filter(e => e.offshore && e.x < -15000).length,
+            naval:[...C.S.tracks.values()].filter(t => t.service === 'USN' && ['SURFACE','ROTARY'].includes(t.classificationType) && t.ox < -14000).map(t => t.platform),
             f35b:[...C.S.tracks.values()].some(t => t.platform === 'F-35B' && t.service === 'USMC' && t.armed),
             targetName:threat.targetName, targetX:threat.targetX, targetY:threat.targetY,
             spawnRange:Math.hypot(threat.x-target.x, threat.y-target.y),
@@ -446,6 +570,12 @@ def test_west_coast_is_split_into_local_north_island_and_miramar_areas(page):
     assert out["miramar"]["sensors"] >= 3 and out["miramar"]["effectors"] >= 6
     assert {"EW_JAMMER", "RF_TAKEOVER", "DIRECTED_ENERGY", "KINETIC_GUN", "KINETIC_INTERCEPTOR", "NET_CAPTURE"}.issubset(set(out["miramar"]["types"]))
     assert out["miramar"]["f35b"] is True
+    assert len(out["miramar"]["targets"]) >= 3
+    assert out["miramar"]["uniqueAxes"] == 8
+    assert out["miramar"]["westAxes"] > out["miramar"]["totalAxes"] / 2
+    assert "PACIFIC NAVAL SCREEN" in out["miramar"]["offshoreScreen"]["label"]
+    assert out["miramar"]["offshoreSensors"] >= 2 and out["miramar"]["offshoreEffectors"] >= 3
+    assert {"DDG-51 DESTROYER", "LCS", "MH-60R"}.issubset(set(out["miramar"]["naval"]))
     assert "MIRAMAR" in out["miramar"]["targetName"]
     assert out["miramar"]["targetX"] == 0 and out["miramar"]["targetY"] == 0
     assert 6190 <= out["miramar"]["spawnRange"] <= 6210
@@ -456,7 +586,7 @@ def test_every_scenario_airport_has_local_defenses_and_traffic(page):
     out = page.evaluate(
         """() => {
           const C = window.__CUAS__;
-          return ['sandiego', 'miramar', 'elpaso', 'norfolk', 'guam'].map(id => {
+          return ['sandiego', 'miramar', 'elpaso', 'norfolk', 'washington', 'guam'].map(id => {
             C.applyScenario(id);
             const scn = C.currentScenario(), airport = scn.civilAirport;
             const near = (item) => Math.hypot(item.x-airport.x, item.y-airport.y) <= 1200;
@@ -566,6 +696,7 @@ def test_5g_details_open_only_when_a_transport_node_is_clicked(page):
         "miramar": "MIRAMAR",
         "elpaso": "EL PASO",
         "norfolk": "NORFOLK",
+        "washington": "NCR",
         "guam": "GUAM",
     }
     for scenario, label in expected.items():
