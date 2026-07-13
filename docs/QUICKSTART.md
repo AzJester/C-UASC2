@@ -31,10 +31,12 @@ The browser UI is the front end to everything below. Served by c2-core, it runs 
 **LIVE** mode (driven by the real bus and engagement gates). The *same* page,
 opened standalone, runs an embedded **SIM** (the shareable, zero-install build).
 
-**Fastest path — Auto-play brief.** Click **▶ Auto-play brief** for a ~90-second
-hands-free run that narrates itself: swarm inbound → fuse → track-quality gate →
-remote tasking → any-sensor/any-shooter engagement → C2 node loss → fight continues
-→ outcomes. Any click takes over manual control. This is the one to show leadership.
+**Fastest path — Auto-play brief.** Choose **Joint defense**, **Airport
+defense**, or **Network resilience**, choose a **2 / 5 / 10 / 15 minute** time
+limit, then click **Auto-play brief**. The run narrates and executes itself:
+swarm inbound → fuse → track-quality gate → remote tasking → red release
+warning → simulated WEAPONS FREE → joint ground / air / naval engagement →
+continued waves → outcomes. Any click takes over manual control.
 
 The **outcomes scoreboard** (top-right) keeps the running score: threats defeated,
 leakers, average time-to-defeat, engagements, and the headline metric —
@@ -51,10 +53,14 @@ The **echelon federation HUD** (top-left) shows this Site C2 node and its links 
 engagements are shared upward with no bespoke integration. If the site node is then
 lost, Battalion still holds the shared picture.
 
-**Scenarios** (bottom-left **AO** selector): **San Diego Coast** (Pacific to the
-west, a Navy ship offshore, threats from the sea) and **El Paso Border** (US-Mexico
-border, a TARS aerostat, threats from the south). Each switches the geography, the
-named defended asset, the MGRS grid, and the joint laydown.
+**Scenarios** (bottom-left **AO** selector): **San Diego Coast**, **El Paso
+Border**, **Norfolk / Hampton Roads**, and **Guam Joint Defense**. Each switches
+the geography, the named defended asset, the grid, and the joint laydown. Guam
+opens at whole-island scale and prefers the satellite basemap; an explicit
+Tactical selection is preserved. Its Regional view uses Pacific installations
+under an INDOPACOM rollup. San Diego expands north to MCAS Miramar, where a
+second defended target has local sensors, layered effectors, and an armed USMC
+air patrol.
 
 **Joint force**: the Blue picture is identifiable aircraft by **platform, service,
 and altitude** (e.g., F/A-18E USN 6000 m, MV-22B USMC 900 m, MQ-9 USAF 7600 m), and
@@ -64,6 +70,12 @@ track for its platform/service/altitude; engagement logs flag **cross-service** 
 
 **Data transport** (rail control): overlay the **MANET** mesh among tactical nodes
 and the **5G** gNB with backhaul to echelon — the pub/sub bus riding real transports.
+Click a 5G gNB or POP to open its contextual network card; click again or elsewhere
+to close it.
+
+Moving vessel and aircraft identifiers remain locally anchored to their tracks.
+Surface labels include a short leader line to the hull and do not choose a new
+collision-avoidance position every frame.
 
 The auto-play now defeats a **mass raid** and reports a **kill ratio** (defeated vs.
 leakers) in the scoreboard.

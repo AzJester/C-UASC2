@@ -187,10 +187,102 @@ def test_weapons_free_requires_two_step_confirmation(page):
     free.click()
     assert page.evaluate("window.__CUAS__.S.wcs") == "WEAPONS_TIGHT"
     assert free.text_content() == "CONFIRM FREE"
+    warning = free.evaluate(
+        "el => ({color:getComputedStyle(el).color, background:getComputedStyle(el).backgroundColor, animation:getComputedStyle(el).animationName})"
+    )
+    assert warning["background"] == "rgb(58, 17, 22)"
+    assert warning["animation"] == "free-confirm-pulse"
+    red, green, blue = (int(value) for value in warning["color"].removeprefix("rgb(").removesuffix(")").split(", "))
+    assert red > green and red > blue
     free.click()
     assert page.evaluate("window.__CUAS__.S.wcs") == "WEAPONS_FREE"
     assert page.evaluate("window.__CUAS__.S.autoReleaseArmed") is True
     page.locator("#wcsSeg button[data-v='WEAPONS_TIGHT']").click()
+
+
+def test_confirmed_weapons_free_activates_air_and_naval_defenses(page):
+    out = page.evaluate(
+        """() => {
+          const C=window.__CUAS__; C.applyScenario('sandiego'); C.setPaused(true);
+          C.S.role='FIRE_CONTROL_AUTHORITY'; C.S.wcs='WEAPONS_FREE'; C.S.autoReleaseArmed=true;
+          C.S.delegatedDefense.armed=false;
+          const aircraft=[...C.S.tracks.values()].find(a => a.armed && a.classificationType !== 'SURFACE'
+            && !C.noFireZoneAt(a.x+80,a.y));
+          const airTarget=C.spawnHostile({r:3000,tq:15,identity:'HOSTILE',cls:'UAS_GROUP_1'});
+          airTarget.x=aircraft.x+80; airTarget.y=aircraft.y; airTarget.heading=Math.atan2(-airTarget.y,-airTarget.x);
+          C.airDefense(0.1);
+
+          const shipEffector=C.S.effectors.find(e => e.auto && !C.noFireZoneAt(e.x+80,e.y));
+          const navalTarget=C.spawnHostile({r:3000,tq:15,identity:'HOSTILE',cls:'UAS_GROUP_1'});
+          navalTarget.x=shipEffector.x+80; navalTarget.y=shipEffector.y; navalTarget.heading=Math.atan2(-navalTarget.y,-navalTarget.x);
+          C.navalDefense(0.1);
+          const messages=C.S.events.map(e => e.msg);
+          const result={active:C.weaponsFreeActive(),delegated:C.S.delegatedDefense.armed,
+            air:airTarget.engAir === true,naval:navalTarget.engNaval === true,
+            airLog:messages.some(m => m.includes('WEAPONS FREE') && m.includes('AIR INTERCEPT')),
+            navalLog:messages.some(m => m.includes('WEAPONS FREE') && (m.includes('CIWS') || m.includes('DE LASE')))};
+          C.setPaused(false); return result;
+        }"""
+    )
+    assert out == {
+        "active": True,
+        "delegated": False,
+        "air": True,
+        "naval": True,
+        "airLog": True,
+        "navalLog": True,
+    }
+
+
+def test_autobrief_offers_requested_missions_durations_and_fires_automatically(page):
+    choices = page.evaluate(
+        """() => ({
+          missions:[...document.querySelectorAll('#autoMissionSel option')].map(o => o.value),
+          durations:[...document.querySelectorAll('#autoDurationSel option')].map(o => Number(o.value))
+        })"""
+    )
+    assert choices == {
+        "missions": ["joint", "airport", "resilience"],
+        "durations": [2, 5, 10, 15],
+    }
+
+    try:
+        page.evaluate(
+            """() => {
+              const C=window.__CUAS__;
+              document.getElementById('autoMissionSel').value='joint';
+              document.getElementById('autoDurationSel').value='2';
+              C.S.autoplay.delayScale=0.03; C.S.timeScale=35;
+              void C.autoplay();
+            }"""
+        )
+        page.wait_for_function(
+            """window.__CUAS__.S.stats.engagements > 0 &&
+               window.__CUAS__.S.events.some(e => e.msg.includes('AUTO-BRIEF') &&
+                 e.msg.includes('WEAPONS FREE CONFIRMED'))""",
+            timeout=8000,
+        )
+        out = page.evaluate(
+            """() => {
+              const C=window.__CUAS__, selected=C.autoplaySelection();
+              return {running:C.S.autoplay.running, minutes:C.S.autoplay.durationMinutes,
+                selected, engagements:C.S.stats.engagements,
+                warning:C.S.events.some(e => e.msg.includes('AUTO-BRIEF') && e.msg.includes('WEAPONS FREE CONFIRMED')),
+                automatic:C.S.events.some(e => e.msg.includes('automatic detect / task / fire'))};
+            }"""
+        )
+        assert out["running"] is True and out["minutes"] == 2
+        assert out["selected"]["durationMs"] == 120000
+        assert out["engagements"] > 0
+        assert out["warning"] and out["automatic"]
+    finally:
+        page.evaluate(
+            """() => {
+              const C=window.__CUAS__; C.stopAutoplay();
+              C.S.autoplay.delayScale=1; C.S.timeScale=1;
+            }"""
+        )
+    assert page.evaluate("window.__CUAS__.S.wcs") == "WEAPONS_TIGHT"
 
 
 def test_dense_track_list_is_keyboard_pageable(page):
@@ -237,23 +329,115 @@ def test_guam_scenario_has_layered_site_protection(page):
         """() => {
           const C = window.__CUAS__; C.applyScenario('guam');
           const scn = C.currentScenario();
+          const fixed = [
+            {name:'SECTOR CENTER', x:0, y:0},
+            {name:scn.civilAirport.code, x:scn.civilAirport.x, y:scn.civilAirport.y},
+            {name:'5G gNB', ...scn.gnb},
+            {name:'5G POP', x:scn.networkBackhaul.x, y:scn.networkBackhaul.y},
+            ...scn.protectedSites,
+            ...scn.sensors.map(s => ({name:s.sensorId, x:s.x, y:s.y})),
+            ...scn.effectors.map(e => ({name:e.effectorId, x:e.x, y:e.y})),
+          ];
+          const path = scn.networkBackhaul.path;
+          const pathSamples = [];
+          for (let i=1; i<path.length; i++) {
+            for (let step=0; step<=20; step++) {
+              const t=step/20;
+              pathSamples.push({x:path[i-1].x+(path[i].x-path[i-1].x)*t,
+                y:path[i-1].y+(path[i].y-path[i-1].y)*t});
+            }
+          }
           return {id:C.S.scenario, terrain:scn.terrain, airport:scn.civilAirport.code,
+            aoRadius:scn.aoRadius, rings:scn.rings, preferred:scn.preferredBasemap,
+            basemap:C.S.basemap,
+            polygon:scn.landPolygon.length, source:scn.landPolygonSource,
             protectedSites:scn.protectedSites.length, sensors:scn.sensors.length,
             effectors:scn.effectors.length,
             protectedSensors:scn.sensors.filter(s => s.protectedSite).length,
             protectedEffectors:scn.effectors.filter(e => e.protectedSite).length,
             effectorTypes:[...new Set(scn.effectors.map(e => e.effectorType))],
-            axes:scn.threat.axes.length, backhaul:scn.networkBackhaul};
+            axes:scn.threat.axes.length, backhaul:scn.networkBackhaul,
+            offLand:fixed.filter(p => !C.scenarioPointOnLand(p.x,p.y)).map(p => p.name),
+            pathOnLand:pathSamples.every(p => C.scenarioPointOnLand(p.x,p.y))};
         }"""
     )
     assert out["id"] == "guam" and out["terrain"] == "island"
     assert out["airport"] == "PGUM"
-    assert out["protectedSites"] >= 3
-    assert out["sensors"] >= 10 and out["effectors"] >= 14
-    assert out["protectedSensors"] >= 6 and out["protectedEffectors"] >= 8
+    assert out["aoRadius"] >= 28000 and out["rings"] == [10000, 20000]
+    assert out["preferred"] == "SAT" and out["polygon"] >= 50
+    assert out["basemap"] == "TAC", "an explicit Tactical selection must override Guam's satellite preference"
+    assert "CENSUS" in out["source"]
+    assert out["protectedSites"] >= 4
+    assert out["sensors"] >= 12 and out["effectors"] >= 16
+    assert out["protectedSensors"] >= 8 and out["protectedEffectors"] >= 10
     assert {"EW_JAMMER", "RF_TAKEOVER", "DIRECTED_ENERGY", "KINETIC_GUN", "KINETIC_INTERCEPTOR", "NET_CAPTURE"}.issubset(set(out["effectorTypes"]))
     assert out["axes"] >= 4
     assert "ON-ISLAND" in out["backhaul"]["description"]
+    assert out["offLand"] == [], f"Guam fixed sites plotted offshore: {out['offLand']}"
+    assert out["pathOnLand"], "every sampled Guam 5G backbone point must stay on land"
+
+
+def test_guam_defaults_to_satellite_without_an_explicit_basemap(page):
+    satellite_page = page.context.new_page()
+    try:
+        satellite_page.goto(f"file://{COP}?debug=1&scn=guam&seed=42&wx=CLEAR&tod=DAY")
+        satellite_page.wait_for_function("window.__CUAS__ && window.__CUAS__.S.scenario === 'guam'")
+        out = satellite_page.evaluate(
+            """() => ({basemap:window.__CUAS__.S.basemap,
+              pressed:document.querySelector('#baseSeg button[data-v="SAT"]').getAttribute('aria-pressed')})"""
+        )
+        assert out == {"basemap": "SAT", "pressed": "true"}
+    finally:
+        satellite_page.close()
+
+
+def test_guam_regional_view_uses_pacific_installations(page):
+    out = page.evaluate(
+        """() => {
+          const C = window.__CUAS__; C.applyScenario('guam'); C.buildRegional();
+          return {title:document.getElementById('regTitle').textContent,
+            hq:document.getElementById('regHq').textContent,
+            bases:document.getElementById('regBases').textContent};
+        }"""
+    )
+    assert "USINDOPACOM" in out["title"]
+    assert "CAMP H.M. SMITH" in out["hq"].upper()
+    assert "PEARL HARBOR-HICKAM" in out["bases"].upper()
+    assert "KADENA" in out["bases"].upper()
+    assert "IWAKUNI" in out["bases"].upper()
+    for continental_base in ("MIRAMAR", "JBLM", "NELLIS"):
+        assert continental_base not in out["bases"].upper()
+
+
+def test_san_diego_has_layered_miramar_defense_and_targeted_ingress(page):
+    out = page.evaluate(
+        """() => {
+          const C = window.__CUAS__; C.applyScenario('sandiego'); C.setPaused(true);
+          const scn = C.currentScenario();
+          const miramar = scn.protectedSites.find(s => s.name.includes('MIRAMAR'));
+          const near = (item) => Math.hypot(item.x-miramar.x, item.y-miramar.y) <= 1200;
+          const sensors = scn.sensors.filter(s => s.protectedSite && near(s));
+          const effectors = scn.effectors.filter(e => e.protectedSite && near(e));
+          const threat = C.spawnThreat(0.3, {target:miramar, r:21000, bearing:Math.PI});
+          const result = {aoRadius:scn.aoRadius, name:miramar.name,
+            sensors:sensors.length, effectors:effectors.length,
+            types:[...new Set(effectors.map(e => e.effectorType))],
+            f35b:[...C.S.tracks.values()].some(t => t.platform === 'F-35B' && t.service === 'USMC' && t.armed),
+            targetName:threat.targetName, targetX:threat.targetX, targetY:threat.targetY,
+            spawnRange:Math.hypot(threat.x-miramar.x, threat.y-miramar.y),
+            prediction:C.trackPrediction(threat).interceptSec};
+          C.setPaused(false); return result;
+        }"""
+    )
+    assert out["aoRadius"] >= 22000
+    assert "MCAS MIRAMAR" in out["name"]
+    assert out["sensors"] >= 3 and out["effectors"] >= 6
+    assert {"EW_JAMMER", "RF_TAKEOVER", "DIRECTED_ENERGY", "KINETIC_GUN", "KINETIC_INTERCEPTOR", "NET_CAPTURE"}.issubset(set(out["types"]))
+    assert out["f35b"] is True
+    assert "MIRAMAR" in out["targetName"]
+    assert out["targetX"] == 6730 and out["targetY"] == 18870
+    assert 20990 <= out["spawnRange"] <= 21010
+    assert out["prediction"] is not None
 
 
 def test_every_scenario_airport_has_local_defenses_and_traffic(page):
@@ -337,14 +521,81 @@ def test_event_panel_is_taller_and_regional_view_uses_alert_font(page):
 
 
 def test_5g_details_open_only_when_a_transport_node_is_clicked(page):
-    page.evaluate("window.__CUAS__.applyScenario('norfolk')")
-    point = page.evaluate("window.__CUAS__.transportPoints().backhaul")
-    assert page.evaluate("window.__CUAS__.S.transportInfoOpen") is False
-    page.locator("#plot").click(position={"x": point["x"], "y": point["y"]})
-    assert page.evaluate("window.__CUAS__.S.transportInfoOpen") is True
-    box = page.locator("#plot").bounding_box()
-    page.locator("#plot").click(position={"x": box["width"] * 0.9, "y": box["height"] * 0.2})
-    assert page.evaluate("window.__CUAS__.S.transportInfoOpen") is False
+    expected = {
+        "sandiego": "SAN DIEGO",
+        "elpaso": "EL PASO",
+        "norfolk": "NORFOLK",
+        "guam": "GUAM",
+    }
+    for scenario, label in expected.items():
+        page.evaluate("scenario => window.__CUAS__.applyScenario(scenario)", scenario)
+        point = page.evaluate("window.__CUAS__.transportPoints().gnb")
+        assert page.evaluate("window.__CUAS__.S.transportInfoOpen") is False
+        page.locator("#plot").click(position={"x": point["x"], "y": point["y"]})
+        page.wait_for_timeout(80)
+        rendered = page.evaluate("window.__CUAS__.S.transportInfoRendered")
+        assert page.evaluate("window.__CUAS__.S.transportInfoOpen") is True
+        assert rendered and label in rendered["label"]
+        page.locator("#plot").click(position={"x": point["x"], "y": point["y"]})
+        assert page.evaluate("window.__CUAS__.S.transportInfoOpen") is False
+
+
+def test_moving_vessel_identifier_keeps_a_stable_nearby_anchor(page):
+    track_id = page.evaluate(
+        """() => {
+          const C=window.__CUAS__; C.applyScenario('sandiego');
+          const t=C.spawnCivBoat({platform:'FISHING VESSEL', laneX:-5200, y:-1200, north:true});
+          return t.trackId;
+        }"""
+    )
+    page.wait_for_timeout(180)
+    first = page.evaluate("id => window.__CUAS__.labelOffset(id)", track_id)
+    page.wait_for_timeout(420)
+    second = page.evaluate("id => window.__CUAS__.labelOffset(id)", track_id)
+    assert first is not None and second is not None
+    assert first == second, "moving vessel label should retain its collision-avoidance slot"
+    assert abs(second) <= 44, "vessel identifier must remain close to its hull"
+
+
+def test_fire_release_actions_are_red_white_and_use_the_console_font(page):
+    track_id = page.evaluate(
+        """() => {
+          const C=window.__CUAS__; C.applyScenario('sandiego'); C.setWorkspace('FIRES');
+          C.S.role='FIRE_CONTROL_AUTHORITY'; C.S.wcs='WEAPONS_TIGHT';
+          const t=C.spawnHostile({r:1200,tq:15,identity:'HOSTILE'});
+          C.selectTrack(t.trackId); return t.trackId;
+        }"""
+    )
+    page.wait_for_timeout(850)
+    queue_button = page.locator(".fire-release:not([disabled])").first
+    assert queue_button.count() == 1
+    out = page.evaluate(
+        """() => {
+          const queue=document.querySelector('.fire-release:not([disabled])');
+          const engage=document.getElementById('btnEngage');
+          const style=(el) => { const s=getComputedStyle(el); return {background:s.backgroundColor,
+            color:s.color,font:s.fontFamily}; };
+          return {queue:style(queue),engage:style(engage),app:getComputedStyle(document.getElementById('cuas')).fontFamily};
+        }"""
+    )
+    assert out["queue"]["background"] == "rgb(143, 29, 44)"
+    assert out["engage"]["background"] == "rgb(143, 29, 44)"
+    assert out["queue"]["color"] == out["engage"]["color"] == "rgb(255, 255, 255)"
+    assert out["queue"]["font"] == out["engage"]["font"] == out["app"]
+    assert track_id
+
+
+def test_every_text_bearing_element_uses_the_app_monospace_font(page):
+    mismatches = page.evaluate(
+        """() => {
+          const expected=getComputedStyle(document.getElementById('cuas')).fontFamily;
+          return [...document.body.querySelectorAll('*')]
+            .filter(el => [...el.childNodes].some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim()))
+            .filter(el => getComputedStyle(el).fontFamily !== expected)
+            .map(el => ({tag:el.tagName,id:el.id,cls:el.className,font:getComputedStyle(el).fontFamily}));
+        }"""
+    )
+    assert mismatches == []
 
 
 def test_san_diego_airport_tracks_publish_transponder_data(page):

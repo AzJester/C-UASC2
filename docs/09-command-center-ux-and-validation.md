@@ -73,8 +73,18 @@ state, never from unrelated presentation chatter.
 
 WEAPONS HOLD and ABORT are persistent, unambiguous controls. WEAPONS FREE or a
 delegated automatic-release envelope requires a deliberate acknowledgement and
-permanently visible armed state. Exercise injects and resets require confirmation
-and are audited separately from operational actions.
+permanently visible armed state. The pending WEAPONS FREE acknowledgement flashes
+red warning text. Once confirmed, WEAPONS FREE activates eligible ground, air,
+and naval simulated effectors together while preserving identity, track-quality,
+range, and no-fire checks. Exercise injects and resets require confirmation and
+are audited separately from operational actions.
+
+AutoBrief is a scripted exercise workflow with three selectable narratives
+(joint defense, airport defense, and network resilience) and real-time 2-, 5-,
+10-, or 15-minute limits. It performs detect, fuse, task, warning, simulated
+release confirmation, and joint engagement without operator clicks, then
+sustains bounded waves until the chosen time expires. LIVE release remains
+governed by backend WCS; the browser does not override authoritative policy.
 
 ## 5. Truth and uncertainty
 
@@ -142,21 +152,30 @@ San Diego, El Paso, Norfolk / Hampton Roads, and Guam are selectable notional
 area-of-operations presets. San Diego models bidirectional civilian airport traffic with
 synthetic Mode-S / ADS-B callsign, ICAO address, squawk, quality, altitude, speed,
 and flight-plan fields. Its airport counter-UAS additions are soft-kill / capture
-illustrations constrained by the existing no-fire geometry. The 5G overlay also
-terminates at a visible, explicitly off-scale San Clemente Island inset. El Paso
+illustrations constrained by the existing no-fire geometry. MCAS Miramar is a
+second defended target with three local sensors, six complementary effector
+types, and an armed USMC F-35B patrol; simulated threats can be assigned to
+North Island or Miramar. The 5G overlay also terminates at a visible, explicitly
+off-scale San Clemente Island inset. El Paso
 adds KELP arrivals/departures, local airport defenses, and three Border Patrol
 stations with paired sensors and non-kinetic effectors. Every El Paso sensor,
 effector, and station marker remains physically north of the configured border.
 Norfolk includes KORF traffic and defenses, multiple naval and commercial
 surface tracks, and a 5G backbone terminating at a boxed, explicitly inland,
 notional terrestrial fiber handoff rather than an offshore tower or island. Guam
-adds PGUM traffic and airport defense plus dense, multi-axis sensor and effector
-layers around three additional notional protected sites. These lines are
+uses a whole-island public Census outline, prefers satellite imagery, anchors
+PGUM and PGUA to public FAA reference points, and adds PGUM traffic and airport
+defense plus dense, multi-axis sensor and effector layers around four additional
+notional protected sites. Every fixed Guam site is validated inside the island
+polygon. The 5G footprint is clipped at the shoreline, and its fiber polyline is
+sampled end-to-end to ensure that it remains on land. Guam's regional rollup
+switches to an INDOPACOM roster centered on Camp H.M. Smith, Pearl
+Harbor-Hickam, Kadena, and MCAS Iwakuni. These lines are
 communications symbology, not statements of real coverage or infrastructure.
 
 5G infrastructure descriptions are hidden during normal map viewing. Selecting
-the gNB or terrestrial POP on the canvas opens its contextual information box;
-selecting elsewhere closes it.
+the gNB or terrestrial POP on the canvas opens its contextual information box on
+every scenario; selecting the node again or selecting elsewhere closes it.
 
 The fixed-site layout separates the former wide decision rail into compact left
 and right operator wings around a wider center map that always scales the
