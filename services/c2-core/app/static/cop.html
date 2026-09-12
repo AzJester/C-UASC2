@@ -996,10 +996,10 @@
   .sb-tile .l { font-size: 10px; letter-spacing: .025em; }
   .sb-tile .n { font-size: 16px; }
   .sb-grid { gap: 6px 3px; }
-  .sb-detail { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .sb-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
-  .sb-row .l { font-size: 10px; }
-  .sb-row .n { white-space: nowrap; }
+  #scoreboard .sb-detail { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  #scoreboard .sb-detail .sb-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+  #scoreboard .sb-detail .l { font-size: 10px; }
+  #scoreboard .sb-detail .n { white-space: nowrap; }
   .system-glance .kv { margin-top: 10px; }
   .system-glance .kv dt, .system-glance .kv dd { font-size: 11px; }
   .system-glance .decision-status { font-size: 11px; }
@@ -2838,7 +2838,7 @@
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
   const COP_VERSION = "1.1.0";    // human-readable application release
-  const COP_BUILD = "e368ee8f";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "99ce7c00";   // stamped by scripts/build_cop.py (content hash)
   $("appVersion").textContent = `v${COP_VERSION} · ${COP_BUILD}`;
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
