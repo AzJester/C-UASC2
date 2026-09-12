@@ -28,6 +28,7 @@ venv: ## Create a local venv and install c2-core + test deps
 	$(PY) -m venv $(VENV)
 	$(VENV)/bin/pip install -U pip
 	$(VENV)/bin/pip install -r services/c2-core/requirements.txt -r requirements-dev.txt
+	$(VENV)/bin/pip install -r services/exercise_service/requirements.txt
 
 test: ## Run the unit tests (no broker needed)
 	$(VENV)/bin/pytest -q || ( echo "run 'make venv' first if deps are missing" && exit 1 )
@@ -38,7 +39,10 @@ validate-specs: ## Validate JSON Schemas / OpenAPI / AsyncAPI structure
 cop-smoke: ## Headless browser smoke + behavior tests of the web COP (installs Playwright + Chromium)
 	$(VENV)/bin/pip install -q playwright
 	$(VENV)/bin/python -m playwright install --with-deps chromium
-	$(VENV)/bin/pytest -q tests/test_cop_smoke.py tests/test_cop_behavior.py tests/test_cop_review_ui.py
+	$(VENV)/bin/pytest -q tests/test_cop_smoke.py tests/test_cop_behavior.py tests/test_cop_review_ui.py tests/test_exercise_ui.py
+
+exercise: ## Run the persistent shared training exercise on localhost:8787
+	$(VENV)/bin/python scripts/run_exercise.py
 
 build-cop: ## Regenerate the COP distribution copies from site/index.html (stamps COP_BUILD)
 	$(PY) scripts/build_cop.py

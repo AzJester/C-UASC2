@@ -26,7 +26,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, Header, HTTPException, Query, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from . import SCHEMA_VERSION
 from .authority import (
@@ -1098,6 +1098,22 @@ async def cop_ui() -> HTMLResponse:
         "<script>window.__CUAS_BACKEND__=true;</script></head>"
         f"<body>{content}</body></html>"
     )
+
+
+@app.get("/exercise.html", include_in_schema=False)
+async def exercise_room_ui() -> FileResponse:
+    """Shared-room client; it previews until served by the exercise service."""
+    return FileResponse(_UI_FILE.parent / "exercise.html", media_type="text/html")
+
+
+@app.get("/exercise.js", include_in_schema=False)
+async def exercise_room_script() -> FileResponse:
+    return FileResponse(_UI_FILE.parent / "exercise.js", media_type="text/javascript")
+
+
+@app.get("/exercise.css", include_in_schema=False)
+async def exercise_room_style() -> FileResponse:
+    return FileResponse(_UI_FILE.parent / "exercise.css", media_type="text/css")
 
 
 # --- health & COP -----------------------------------------------------------

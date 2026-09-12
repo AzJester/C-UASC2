@@ -66,6 +66,8 @@ def main() -> int:
     check = "--check" in sys.argv
     full = stamped_source()
     outputs = {SOURCE: full, DEMO: full, SERVED: strip_wrapper(full)}
+    for asset in ("exercise.html", "exercise.js", "exercise.css"):
+        outputs[SERVED.parent / asset] = read_lf(ROOT / "site" / asset)
     drift = [
         str(p.relative_to(ROOT))
         for p, want in outputs.items()
