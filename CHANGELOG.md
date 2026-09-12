@@ -6,6 +6,16 @@ changes are listed first. For the exact code-level history, see the
 
 ## 2026-09-11
 
+### TAK Server 5.8 report compatibility
+
+- Corrected manual report delivery after testing against TAK Server 5.8-RELEASE-79.
+  The adapter waits briefly for subscription setup and drains the TLS stream
+  before closing it.
+- Retained provenance in a compatible CoT detail element. The namespaced
+  extension used previously prevented the server from forwarding the report.
+- Added a mutual-TLS regression test for delayed subscription readiness.
+  A completed write still does not claim WinTAK client receipt.
+
 ### Shared exercise rooms and optional TAK exchange, version 1.2
 
 - Added a desktop Exercise room with terrain imagery by default, named

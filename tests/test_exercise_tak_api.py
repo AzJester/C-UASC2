@@ -97,7 +97,7 @@ def test_export_contains_only_this_rooms_current_report_annotations(client):
     assert "EXERCISE/TRAINING" in event.find("detail/contact").attrib["callsign"]
     assert "Latest <review> & correction" in event.findtext("detail/remarks")
     assert "Observed: Unavailable" in event.findtext("detail/remarks")
-    assert event.find("detail/{urn:insightfuldefense:exercise:1}report").attrib["version"] == "2"
+    assert event.find("detail/exerciseReport").attrib["version"] == "2"
     for excluded in ("OTHER_ROOM_PRIVATE_WORDING", "ATTACHMENT_NOT_A_MAP_ANNOTATION", "REASON_RETAINED_IN_CASE_ONLY", alpha["token"], beta["token"]):
         assert excluded not in response.text
 

@@ -86,6 +86,13 @@ The XML review export contains a standard CoT event for one located report or a
 clearly labeled review bundle for multiple reports. Direct WinTAK import of the
 multi-report wrapper is unverified. The transport sends individual CoT events.
 
+Live testing with TAK Server 5.8-RELEASE-79 confirmed forwarding to an independent
+certificate-authenticated receiver. To support that server, provenance uses an
+unqualified `exerciseReport` detail element with a `schema` attribute; a namespaced
+extension prevented forwarding. The adapter also allows a bounded interval for
+the server's initial subscription setup and TLS shutdown. That protocol traffic
+is not a report acknowledgment, and this check does not establish WinTAK display.
+
 TAK transmission is manual. Each marker carries explicit EXERCISE/TRAINING labels
 and an exercise-specific ID. The adapter does not transmit simulation target
 tracks, sensor feeds, or command/release messages. The interface distinguishes a

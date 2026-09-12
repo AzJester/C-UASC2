@@ -30,6 +30,37 @@ MAX_CERT_BYTES = 1024 * 1024
 UNKNOWN_POINT_VALUE = "9999999.0"
 MARKER_LIFETIME_SECONDS = 15 * 60
 SOCKET_TIMEOUT_SECONDS = 5.0
+SERVER_CONTROL_TIMEOUT_SECONDS = 1.0
+SERVER_DRAIN_TIMEOUT_SECONDS = 0.25
+
+
+def _read_server_control(secure: ssl.SSLSocket, *, before_write: bool) -> None:
+    """Allow TAK's asynchronous subscription setup before closing the stream.
+
+    The initial CoT protocol announcement follows the authenticated subscription
+    setup in TAK Server. It is not an acknowledgement of any training report.
+    Older compatible peers may send nothing, so this wait is strictly bounded.
+    Incoming control bytes are discarded and never treated as exercise content.
+    """
+    duration = SERVER_CONTROL_TIMEOUT_SECONDS if before_write else SERVER_DRAIN_TIMEOUT_SECONDS
+    deadline = time.monotonic() + duration
+    data = bytearray()
+    try:
+        while len(data) < 65536:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            secure.settimeout(remaining)
+            chunk = secure.recv(min(8192, 65536 - len(data)))
+            if not chunk:
+                break
+            data.extend(chunk)
+            if before_write and b"</event>" in data:
+                break
+    except (TimeoutError, ssl.SSLWantReadError):
+        pass
+    finally:
+        secure.settimeout(SOCKET_TIMEOUT_SECONDS)
 
 
 class TakValidationError(ValueError):
@@ -121,7 +152,7 @@ def _events(room: Mapping, reports: Sequence, now: datetime) -> tuple[list[ET.El
         ET.SubElement(detail, "contact", {"callsign": f"EXERCISE/TRAINING {title}"[:190]})
         ET.SubElement(detail, "precisionlocation", {"geopointsrc": "USER", "altsrc": "???"})
         # Visible remarks carry essential meaning even when an external client
-        # ignores the custom, namespaced evidence metadata.
+        # ignores the custom evidence metadata.
         ET.SubElement(detail, "remarks").text = (
             f"EXERCISE / TRAINING ONLY. Fictional review annotation, not a live observation.\n"
             f"Exercise: {room_name}\nReport: {report_id}, version {version}\n"
@@ -129,7 +160,11 @@ def _events(room: Mapping, reports: Sequence, now: datetime) -> tuple[list[ET.El
             f"Annotation exported: {_iso(now)}. Marker expires in 15 minutes; this does not refresh the report.\n"
             f"Altitude and positional accuracy: unknown.\n{body}"
         )
-        ET.SubElement(detail, "{urn:insightfuldefense:exercise:1}report", {
+        # TAK 5.8's CoT stream parser drops events containing XML namespace
+        # prefixes, including prefixes declared only on a custom detail child.
+        # Keep the custom tag unqualified and identify its schema explicitly.
+        ET.SubElement(detail, "exerciseReport", {
+            "schema": "urn:insightfuldefense:exercise:1",
             "roomId": room_id, "reportId": report_id, "version": str(version),
             "observedAt": observed if observed != "Unavailable" else "", "receivedAt": received,
             "observationTimeKnown": str(observed != "Unavailable").lower(), "training": "true",
@@ -301,11 +336,13 @@ class TakAdapter:
                 with _connect(host, port) as raw:
                     raw.settimeout(SOCKET_TIMEOUT_SECONDS)
                     with context.wrap_socket(raw, server_hostname=host) as secure:
+                        _read_server_control(secure, before_write=True)
                         # Once writing begins, a timeout can mean partial delivery.
                         transport_status = "delivery_unknown"
                         secure.sendall(payload)
                         self._last_sent = _iso(_utc())
                         transport_status = "written_to_tls_socket"
+                        _read_server_control(secure, before_write=False)
                         # Send TLS close_notify so closing with unread TLS 1.3
                         # session tickets does not reset the peer's connection.
                         # A shutdown response is transport housekeeping, not a
