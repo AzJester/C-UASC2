@@ -96,10 +96,28 @@ back silently to simulation. Connection states are explicit:
 `SIM` is a separate truth domain. Static demonstration inventory or assumptions
 are labeled `STATIC DEMO`.
 
-Track quality is derived from observation age, continuity, covariance, source
-geometry, and trust—not directly increased by a task request. Identity includes
-confidence, evidence, declaring authority, time, and reversal history. Tasking
-changes future observations rather than directly changing fused quality.
+The embedded model's track quality is an illustrative score based on configured
+sensor contributions, dwell, and injected delay. It is not a validated covariance,
+source-trust estimate, or probability of correct identification. Tasking changes
+future modeled observations rather than directly changing quality.
+
+Operator details distinguish supplied observations, scenario/source declarations,
+and unavailable information. True scenario intent, assigned objectives, and flight
+profiles appear in Exercise Control's instructor panel. The existing scripted
+HOSTILE declaration rule is explicitly labeled; it is not independent evidence
+of intent. Missing identity confidence, altitude datum, declaring authority, or
+source timestamp remains unavailable instead of being invented.
+
+Observation age measures the source sample; receipt age measures delivery to the
+display; displayed-sample age measures the sample represented by the map position.
+SIM ages use simulation time and freeze when paused. LIVE source age advances
+from a supplied age or observation timestamp; receipt time alone does not establish
+source freshness. Position and sensor models remain illustrative.
+
+Regional peers have no feed. Their roster and inventory fractions are presets,
+not current readiness. The scenario score is a scripted point score, not damage
+or mission availability. Cost and architecture displays link to assumptions,
+exclusions, and the deliberately unequal enabled inventories used by the example.
 
 ## 6. Engagement and AAR semantics
 
@@ -112,11 +130,33 @@ outcomes, not evidence that an effector acted. Terminal lifecycle alternatives a
 `DENIED`, `ABORTED`, and `FAILED`. A disconnected transport cannot report a queued
 or delivered order unless durable storage or acknowledgement exists.
 
-AAR metrics are reconstructed from immutable lifecycle snapshots and hash-chained
-audit records. “Model Pk,” terminal hits,
-confirmed defeats, misses, pending BDA, engagements, denials, aborts, leakers,
-cost committed, and cost expended are separate measures. Defeats divided by
-engagements is labeled “observed defeats per engagement,” never “hit rate (Pk).”
+The public demo's AAR captures an in-memory snapshot of the run counters,
+inventory, assumptions, and recorded events. It is not a tamper-proof audit or an
+independently reconciled lifecycle ledger. The backend scaffold has separate
+audit capabilities; those do not make the standalone browser record immutable.
+Defeats divided by engagements is labeled “observed defeats per engagement,” never
+“hit rate (Pk).” Missing denominators are shown as **Not measured**.
+
+An open run is an interim review. Ending a run freezes the embedded simulation;
+active hostile contacts, unresolved identities (including expired reports), or
+pending outcomes keep the review incomplete. An illustrative objective-met result
+also requires at least one recorded defeat and no recorded arrivals at scenario
+objectives. LIVE data does not establish mission completion. Reopening the AAR
+captures a new snapshot; a snapshot already being reviewed stays fixed.
+
+JSON export contains the run/build/seed identifiers, starting random state and
+configuration, configuration events, both labeled operator and instructor ledgers,
+inventory, coordination, case reports/decisions, and replay frames. Reset/reload
+clears the in-memory record; export before resetting. The on-screen history shows
+the latest 200 operator events, while export retains the full recorded ledger.
+Replay preserves its first and last recorded frames and decimates intermediate
+positions when exceeding 7,200 frames or 600,000 points. Sampling is disclosed.
+A seed reproduces the initial laydown, not all timing-dependent outcomes.
+
+The five-minute fictional review case runs on a separate exercise clock while
+the COP is paused. It includes conflicting reports, interrupted delivery, a benign
+revision, and pending coordination. Human decisions retain their stated reasons;
+missing input remains explicit. This case sends no tasking or release command.
 
 The scaffold remains a single-process demonstration: request idempotency,
 reservations, consumed token IDs, simulator inventory, and active lifecycle state

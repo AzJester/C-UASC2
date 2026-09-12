@@ -401,8 +401,14 @@ def test_washington_airports_coast_and_every_effector_share_the_data_mesh(page):
             clientY:rect.top+point.y*(rect.height/canvas.clientHeight)}));
           clickPlot(coastPoint.find(p => p.inset));
           const sensorCard = document.getElementById('trackBody').innerText;
+          document.getElementById('btnSystemDetails').click();
+          const sensorDetails = document.getElementById('decisionDetailBody').innerText;
+          document.getElementById('decisionClose').click();
           clickPlot(airportPoint.find(p => p.inset));
           const effectorCard = document.getElementById('trackBody').innerText;
+          document.getElementById('btnSystemDetails').click();
+          const effectorDetails = document.getElementById('decisionDetailBody').innerText;
+          document.getElementById('decisionClose').click();
           const version = document.getElementById('appVersion');
           const result = {
             sensors:scn.sensors.length, effectors:scn.effectors.length,
@@ -412,7 +418,7 @@ def test_washington_airports_coast_and_every_effector_share_the_data_mesh(page):
             mesh:scn.dataMesh, allPaths:paths.every(Boolean), paths:[...new Set(paths)],
             civilAir:[...C.S.tracks.values()].filter(t => t.civil && !t.surface).map(t => ({airport:t.civilAirport, arrival:t.civilArrival, plan:t.flightPlan, callsign:t.transponder?.callsign})),
             coastInset:coastPoint.some(p => p.inset), airportInset:airportPoint.some(p => p.inset),
-            sensorCard, effectorCard, selected:C.S.selectedAsset,
+            sensorCard, effectorCard, sensorDetails, effectorDetails, selected:C.S.selectedAsset,
             version:version.textContent, versionPx:parseFloat(getComputedStyle(version).fontSize),
           };
           C.setPaused(false); return result;
@@ -438,10 +444,11 @@ def test_washington_airports_coast_and_every_effector_share_the_data_mesh(page):
         assert any(track["arrival"] is False and code in track["plan"] for track in traffic)
         assert all(track["callsign"] for track in traffic)
     assert out["coastInset"] and out["airportInset"]
-    assert "DATA-SHARING PATH" in out["sensorCard"] and "SHARED COP" in out["sensorCard"]
-    assert "MAGAZINE DEPTH" in out["effectorCard"] and "COMMS LINK" in out["effectorCard"]
+    assert "Full system status" in out["sensorCard"]
+    assert "DATA-SHARING PATH" in out["sensorDetails"] and "SHARED COP" in out["sensorDetails"]
+    assert "MAGAZINE DEPTH" in out["effectorDetails"] and "COMMS LINK" in out["effectorDetails"]
     assert out["selected"]["kind"] == "effector"
-    assert out["version"].startswith("v1.0.0") and out["versionPx"] <= 8
+    assert out["version"].startswith("v1.1.0") and out["versionPx"] >= 9
 
 
 def test_washington_joint_air_package_joins_a_ground_started_weapons_free_mission(page):

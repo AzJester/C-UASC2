@@ -40,6 +40,9 @@ jobs:
       - name: Run tests
         run: make test
 
+      - name: Reporting and replay regression tests
+        run: node --test tests/test_cop_review.mjs
+
   cop-smoke:
     # Headless browser smoke test of the web COP: boots the page, runs a raid,
     # checks pause/scoreboard/no-scroll, and fails on any console error.
