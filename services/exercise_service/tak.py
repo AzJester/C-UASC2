@@ -160,8 +160,8 @@ def _events(room: Mapping, reports: Sequence, now: datetime) -> tuple[list[ET.El
             f"Annotation exported: {_iso(now)}. Marker expires in 15 minutes; this does not refresh the report.\n"
             f"Altitude and positional accuracy: unknown.\n{body}"
         )
-        # TAK 5.8's CoT stream parser drops events containing XML namespace
-        # prefixes, including prefixes declared only on a custom detail child.
+        # TAK 5.8 rewrites this prefixed extension into invalid forwarded XML
+        # (an empty namespace binding), including child-local declarations.
         # Keep the custom tag unqualified and identify its schema explicitly.
         ET.SubElement(detail, "exerciseReport", {
             "schema": "urn:insightfuldefense:exercise:1",

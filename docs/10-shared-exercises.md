@@ -88,8 +88,9 @@ multi-report wrapper is unverified. The transport sends individual CoT events.
 
 Live testing with TAK Server 5.8-RELEASE-79 confirmed forwarding to an independent
 certificate-authenticated receiver. To support that server, provenance uses an
-unqualified `exerciseReport` detail element with a `schema` attribute; a namespaced
-extension prevented forwarding. The adapter also allows a bounded interval for
+unqualified `exerciseReport` detail element with a `schema` attribute. The server
+rewrote the previous namespaced extension into malformed forwarded XML. The
+adapter also allows a bounded interval for
 the server's initial subscription setup and TLS shutdown. That protocol traffic
 is not a report acknowledgment, and this check does not establish WinTAK display.
 
