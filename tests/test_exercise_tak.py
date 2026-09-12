@@ -110,7 +110,10 @@ def test_xml_escaping_training_metadata_and_stable_uid():
     assert first.find(".//command") is None
     point = first.find("point").attrib
     assert point["hae"] == point["ce"] == point["le"] == "9999999.0"
-    observed = first.find("detail/{urn:insightfuldefense:exercise:1}report").attrib["observedAt"]
+    metadata = first.find("detail/exerciseReport")
+    assert metadata.attrib["schema"] == "urn:insightfuldefense:exercise:1"
+    assert b"xmlns" not in adapter.export(ROOM, [report])
+    observed = metadata.attrib["observedAt"]
     assert observed == "2026-01-02T12:00:00.000Z"
     assert (datetime.fromisoformat(first.attrib["stale"]) - datetime.fromisoformat(first.attrib["time"])).total_seconds() == 900
     assert "does not refresh the report" in remarks
@@ -119,7 +122,7 @@ def test_xml_escaping_training_metadata_and_stable_uid():
 def test_missing_observation_time_stays_unavailable():
     event = ET.fromstring(TakAdapter().export(ROOM, [{**REPORT, "observedAt": None}]))
     assert "Observed: Unavailable" in event.findtext("detail/remarks")
-    metadata = event.find("detail/{urn:insightfuldefense:exercise:1}report").attrib
+    metadata = event.find("detail/exerciseReport").attrib
     assert metadata["observationTimeKnown"] == "false" and metadata["observedAt"] == ""
 
 
@@ -180,7 +183,7 @@ def test_configuration_is_fixed_and_rejects_extra_overrides(tmp_path, material):
         validate_config(path)
 
 
-def local_tls_peer(tmp_path, material):
+def local_tls_peer(tmp_path, material, *, delayed_subscription=False):
     listener = socket.socket()
     listener.bind(("127.0.0.1", 0))
     listener.listen(1)
@@ -199,6 +202,19 @@ def local_tls_peer(tmp_path, material):
                 with raw:
                     raw.settimeout(5)
                     with context.wrap_socket(raw, server_side=True) as secure:
+                        if delayed_subscription:
+                            # Real TAK initializes its authenticated subscription
+                            # asynchronously, then emits this protocol event.
+                            secure.settimeout(0.08)
+                            try:
+                                premature = secure.recv(65536)
+                                if premature:
+                                    errors.append("payload-before-subscription")
+                                    return
+                            except socket.timeout:
+                                pass
+                            secure.settimeout(5)
+                            secure.sendall(b'<event version="2.0" type="t-x-takp-v"><detail/></event>')
                         while data := secure.recv(65536):
                             received.append(data)
         except (OSError, ssl.SSLError) as error:
@@ -229,6 +245,19 @@ def test_wrong_server_hostname_is_rejected_without_fallback(tmp_path):
     assert "verification failed" in result["lastError"]
 
 
+def test_send_waits_for_authenticated_subscription_control(tmp_path, material):
+    path, thread, received, errors = local_tls_peer(tmp_path, material, delayed_subscription=True)
+    result = TakAdapter(path).send(ROOM, [REPORT])
+    thread.join(timeout=6)
+    assert not thread.is_alive() and not errors
+    event = ET.fromstring(b"".join(received))
+    assert event.get("uid").startswith("exercise-")
+    assert b"xmlns" not in b"".join(received)
+    assert event.find("detail/exerciseReport").get("reportId") == REPORT["id"]
+    assert result["transportStatus"] == "written_to_tls_socket"
+    assert result["clientReceipt"] == "unverified"
+
+
 def test_dns_timeout_is_bounded_and_never_connects_later(monkeypatch):
     finish = threading.Event()
     def delayed_resolver(*args, **kwargs):
@@ -250,6 +279,7 @@ def test_partial_write_stays_unknown_and_error_is_sanitized(monkeypatch):
         def __enter__(self): return self
         def __exit__(self, *args): pass
         def settimeout(self, value): pass
+        def recv(self, size): raise TimeoutError()
         def sendall(self, payload): raise TimeoutError("sensitive machine detail")
     class Context:
         def wrap_socket(self, *args, **kwargs): return Connection()
