@@ -20,6 +20,8 @@ changes are listed first. For the exact code-level history, see the
   timestamps remain unavailable. Focused controls no longer freeze displayed data.
 - Added searchable complete inventories, compact sensor/effector cards, readable
   dialogs, a persistent mission summary/pause control, and selected-map labels.
+- Kept terrain imagery as the default, made Tactical an explicit selection, and
+  added imagery retry controls instead of automatically changing map styles.
 - Moved architecture/weather/time controls into Exercise Control, and added a
   five-minute fictional evidence/coordination case with recorded decision reasons.
 - Added reporting, replay, desktop layout, review, export, and focus regressions.

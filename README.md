@@ -48,9 +48,10 @@ to GitHub Pages so anyone can view it with no install:
 
 The published page is the standalone build ([`site/index.html`](site/index.html)):
 it runs an embedded, seeded-random simulation entirely in the browser (no
-backend). Satellite imagery is the default basemap and fetches public Esri World
-Imagery tiles; when they are unreachable the COP falls back to its synthetic
-tactical map, so the page still works fully offline. All figures are simulated;
+backend). Real-world terrain imagery is the default basemap, using public Esri
+World Imagery satellite tiles. Tactical is an explicit choice in Display settings
+and works offline. If imagery is unavailable, the map offers a retry or manual
+switch to Tactical without silently changing the selected basemap. All figures are simulated;
 every view is labeled for demonstration only.
 The same page runs in LIVE mode against the real c2-core REST API and bus
 when c2-core serves it (`make up`, then <http://localhost:8000/>).

@@ -55,10 +55,17 @@ def test_cop_boots_clean(page):
     assert "S" in api and "resetScenario" in api, f"debug hook incomplete: {api}"
 
 
-def test_satellite_imagery_is_the_default_basemap(page):
+@pytest.mark.parametrize("basemap_query", ["", "&basemap=terrain", "&basemap=unknown"])
+def test_terrain_imagery_is_default_and_tactical_is_an_explicit_choice(page, basemap_query):
     default_page = page.context.new_page()
-    default_page.route("https://server.arcgisonline.com/**", lambda route: route.abort())
-    default_page.goto(f"file://{COP}?debug=1&seed=17")
+    imagery_requests = []
+
+    def abort_imagery(route):
+        imagery_requests.append(route.request.url)
+        route.abort()
+
+    default_page.route("https://server.arcgisonline.com/**", abort_imagery)
+    default_page.goto(f"file://{COP}?debug=1&seed=17{basemap_query}")
     default_page.wait_for_function("() => !!window.__CUAS__")
 
     assert default_page.evaluate("window.__CUAS__.S.basemap") == "SAT"
@@ -70,6 +77,23 @@ def test_satellite_imagery_is_the_default_basemap(page):
         default_page.get_attribute('#baseSeg button[data-v="TAC"]', "aria-pressed")
         == "false"
     )
+    default_page.locator("#mapImageryStatus").wait_for(state="visible")
+    assert default_page.locator("#mapModeBadge").inner_text() == "TERRAIN IMAGERY UNAVAILABLE"
+    assert default_page.evaluate("window.__CUAS__.S.basemap") == "SAT"
+
+    requested_before_retry = len(imagery_requests)
+    with default_page.expect_request("https://server.arcgisonline.com/**"):
+        default_page.click("#btnRetryImagery")
+    default_page.locator("#mapImageryStatus").wait_for(state="visible")
+    assert len(imagery_requests) > requested_before_retry
+
+    default_page.click("#btnChooseTactical")
+    default_page.wait_for_function("document.querySelector('#mapModeBadge').textContent === 'TACTICAL LOCAL'")
+    assert default_page.locator("#mapImageryStatus").is_hidden()
+    assert default_page.evaluate("window.__CUAS__.S.basemap") == "TAC"
+    default_page.click("#btnDisplaySettings")
+    default_page.click('#baseSeg button[data-v="SAT"]')
+    assert default_page.evaluate("window.__CUAS__.S.basemap") == "SAT"
     default_page.close()
 
 

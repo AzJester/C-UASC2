@@ -467,6 +467,15 @@
 
   .empty { color: var(--faint); font-size: 12px; font-style: italic; }
 
+  .map-imagery-status {
+    position: absolute; top: 76px; right: 12px; z-index: 8;
+    width: 260px; max-width: calc(100% - 24px); padding: 12px;
+    border: 1px solid #796139; border-radius: 5px; background: #151d27;
+    color: var(--text); font: 12px/1.5 var(--mono);
+  }
+  .map-imagery-status[hidden] { display: none; }
+  .map-imagery-status p { margin: 0 0 10px; }
+
   /* accessible, keyboard-operable companion to the canvas COP */
   .track-list { display: grid; gap: 4px; }
   .track-list-head, .track-list-row {
@@ -1137,7 +1146,12 @@
       <canvas id="plot" role="img" aria-label="Tactical common operating picture. Tracks, sensors, effectors, and transport nodes can be selected for status details." aria-describedby="plotAccessNote"></canvas>
       <span class="sr-only" id="plotAccessNote">The map is a visual overview. Tracks are available in the track list; sensors and effectors are also selectable on the map and from their status lists.</span>
       <button type="button" class="map-recenter" id="btnRecenterMap" title="Restore the default map center and zoom">Re-center &middot; <span id="mapZoom">100%</span></button>
-      <div class="map-mode-badge" id="mapModeBadge">Satellite &middot; Esri World Imagery</div>
+      <div class="map-mode-badge" id="mapModeBadge">Terrain imagery &middot; Esri</div>
+      <div class="map-imagery-status" id="mapImageryStatus" hidden>
+        <p role="status">Terrain imagery is unavailable. Retry the imagery service or choose the local tactical map.</p>
+        <button type="button" class="rail-tool" id="btnRetryImagery">Retry imagery</button>
+        <button type="button" class="rail-tool" id="btnChooseTactical">Use tactical</button>
+      </div>
       <div class="topstack" id="topstack">
         <div class="pausebadge" id="pauseBadge" hidden>&#10074;&#10074; PAUSED</div>
         <div class="nodelost" id="nodeLost"></div>
@@ -1179,9 +1193,10 @@
           <div class="field" style="margin-top:10px;margin-bottom:0">
             <label>Basemap</label>
             <div class="seg" id="baseSeg">
-              <button data-v="SAT" aria-pressed="true" title="Default Esri World Imagery basemap; requires an external network request">SAT · EXTERNAL</button>
-              <button data-v="TAC" title="Local synthetic tactical terrain; offline fallback and manual alternative">TACTICAL · LOCAL</button>
+              <button data-v="SAT" aria-pressed="true" title="Default real-world terrain and satellite imagery from Esri; requires an external network request">TERRAIN IMAGERY</button>
+              <button data-v="TAC" title="Choose the local synthetic tactical map; works offline">TACTICAL · LOCAL</button>
             </div>
+            <div class="meta" style="margin-top:5px">Terrain imagery is the default. Tactical is a manual choice.</div>
           </div>
 
 
@@ -2409,7 +2424,7 @@
     transport: "BOTH",                       // BOTH | MANET | 5G | OFF (selected data path; lines hidden without a selection)
     transportInfoOpen: false,                // contextual 5G node details, opened from the map
     visibleDataRoute: null,                   // active contextual line: selected system or selected network node
-    basemap: "SAT",                          // SAT default | TAC manual/offline fallback
+    basemap: "SAT",                          // real-world terrain imagery default | TAC explicit choice
     basemapExplicit: false,                  // query/manual selection overrides a scenario preference
     wx: "CLEAR",                             // CLEAR | WIND | RAIN (seeded per run)
     tod: "AUTO",                             // AUTO (scenario clock) | DAY | NIGHT
@@ -2838,7 +2853,7 @@
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
   const COP_VERSION = "1.1.0";    // human-readable application release
-  const COP_BUILD = "99ce7c00";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "6073b775";   // stamped by scripts/build_cop.py (content hash)
   $("appVersion").textContent = `v${COP_VERSION} · ${COP_BUILD}`;
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
@@ -4351,12 +4366,12 @@
   // Esri World Imagery tiles, fetched by the viewer's browser and drawn under
   // the tactical overlay. Each scenario is anchored at its true lat/lon; local
   // meters map through Web Mercator, so glyph geometry is unchanged. When tiles
-  // cannot load (offline, or a CSP that blocks external hosts) the COP falls
-  // back to the synthetic tactical terrain automatically.
+  // cannot load, retain the user's imagery choice and offer a retry or explicit
+  // switch to the synthetic tactical map. Never silently change the basemap.
   const TILE_URL = (z, x, y) => "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + z + "/" + y + "/" + x;
   const EARTH_R = 6378137, TILE_PX = 256, TILE_MAX_Z = 17;
   const tileCache = new Map();          // "z/x/y" -> {img, ok}
-  let satLoads = 0, satFails = 0, satDead = false;
+  let satDead = false, imageryGeneration = 0;
   function tileFor(z, x, y) {
     const nTiles = 1 << z;
     if (y < 0 || y >= nTiles) return null;
@@ -4367,21 +4382,22 @@
       if (tileCache.size > 400) for (const k of tileCache.keys()) { tileCache.delete(k); if (tileCache.size <= 300) break; }
       const img = new Image();
       img.crossOrigin = "anonymous";
-      t = { img, ok: false };
-      img.onload = () => { t.ok = true; satLoads++; };
+      t = { img, ok: false, failed: false };
+      const generation = imageryGeneration;
+      img.onload = () => {
+        if (generation !== imageryGeneration) return;
+        t.ok = true;
+      };
       img.onerror = () => {
-        satFails++;
-        if (!satLoads && satFails >= 6 && !satDead) {
-          satDead = true;   // imagery unreachable: stop requesting, stay synthetic
-          logEvent("INFO", "INFO", "Satellite imagery unavailable \u00b7 using tactical basemap");
-        }
+        if (generation !== imageryGeneration) return;
+        t.failed = true;
       };
       img.src = TILE_URL(z, x, y);
       tileCache.set(key, t);
     }
     return t;
   }
-  // Returns the number of tiles drawn (0 while loading / when unreachable).
+  // Returns tiles drawn, 0 while pending, or -1 when this view is unavailable.
   function drawSatellite() {
     const { w, h, cx, cy, scale } = VIEW;
     const lat0 = ASSET.lat * Math.PI / 180;
@@ -4400,12 +4416,13 @@
     const south = mercY0 + (S.mapView.centerY - (h - cy) / scale) * kStretch;
     const tx0 = Math.floor((west + HALF) / mercPerTile), tx1 = Math.floor((east + HALF) / mercPerTile);
     const ty0 = Math.floor((HALF - north) / mercPerTile), ty1 = Math.floor((HALF - south) / mercPerTile);
-    if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) > 150) return 0;  // sanity cap
-    let drawn = 0;
+    if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) > 150) return -1;  // sanity cap
+    let drawn = 0, pending = 0, failed = 0;
     for (let tx = tx0; tx <= tx1; tx++) {
       for (let ty = ty0; ty <= ty1; ty++) {
         const t = tileFor(z, tx, ty);
-        if (!t || !t.ok) continue;
+        if (!t || t.failed) { failed++; continue; }
+        if (!t.ok) { pending++; continue; }
         const gx = (tx * mercPerTile - HALF - mercX0) / kStretch;        // tile NW corner,
         const gy = (HALF - ty * mercPerTile - mercY0) / kStretch;        // ground meters
         const sizePx = (mercPerTile / kStretch) * scale;
@@ -4413,7 +4430,7 @@
         drawn++;
       }
     }
-    return drawn;
+    return drawn || (!pending && failed ? -1 : 0);
   }
 
   function setMapModeBadge(text) {
@@ -4423,11 +4440,16 @@
 
   function drawTerrain() {
     const { w, h } = VIEW;
-    if (S.basemap === "SAT" && !satDead) {
+    const imageryStatus = $("mapImageryStatus");
+    if (S.basemap === "SAT") {
       ctx.fillStyle = "#0a0d12"; ctx.fillRect(0, 0, w, h);
-      if (drawSatellite() > 0) {
+      const imageryTiles = drawSatellite(), unavailable = imageryTiles < 0;
+      if (unavailable && !satDead) logEvent("INFO", "INFO", "Terrain imagery unavailable; retry or select tactical manually");
+      satDead = unavailable;
+      if (imageryStatus.hidden === unavailable) imageryStatus.hidden = !unavailable;
+      if (imageryTiles > 0) {
         S._satOn = true;
-        setMapModeBadge("SATELLITE \u00B7 ESRI WORLD IMAGERY");
+        setMapModeBadge("TERRAIN IMAGERY \u00B7 ESRI");
         // dim to console luminance so glyphs, coverage, and labels stay readable
         ctx.fillStyle = "rgba(5,9,15,0.45)"; ctx.fillRect(0, 0, w, h);
         if (SCN.landPolygon && traceScenarioLand()) {
@@ -4451,18 +4473,15 @@
         ctx.fillText("IMAGERY \u00a9 ESRI \u00b7 MAXAR \u00b7 EARTHSTAR GEOGRAPHICS", VIEW.cx, h - 20);
         return;
       }
-      if (SCN.satelliteRequired) {
-        S._satOn = false;
-        setMapModeBadge("LOADING REAL SATELLITE IMAGERY\u2026");
-        ctx.fillStyle = "#080d14"; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = "#78a8cf"; ctx.font = "700 12px " + MONO; ctx.textAlign = "center";
-        ctx.fillText("LOADING ESRI WORLD IMAGERY\u2026", w / 2, h / 2);
-        return;
-      }
-      // tiles still loading: other scenarios may draw synthetic terrain meanwhile
+      S._satOn = false;
+      setMapModeBadge(satDead ? "TERRAIN IMAGERY UNAVAILABLE" : "LOADING TERRAIN IMAGERY\u2026");
+      ctx.fillStyle = "#78a8cf"; ctx.font = "700 12px " + MONO; ctx.textAlign = "center";
+      ctx.fillText(satDead ? "BASEMAP UNAVAILABLE" : "LOADING ESRI WORLD IMAGERY\u2026", w / 2, h / 2);
+      return;
     }
+    if (!imageryStatus.hidden) imageryStatus.hidden = true;
     S._satOn = false;
-    setMapModeBadge(S.basemap === "SAT" && satDead ? "TACTICAL FALLBACK \u00B7 IMAGERY OFFLINE" : "TACTICAL LOCAL");
+    setMapModeBadge("TACTICAL LOCAL");
     if (SCN.terrain === "border") {
       // desert land; US-Mexico border (anchored in the meters frame) with Mexico south
       ctx.fillStyle = "#100f0a"; ctx.fillRect(0, 0, w, h);
@@ -6333,6 +6352,16 @@
   bindSeg("archSeg", "arch", onArchChange);
   bindSeg("transSeg", "transport");
   bindSeg("baseSeg", "basemap", () => { S.basemapExplicit = true; });
+  $("btnRetryImagery").onclick = () => {
+    imageryGeneration++; tileCache.clear(); satDead = false;
+    logEvent("INFO", "INFO", "Terrain imagery retry requested");
+    $("btnDisplaySettings").focus();
+  };
+  $("btnChooseTactical").onclick = () => {
+    S.basemapExplicit = true;
+    applySeg("baseSeg", "basemap", "TAC");
+    $("btnDisplaySettings").focus();
+  };
   bindSeg("wxSeg", "wx");
   bindSeg("todSeg", "tod");
 
@@ -6929,7 +6958,7 @@
 
   // ---- guided tour: six spotlight steps for first-time viewers ----
   const TOUR_STEPS = [
-    { sel: "#cuas", workspace: "COP", title: "The Common Operating Picture", text: "One correlated Red + Blue picture from configured sensors. SAT EXTERNAL is the default basemap; TACTICAL LOCAL remains available and takes over automatically when external imagery is unreachable." },
+    { sel: "#cuas", workspace: "COP", title: "The Common Operating Picture", text: "One correlated Red + Blue picture from configured sensors. Terrain imagery from Esri is the default basemap. Choose Tactical Local in Display settings for the synthetic offline map. If imagery is unavailable, retry it or select tactical explicitly." },
     { sel: "#scoreboard", workspace: "COP", title: "Engagement outcomes", text: "Recorded defeats, arrivals at scenario objectives, pending outcomes, an illustrative score, and defined cost assumptions." },
     { sel: "#queueCard", workspace: "FIRES", title: "Fire-control queue", text: "Ranked threats, evidence, release criteria, and feasible effectors. WEAPONS FREE requires deliberate confirmation and visibly arms auto-release." },
     { sel: "#roleSeg", workspace: "FIRES", title: "Authority gates", text: "Role, WCS, track quality, identity evidence, geometry, and safety are shown before release. LIVE authority is read-only from c2-core." },
@@ -7012,9 +7041,9 @@
     bindReviewControls();
     S.t0 = Date.UTC(2026, 5, 26, randi(5, 21), randi(0, 59), 0);   // start clock varies per run
     const qs = new URLSearchParams(location.search);
-    S.basemapExplicit = qs.has("basemap");
     const baseq = (qs.get("basemap") || "SAT").toUpperCase();
-    applySeg("baseSeg", "basemap", baseq === "SAT" ? "SAT" : "TAC");
+    S.basemapExplicit = qs.has("basemap") && ["SAT", "TERRAIN", "TAC", "TACTICAL"].includes(baseq);
+    applySeg("baseSeg", "basemap", ["TAC", "TACTICAL"].includes(baseq) ? "TAC" : "SAT");
     const wxq = (qs.get("wx") || "").toUpperCase();
     const wxRoll = (() => { const r = rand(); return r < 0.6 ? "CLEAR" : r < 0.85 ? "WIND" : "RAIN"; })();
     applySeg("wxSeg", "wx", ["CLEAR", "WIND", "RAIN"].includes(wxq) ? wxq : wxRoll);
