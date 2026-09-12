@@ -984,6 +984,7 @@
   .selected-title { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
   .trk-id { font-size: 17px; }
   .decision-glance .k { font-size: 10px; }
+  .decision-glance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .decision-glance .v { font-size: 14px; }
   .decision-status { font-size: 12px; line-height: 1.4; }
   .decision-actions .btn { font-size: 11px; min-height: 30px; }
@@ -995,6 +996,10 @@
   .sb-tile .l { font-size: 10px; letter-spacing: .025em; }
   .sb-tile .n { font-size: 16px; }
   .sb-grid { gap: 6px 3px; }
+  .sb-detail { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .sb-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+  .sb-row .l { font-size: 10px; }
+  .sb-row .n { white-space: nowrap; }
   .system-glance .kv { margin-top: 10px; }
   .system-glance .kv dt, .system-glance .kv dd { font-size: 11px; }
   .system-glance .decision-status { font-size: 11px; }
@@ -1003,11 +1008,16 @@
   .sbtn:hover { background: #233346; }
   .sbtn.primary { background: var(--accent-dim); border-color: #2c6075; color: #dcf2fb; }
   .sbtn:disabled { opacity: .5; cursor: default; }
-  #cuas[data-workspace="FIRES"] .identity-summary { display: none; }
   #cuas[data-workspace="FIRES"] .decision-glance { margin-top: 6px; gap: 3px 6px; }
   #cuas[data-workspace="FIRES"] .decision-status { margin-top: 5px; padding: 4px; }
   #cuas[data-workspace="FIRES"] #trackBody .tq { display: none; }
+  #cuas[data-workspace="FIRES"] .rail-left-scroll { grid-template-rows: minmax(0, 1fr) auto; }
+  #cuas[data-workspace="FIRES"] .rail-right-scroll,
+  #cuas[data-workspace="SUPERVISOR"] .rail-left-scroll { grid-template-rows: minmax(0, 1fr); }
+  #cuas[data-workspace="SUPERVISOR"] .rail-right-scroll { grid-template-rows: auto minmax(0, 1fr); }
+  #cuas > .tray { grid-area: auto; }
   .tray { position: absolute; bottom: 22px; left: 10px; right: 10px; z-index: 45; max-height: calc(100% - 190px); overflow: auto; border: 1px solid #355069; box-shadow: 0 -12px 40px #0009; }
+  .tray > * { flex-shrink: 0; }
   .exercise-settings { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; padding: 10px 14px; border-bottom: 1px solid var(--hair); }
   .exercise-settings .field { margin: 0; min-width: 170px; max-width: 300px; }
   .exercise-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 14px; }
@@ -1037,6 +1047,15 @@
   #aarRecord { font-size: 12px; line-height: 1.6; margin: 8px 0; color: #b7c8dc; }
   .reg-source { font-size: 11px; margin: 7px 0; color: #e4cf96; }
   .reg-pill.preset { color: #d2c9b6; background: #28251f; border-color: #5a5140; }
+  .delegation-details { display: none; }
+  @media (max-height: 899px) {
+    #authorityCard .field { gap: 3px; margin-bottom: 6px; }
+    #authorityCard .field > label { font-size: 9px; letter-spacing: .025em; }
+    #authorityCard .seg button { padding: 4px; font-size: 10px; }
+    #authorityCard #btnDelegated { padding: 5px 2px; font-size: 10px; line-height: 1.25; }
+    #authorityCard #delegatedNote { display: none; }
+    #authorityCard .delegation-details { display: block; padding: 3px 6px; font-size: 10px; }
+  }
   @media (max-width: 1599px) {
     .brand > span:not(.app-version) { display: none; }
     .stat-group { gap: 10px; }
@@ -1051,7 +1070,6 @@
     #cuas[data-workspace="FIRES"] .decision-glance .v { font-size: 12px; }
     #cuas[data-workspace="FIRES"] .decision-actions { margin-top: 4px; gap: 3px; }
     #cuas[data-workspace="FIRES"] .decision-actions .btn { min-height: 26px; font-size: 10px; }
-    #cuas[data-workspace="FIRES"] #trackBody .decision-glance .g:nth-child(n+3) { display: none; }
   }
 
 </style>
@@ -1205,12 +1223,13 @@
           </div>
           <div class="field">
             <label>Delegated self-defense envelope</label>
-            <button type="button" class="btn" id="btnDelegated" aria-pressed="false">DISARMED · MANUAL RELEASE ONLY</button>
+            <button type="button" class="btn" id="btnDelegated" aria-pressed="false" aria-describedby="delegatedNote">DISARMED · MANUAL RELEASE ONLY</button>
             <div class="tq-note" id="delegatedNote">Default OFF · FCA may arm 360° point defense for 5 mission minutes · HOSTILE UAS · TQ ≥ 12 · no-fire geometry enforced.</div>
+            <button type="button" class="rail-tool delegation-details" data-review="delegation">View configured envelope</button>
           </div>
         </div>
 
-        <div class="card" id="sensorPostureCard" data-workspaces="SENSORS SUPERVISOR">
+        <div class="card" id="sensorPostureCard" data-workspaces="SENSORS">
           <h3>Sensor Posture</h3>
           <div class="sensor-posture" id="sensorPosture"></div>
         </div>
@@ -2696,6 +2715,8 @@
     if (name === "AAR") { showAAR(); return; }
     if (!WORKSPACES.has(name)) return;
     S.workspace = name;
+    if (name === "FIRES") $("leftRail").appendChild($("authorityCard"));
+    else $("rightRail").insertBefore($("authorityCard"), $("effectorCard"));
     $("cuas").dataset.workspace = name;
     document.querySelectorAll("#workspaceNav [data-workspace]").forEach((b) =>
       b.setAttribute("aria-selected", b.dataset.workspace === name ? "true" : "false"));
@@ -2771,16 +2792,12 @@
     const conn = S.live ? S.connectionState : (S.degraded ? "DEGRADED" : "LOCAL");
     $("cmdComms").textContent = conn;
     $("cmdComms").className = "v " + ((conn === "LIVE" || conn === "LOCAL") ? "good" : conn === "OFFLINE" ? "bad" : "warn");
-    let ageText = "CURRENT", ageClass = "good";
-    if (S.live) {
-      const age = S.lastLiveUpdate == null ? null : Math.max(0, (perf() - S.lastLiveUpdate) / 1000);
-      ageText = age == null ? "NO DATA" : `${age.toFixed(age < 10 ? 1 : 0)}s`;
-      ageClass = age == null || age >= 5 ? "bad" : age >= 2 ? "warn" : "good";
-    } else {
-      const ages = [...S.tracks.values()].filter(t => t.state !== "NEUTRALIZED").map(t => reportFreshness(t, false, missionNow()).displayed).filter(Number.isFinite);
-      ageText = ages.length ? `${Math.max(...ages).toFixed(1)}s MAX${S.degraded ? " · DELAY" : ""}` : "NO SAMPLE";
-      ageClass = !ages.length || S.degraded || Math.max(...ages) >= 2 ? "warn" : "good";
-    }
+    const visibleAges = [...S.tracks.values()].filter(t => t.state !== "NEUTRALIZED").map(t => reportFreshness(t, S.live, missionNow()).displayed);
+    const ages = visibleAges.filter(Number.isFinite), unknown = visibleAges.length - ages.length;
+    const oldest = ages.length ? Math.max(...ages) : null;
+    const ageText = (oldest == null ? "NO SAMPLE" : `${oldest.toFixed(oldest < 10 ? 1 : 0)}s MAX`) + (unknown ? ` · ${unknown} UNKNOWN` : "") + (!S.live && S.degraded ? " · DELAY" : "");
+    const ageClass = oldest >= 5 ? "bad" : oldest == null || unknown || S.degraded || oldest >= 2 ? "warn" : "good";
+    $("cmdComms").title = S.live ? `Latest feed receipt: ${S.lastLiveUpdate == null ? "unavailable" : fmtAge((perf() - S.lastLiveUpdate) / 1000)}. Display age is based on source timestamps.` : "Embedded simulation. No transport feed is connected.";
     $("cmdAge").textContent = ageText;
     $("cmdAge").className = "v " + ageClass;
     renderAlerts();
@@ -2821,7 +2838,7 @@
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
   const COP_VERSION = "1.1.0";    // human-readable application release
-  const COP_BUILD = "7b1746e1";   // stamped by scripts/build_cop.py (content hash)
+  const COP_BUILD = "e368ee8f";   // stamped by scripts/build_cop.py (content hash)
   $("appVersion").textContent = `v${COP_VERSION} · ${COP_BUILD}`;
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
@@ -5221,7 +5238,7 @@
       <button type="button" class="sbtn" data-review-decision="Record no action / awaiting coordination">Record no action / awaiting coordination</button>`;
   }
   function showReviewPanel(kind) {
-    const content = { inventory: ["Complete system inventory", inventoryPanel], assumptions: ["Definitions, assumptions, and sources", assumptionsPanel], instructor: ["Instructor scenario facts", instructorPanel], coordination: ["Exercise coordination record", coordinationPanel], case: ["Five-minute evidence and coordination exercise", casePanel] }[kind];
+    const content = { inventory: ["Complete system inventory", inventoryPanel], assumptions: ["Definitions, assumptions, and sources", assumptionsPanel], instructor: ["Instructor scenario facts", instructorPanel], coordination: ["Exercise coordination record", coordinationPanel], case: ["Five-minute evidence and coordination exercise", casePanel], delegation: ["Configured simulation envelope", () => `<p>${esc($("delegatedNote").textContent)}</p><p>This describes the existing demonstration configuration. It is not operational authority or a validated procedure.</p>`] }[kind];
     if (!content) return;
     // A single review surface avoids stacked dialogs and preserves focus return.
     const open = openModalBack(); if (open) closeModal(open.id);
@@ -5404,7 +5421,7 @@
       const rank = (e) => (S.live && (e.readiness !== "READY" || e.geometryUnknown)) ? 0 : e.rearmT ? 1 : e.mag <= 0 ? 2 : 3;
       return rank(a) - rank(b) || (a.mag / Math.max(1, a.cap)) - (b.mag / Math.max(1, b.cap));
     });
-    const effShown = effOrdered.slice(0, window.innerHeight < 900 ? 3 : 6);
+    const effShown = effOrdered.slice(0, window.innerHeight < 900 ? 2 : 6);
     stableHTML($("effList"), effShown.map((e) => {
       const liveUnavailable = S.live && (e.readiness !== "READY" || e.geometryUnknown);
       const c = liveUnavailable ? "var(--hostile)" : e.rearmT ? "var(--suspect)" : e.mag > 0 ? "var(--neutral)" : "var(--faint)";
@@ -5412,7 +5429,7 @@
       return `<button type="button" class="eff asset-eff-row" data-asset-kind="effector" data-asset-id="${esc(e.effectorId)}" aria-current="${S.selectedAsset && S.selectedAsset.kind === "effector" && S.selectedAsset.id === e.effectorId ? "true" : "false"}"><span class="dot" style="background:${c}"></span>
         <span class="nm">${esc(e.effectorId)}<small>${esc(e.effectorType.replace(/_/g, " "))} &middot; ${esc(e.vendor)} &middot; ${esc(e.service || "USA")} &middot; ${fmtCost(SHOT_COST[e.effectorType] || 10000)}/shot</small></span>
         <span class="mag">${liveUnavailable ? esc(e.geometryUnknown ? "NO GEO" : e.readiness) : e.rearmT ? "REARM" : pct + "%"}</span></button>`;
-    }).join("") + (S.effectors.length > effShown.length ? `<div class="track-list-note">Showing ${effShown.length} priority effectors of ${S.effectors.length}. Open Inventory for the complete searchable list.</div>` : ""));
+    }).join("") + (S.effectors.length > effShown.length ? `<div class="track-list-note">${effShown.length} of ${S.effectors.length} effectors. See Inventory.</div>` : ""));
 
     const t = S.selected && S.tracks.get(S.selected);
     const body = $("trackBody");
@@ -5559,7 +5576,7 @@
       : S.wcs === "WEAPONS_TIGHT" ? "consent required (in the loop)" : "holding";
     const body = $("queueBody");
     if (!q.length) { stableHTML(body, '<p class="empty">No active threats.</p>'); return; }
-    const html = `<div style="font:9px ${MONO};color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">TEWA \u00b7 ${mode}</div>` +
+    const html = `<div style="font:10px var(--mono);color:var(--faint);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">TEWA \u00b7 ${mode}</div>` +
       q.map(({ t, eta, rec, auth }) => {
         const col = COLORS[t.identity] || COLORS.UNKNOWN;
         const etaStr = eta > 3600 ? "\u2014" : eta >= 60 ? Math.floor(eta / 60) + "m" + String(Math.round(eta % 60)).padStart(2, "0") : Math.round(eta) + "s";
@@ -6569,8 +6586,8 @@
       tile(S.stats.airKills ? "good" : "", S.stats.airKills || 0, "Air defeats") +
       '</div>' +
       '<div class="sb-detail">' +
-      `<div class="sb-row"><span class="l">Configured 2D overlap</span><span class="n"><span style="color:var(--neutral)">${(S.coverage || {}).netPct ?? 0}%</span> / <span style="color:var(--hostile)">${(S.coverage || {}).hubPct ?? 0}%</span></span></div>` +
-      `<div class="sb-row"><span class="l">Enabled units (net/fixed)</span><span class="n"><span style="color:var(--neutral)">${S.effectors.length}</span> / <span style="color:var(--hostile)">${HUB_EFFECTORS.size}</span></span></div>` +
+      `<div class="sb-row" title="Shared-set / fixed-subset geometric overlap. Unequal presets; not a performance comparison."><span class="l">2D overlap (net/fixed)</span><span class="n">${(S.coverage || {}).netPct ?? 0}% / ${(S.coverage || {}).hubPct ?? 0}%</span></div>` +
+      `<div class="sb-row" title="Configured availability differs between the two presets."><span class="l">Enabled units (net/fixed)</span><span class="n">${S.effectors.length} / ${HUB_EFFECTORS.size}</span></div>` +
       `<div class="sb-row"><span class="l">Assumed cost / value</span><span class="n">${fmtCost(S.stats.costSpent || 0)} / <span style="color:${(S.stats.threatValue || 0) >= (S.stats.costSpent || 0) ? "var(--neutral)" : "var(--hostile)"}">${fmtCost(S.stats.threatValue || 0)}</span></span></div>` +
       '</div>' +
       '<div class="sb-xv"><div class="l">Mixed-vendor provenance (illustrative)</div>' +
@@ -6670,7 +6687,7 @@
     S[key] = v;
     if (S.runId && prior !== v && ["arch", "wx", "tod", "timeScale"].includes(key)) logEvent("INFO", "INFO", `Exercise configuration: ${key} changed from ${prior} to ${v}`);
     if (key === "wcs") S.autoReleaseArmed = v === "WEAPONS_FREE";
-    $(segId).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x.dataset.v === v ? "true" : "false"));
+    $(segId).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x.dataset.v === String(v) ? "true" : "false"));
   }
   async function autoSleep(ms) { await sleep(Math.max(1, ms * (S.autoplay.delayScale || 1))); }
   async function autoArmWeaponsFree(label) {

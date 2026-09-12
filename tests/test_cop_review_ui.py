@@ -53,17 +53,19 @@ def test_operator_evidence_excludes_instructor_intent(page):
     page.click("#btnDecisionDetails")
     detail = page.locator("#decisionDetailBody").inner_text()
     assert "Not established by these reports" in detail
-    assert "Flight-profile assessment" in detail
-    assert "Assigned objective" not in detail
-    assert "Scripted intent" not in detail
+    assert "FLIGHT-PROFILE ASSESSMENT" in detail
+    labels = page.locator("#decisionDetailBody dt").all_text_contents()
+    assert "Assigned objective" not in labels
+    assert "Scripted intent" not in labels
     assert "Not calibrated or independently validated" in detail
     assert page.locator("#decisionDetailBody dd").first.evaluate("e => getComputedStyle(e).color") != "rgb(0, 0, 0)"
     page.keyboard.press("Escape")
     page.click("#btnExercise")
     page.click('[data-review="instructor"]')
     assert "INSTRUCTOR TRUTH" in page.locator("#reviewBody").inner_text()
-    assert "Scripted intent" in page.locator("#reviewBody").inner_text()
-    assert "Assigned objective" in page.locator("#reviewBody").inner_text()
+    instructor_labels = page.locator("#reviewBody dt").all_text_contents()
+    assert "Scripted intent" in instructor_labels
+    assert "Assigned objective" in instructor_labels
 
 
 def test_complete_inventory_search_and_system_details(page):
