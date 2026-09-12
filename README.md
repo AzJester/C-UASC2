@@ -75,6 +75,33 @@ WEAPONS FREE, fires eligible joint effectors, and adds bounded waves until the
 selected time limit before presenting outcomes.
 Preset links: `?scn=guam&arch=NETWORKED&wx=WIND&tod=NIGHT&seed=N`.
 
+Version 1.1 adds an evidence-review workflow for desktop use:
+
+- Operator details distinguish reports, declarations, and unknowns. Scripted
+  intent, assigned objectives, and flight profiles appear in **Exercise Control
+  → Instructor facts**.
+- **Inventory** opens every configured sensor and effector in a searchable
+  table. Compact status cards open full details without clipping the operator rail.
+- **Exercise Control → 5-minute evidence exercise** runs a fictional review case
+  with conflicting reports, source and receipt ages, a correction, decision
+  reasons, and coordination. The underlying COP pauses during the case.
+- AARs are fixed snapshots. An open run remains interim; **End run and review**
+  accounts for active hostiles, unresolved identities (including expired reports),
+  and pending outcomes. JSON export contains the run/build identifiers, starting
+  configuration and random state, labeled event ledgers, case decisions, inventory,
+  assumptions, and the replay.
+- Replay preserves its first and last recorded frames. Dense or long runs are
+  sampled at a 7,200-frame / 600,000-point budget instead of losing the beginning.
+  Event history is retained separately in memory for export; reload/reset clears it.
+- **Definitions and sources** explain the illustrative score, mixed-unit inventory
+  fraction, cost exclusions, and unequal architecture presets. Peer regional rows
+  are explicitly preset data with no connected feed.
+
+These changes improve the demonstration's evidence handling and reporting.
+They do not validate its sensing, identification, engagement, command relationships,
+legal authority, or integration performance. The browser's existing simulation
+and backend release policy are unchanged.
+
 The embedded simulation includes separate San Diego / North Island and MCAS
 Miramar maps plus El Paso, Norfolk / Hampton Roads, Washington / National
 Capital Region, and Guam area-of-operations presets. North Island includes

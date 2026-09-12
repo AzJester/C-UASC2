@@ -38,7 +38,7 @@ validate-specs: ## Validate JSON Schemas / OpenAPI / AsyncAPI structure
 cop-smoke: ## Headless browser smoke + behavior tests of the web COP (installs Playwright + Chromium)
 	$(VENV)/bin/pip install -q playwright
 	$(VENV)/bin/python -m playwright install --with-deps chromium
-	$(VENV)/bin/pytest -q tests/test_cop_smoke.py tests/test_cop_behavior.py
+	$(VENV)/bin/pytest -q tests/test_cop_smoke.py tests/test_cop_behavior.py tests/test_cop_review_ui.py
 
 build-cop: ## Regenerate the COP distribution copies from site/index.html (stamps COP_BUILD)
 	$(PY) scripts/build_cop.py

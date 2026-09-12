@@ -3,6 +3,7 @@
 <meta name="description" content="Counter-UAS command and control common operating picture &mdash; a leadership demo of any-sensor / any-shooter engagement under positive control."><link rel="icon" href="data:,"></head><body>
 <style>
   :root {
+    color-scheme: dark;
     --ground: #0a0d12;
     --panel: #10151d;
     --raised: #161d28;
@@ -959,6 +960,101 @@
   .workstation-gate .gate-card { max-width: 560px; border: 1px solid #2a3645; border-radius: 8px; background: var(--panel); padding: 24px; }
   .workstation-gate h1 { margin: 0 0 10px; color: #e7eef7; font-size: 18px; }
   .workstation-gate p { color: var(--muted); line-height: 1.6; }
+  /* Desktop evidence review: preserve the command-screen palette and typeface. */
+  #cuas { grid-template-rows: 22px 64px 68px minmax(0, 1fr) auto 22px; }
+  .brand { display: grid; grid-template-columns: auto auto auto; align-items: baseline; gap: 2px 8px; min-width: 0; }
+  .brand .app-version { font-size: 10px; color: var(--muted); }
+  .mission-summary { grid-column: 1 / -1; font-size: 11px; color: #b9cadd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .commandbar { display: grid; grid-template-columns: auto minmax(100px, 1fr) auto auto auto auto auto auto; grid-template-rows: 30px 26px; gap: 4px 7px; }
+  .workspace-nav { grid-column: 1; grid-row: 1; }
+  .cmd-divider { display: none; }
+  .cmd-states { grid-row: 2; grid-column: 1 / -1; gap: 22px; justify-content: flex-start; }
+  .cmd-item .k { font-size: 10px; letter-spacing: .03em; }
+  .cmd-item .v { font-size: 12px; }
+  .alert-latch { grid-column: 2; grid-row: 1; font-size: 10px; }
+  #btnHoldAbort { grid-column: 3; grid-row: 1; }
+  #btnAckAlert { grid-column: 4; grid-row: 1; }
+  #btnPauseTop { grid-column: 5; grid-row: 1; }
+  #btnRegionalTop { grid-column: 6; grid-row: 1; }
+  #btnExercise { grid-column: 7; grid-row: 1; }
+  #btnHelpTop { grid-column: 8; grid-row: 1; }
+  .workspace-nav button, .cmd-action { font-size: 10px; letter-spacing: .025em; padding: 5px 6px; }
+  .rail-left .rail-toolbar { display: flex; justify-content: space-between; }
+  .rail-tool { font-size: 11px; }
+  .card h3 { font-size: 11px; letter-spacing: .07em; }
+  .selected-title { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .trk-id { font-size: 17px; }
+  .decision-glance .k { font-size: 10px; }
+  .decision-glance .v { font-size: 14px; }
+  .decision-status { font-size: 12px; line-height: 1.4; }
+  .decision-actions .btn { font-size: 11px; min-height: 30px; }
+  .track-list-row { font-size: 11px; grid-template-columns: minmax(0,1.6fr) minmax(0,1fr) 20px 42px; }
+  .track-list-row > span { min-width: 0; overflow-wrap: anywhere; }
+  .track-list-row .num { white-space: nowrap; overflow-wrap: normal; }
+  .track-list-head { font-size: 10px; }
+  .track-list-note, .track-pager span, .track-pager button { font-size: 10px; }
+  .sb-tile .l { font-size: 10px; letter-spacing: .025em; }
+  .sb-tile .n { font-size: 16px; }
+  .sb-grid { gap: 6px 3px; }
+  .system-glance .kv { margin-top: 10px; }
+  .system-glance .kv dt, .system-glance .kv dd { font-size: 11px; }
+  .system-glance .decision-status { font-size: 11px; }
+  .system-glance .decision-actions { margin-top: 10px; }
+  .sbtn { background: var(--raised); color: var(--text); border: 1px solid #35475a; border-radius: 4px; padding: 7px 12px; font-size: 12px; cursor: pointer; }
+  .sbtn:hover { background: #233346; }
+  .sbtn.primary { background: var(--accent-dim); border-color: #2c6075; color: #dcf2fb; }
+  .sbtn:disabled { opacity: .5; cursor: default; }
+  #cuas[data-workspace="FIRES"] .identity-summary { display: none; }
+  #cuas[data-workspace="FIRES"] .decision-glance { margin-top: 6px; gap: 3px 6px; }
+  #cuas[data-workspace="FIRES"] .decision-status { margin-top: 5px; padding: 4px; }
+  #cuas[data-workspace="FIRES"] #trackBody .tq { display: none; }
+  .tray { position: absolute; bottom: 22px; left: 10px; right: 10px; z-index: 45; max-height: calc(100% - 190px); overflow: auto; border: 1px solid #355069; box-shadow: 0 -12px 40px #0009; }
+  .exercise-settings { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; padding: 10px 14px; border-bottom: 1px solid var(--hair); }
+  .exercise-settings .field { margin: 0; min-width: 170px; max-width: 300px; }
+  .exercise-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 14px; }
+  .aar, .reg { color: var(--text); line-height: 1.5; }
+  .aar { font-size: 13px; }
+  .aar-cell .k { font-size: 11px; }
+  .review-notice { padding: 10px 12px; color: #e4cf96; background: #241e12; border: 1px solid #615332; border-radius: 4px; }
+  .review-evidence-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .review-evidence-grid section { min-width: 0; }
+  .review-evidence-grid p { line-height: 1.6; }
+  .review-evidence-grid .kv dt, .review-evidence-grid .kv dd { font-size: 12px; }
+  .review-evidence-grid .kv { grid-template-columns: 135px minmax(0, 1fr); row-gap: 9px; }
+  .review-evidence-grid .kv dd { text-align: left; overflow-wrap: anywhere; }
+  .review-search { display: flex; flex-direction: column; gap: 6px; margin: 14px 0; }
+  .review-search input, .review-field select { padding: 10px; background: #101822; color: #deebf8; border: 1px solid #456079; border-radius: 4px; font-size: 13px; }
+  .review-table-wrap { overflow: auto; max-height: 49vh; margin-top: 10px; }
+  .review-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  .review-table th { text-align: left; background: #172332; position: sticky; top: 0; }
+  .review-table td, .review-table th { padding: 10px 9px; border-bottom: 1px solid #304052; }
+  .review-table td { vertical-align: top; }
+  .review-definitions dt { margin-top: 15px; color: #c4e5f4; font-weight: 700; }
+  .review-definitions dd { margin: 5px 0 0; line-height: 1.6; }
+  .review-field { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 16px; margin: 12px 0; }
+  .review-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  #reviewBody progress { width: 100%; height: 8px; accent-color: var(--accent); }
+  #reviewBody a { color: #8ed8f2; }
+  #aarRecord { font-size: 12px; line-height: 1.6; margin: 8px 0; color: #b7c8dc; }
+  .reg-source { font-size: 11px; margin: 7px 0; color: #e4cf96; }
+  .reg-pill.preset { color: #d2c9b6; background: #28251f; border-color: #5a5140; }
+  @media (max-width: 1599px) {
+    .brand > span:not(.app-version) { display: none; }
+    .stat-group { gap: 10px; }
+    .modechip { font-size: 10px; padding: 4px 6px; }
+    .cmd-states { gap: 16px; }
+    .cmd-item .k { font-size: 9px; }
+    .cmd-item .v { font-size: 11px; }
+    .sb-tile .l { font-size: 9px; }
+    .track-list-row { padding: 4px; font-size: 10.5px; }
+    .sensor-row { font-size: 11px; }
+    #cuas[data-workspace="FIRES"] .trk-id { font-size: 14px; }
+    #cuas[data-workspace="FIRES"] .decision-glance .v { font-size: 12px; }
+    #cuas[data-workspace="FIRES"] .decision-actions { margin-top: 4px; gap: 3px; }
+    #cuas[data-workspace="FIRES"] .decision-actions .btn { min-height: 26px; font-size: 10px; }
+    #cuas[data-workspace="FIRES"] #trackBody .decision-glance .g:nth-child(n+3) { display: none; }
+  }
+
 </style>
 
 <div id="cuas" data-workspace="COP">
@@ -968,7 +1064,8 @@
     <div class="brand">
       <b>JIATF&nbsp;C-UAS&nbsp;C2</b>
       <span>Common Operating Picture</span>
-      <span class="app-version" id="appVersion" title="Application release and content-build identifier">v1.0.0</span>
+      <span class="app-version" id="appVersion" title="Application release and content-build identifier">v1.1.0</span>
+      <div id="missionSummary" class="mission-summary" aria-label="Scenario and simulation clock"></div>
     </div>
     <div class="stat-group">
       <div class="stat hostile"><div class="v" id="sRed">0</div><div class="k">Red</div></div>
@@ -998,13 +1095,14 @@
       <div class="cmd-item"><span class="k">Authority</span><span class="v" id="cmdAuthority">FCA</span></div>
       <div class="cmd-item"><span class="k">Control</span><span class="v" id="cmdNode">C2-NODE-01</span></div>
       <div class="cmd-item"><span class="k">Comms</span><span class="v good" id="cmdComms">LOCAL</span></div>
-      <div class="cmd-item"><span class="k">Feed age</span><span class="v good" id="cmdAge">CURRENT</span></div>
+      <div class="cmd-item"><span class="k">Display age</span><span class="v good" id="cmdAge">CURRENT</span></div>
     </div>
     <div class="alert-latch" id="alertLatch" role="status" aria-live="polite" aria-atomic="true">
       <span aria-hidden="true">ALERT</span><span class="msg" id="alertText">NO UNACKNOWLEDGED ALERTS</span><span class="alert-count" id="alertCount"></span>
     </div>
     <button type="button" class="cmd-action danger" id="btnHoldAbort" title="Abort the selected active engagement; with no active engagement, place the local simulation in WEAPONS HOLD">Hold / abort</button>
     <button type="button" class="cmd-action ack-alert" id="btnAckAlert" hidden>Acknowledge</button>
+    <button type="button" class="cmd-action" id="btnPauseTop">Pause</button>
     <button type="button" class="cmd-action" id="btnRegionalTop">Regional</button>
     <button type="button" class="cmd-action" id="btnExercise" aria-expanded="false" aria-controls="tray">Exercise control</button>
     <button type="button" class="cmd-action" id="btnHelpTop">Help</button>
@@ -1013,7 +1111,7 @@
   <div class="main">
     <aside class="rail rail-left" aria-label="Track and posture wing">
       <div class="rail-toolbar">
-        <span class="context" id="railContext">COP track view</span>
+        <span class="context" id="railContext">COP track view</span><button type="button" class="rail-tool" id="btnInventory">Inventory</button>
       </div>
       <div class="rail-scroll rail-left-scroll" id="leftRail"></div>
     </aside>
@@ -1044,18 +1142,13 @@
 
         <div class="card display-popover" id="displayCard" hidden>
           <h3>COP View</h3>
+          <button type="button" class="rail-tool" data-review="assumptions">Definitions and sources</button>
           <div class="seg" id="viewSeg">
             <button data-v="ALL" aria-pressed="true">ALL</button>
             <button data-v="RED">RED</button>
             <button data-v="BLUE">BLUE</button>
           </div>
-          <div class="field" style="margin-top:10px;margin-bottom:0">
-            <label>Architecture</label>
-            <div class="seg" id="archSeg">
-              <button data-v="NETWORKED" aria-pressed="true">NETWORKED</button>
-              <button data-v="HUB">HUB &amp; SPOKE</button>
-            </div>
-          </div>
+
           <div class="field" style="margin-top:10px;margin-bottom:0">
             <label>Selected data path</label>
             <div class="seg" id="transSeg">
@@ -1073,22 +1166,8 @@
               <button data-v="TAC" title="Local synthetic tactical terrain; offline fallback and manual alternative">TACTICAL · LOCAL</button>
             </div>
           </div>
-          <div class="field" style="margin-top:10px;margin-bottom:0">
-            <label>Weather</label>
-            <div class="seg" id="wxSeg">
-              <button data-v="CLEAR" aria-pressed="true" title="Nominal notional sensor and effector conditions">CLEAR</button>
-              <button data-v="WIND" title="Small UAS slow down (new arrivals)">WIND</button>
-              <button data-v="RAIN" title="EO/IR range and directed-energy performance degraded">RAIN</button>
-            </div>
-          </div>
-          <div class="field" style="margin-top:10px;margin-bottom:0">
-            <label>Time of day</label>
-            <div class="seg" id="todSeg">
-              <button data-v="AUTO" aria-pressed="true" title="Follow the scenario clock">AUTO</button>
-              <button data-v="DAY" title="Force daylight: full EO/IR performance">DAY</button>
-              <button data-v="NIGHT" title="Force night: EO/IR range cut to 55%">NIGHT</button>
-            </div>
-          </div>
+
+
         </div>
 
         <div class="card" id="trackListCard" data-workspaces="COP SENSORS">
@@ -1152,6 +1231,30 @@
   </div>
 
   <div class="tray" id="tray" hidden aria-label="Exercise control workspace">
+    <div class="exercise-settings">          <div class="field" style="margin-top:10px;margin-bottom:0">
+            <label>Architecture</label>
+            <div class="seg" id="archSeg">
+              <button data-v="NETWORKED" aria-pressed="true">NETWORKED</button>
+              <button data-v="HUB">HUB &amp; SPOKE</button>
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px;margin-bottom:0">
+            <label>Weather</label>
+            <div class="seg" id="wxSeg">
+              <button data-v="CLEAR" aria-pressed="true" title="Nominal notional sensor and effector conditions">CLEAR</button>
+              <button data-v="WIND" title="Small UAS slow down (new arrivals)">WIND</button>
+              <button data-v="RAIN" title="EO/IR range and directed-energy performance degraded">RAIN</button>
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px;margin-bottom:0">
+            <label>Time of day</label>
+            <div class="seg" id="todSeg">
+              <button data-v="AUTO" aria-pressed="true" title="Follow the scenario clock">AUTO</button>
+              <button data-v="DAY" title="Force daylight: full EO/IR performance">DAY</button>
+              <button data-v="NIGHT" title="Force night: EO/IR range cut to 55%">NIGHT</button>
+            </div>
+          </div></div>
+    <div class="exercise-actions"><button type="button" class="sbtn primary" data-review="case">5-minute evidence exercise</button><button type="button" class="sbtn" data-review="instructor">Instructor facts</button><button type="button" class="sbtn" data-review="coordination">Coordination record</button><button type="button" class="sbtn" data-review="assumptions">Definitions and sources</button><button type="button" class="sbtn" id="btnEndRun">End run and review</button></div>
     <div class="scenario">
       <div class="ctl-grp">
         <span class="glabel">AO</span>
@@ -1237,6 +1340,7 @@
       <button class="aar-x" id="aarClose" aria-label="Close">&times;</button>
     </div>
     <div class="aar-verdict" id="aarVerdict"></div>
+    <div id="aarRecord"></div>
     <div class="aar-grid" id="aarGrid"></div>
     <div class="aar-h" style="margin-top:10px">Replay</div>
     <canvas id="repCv" style="width:100%;height:170px;background:#0a0d12;border:1px solid #1f2937;border-radius:4px"></canvas>
@@ -1257,6 +1361,7 @@
     <div class="aar-foot">
       <span class="aar-note">For demonstration only &middot; not a fielded system &middot; figures are simulated.</span>
       <span class="grow"></span>
+      <button class="sbtn" id="aarExport">Export run JSON</button>
       <button class="sbtn" id="aarCopy">Copy AAR text</button>
       <button class="sbtn primary" id="aarDone">Close</button>
     </div>
@@ -1276,7 +1381,7 @@
     </div>
     <div class="reg-body">
       <div class="reg-left">
-        <div class="reg-h">Theater laydown &mdash; subordinate installations</div>
+        <div class="reg-h">Illustrative installation roster</div>
         <div class="reg-hq" id="regHq"></div>
         <div class="reg-bases" id="regBases"></div>
       </div>
@@ -1288,7 +1393,7 @@
       </div>
     </div>
     <div class="reg-foot">
-      <span class="reg-note">For demonstration only &middot; not a fielded system &middot; geography and figures are illustrative.</span>
+      <span class="reg-note">Illustrative roster and inventory fractions. Peer rows have no feed. No validated command relationship or sustainment forecast is implied.</span>
       <span class="grow"></span>
       <button class="sbtn primary" id="regDone">Close</button>
     </div>
@@ -1313,10 +1418,10 @@
           <div><b style="color:#3da5ff">&#9711; Blue circle</b> &mdash; friendly air (CAP, ISR, lift); armed types shoot</div>
           <div><b style="color:#46c66e">&#9670; Green diamond</b> &mdash; effector (gun, interceptor, EW, laser, net)</div>
           <div><b>&#9634; Square</b> &mdash; sensor (radar, RF, EO/IR, ship)</div>
-          <div><b style="color:#cdd9e6">&#9711; White ring</b> &mdash; the defended asset (ring tints as integrity drops)</div>
+          <div><b style="color:#cdd9e6">&#9711; White ring</b> &mdash; the site reference (ring reflects an illustrative scenario score, not assessed damage)</div>
           <div><b style="color:#39a0c4">cyan / amber / violet beam</b> &mdash; air intercept / kinetic / directed-energy shot</div>
           <div><b>dashed coastline / border</b> &mdash; terrain; naval assets sit offshore in blue water</div>
-          <div><b style="color:#ff6b78">red dashed circle</b> &mdash; no-fire zone: kinetic fires prohibited over it; soft-kill (EW / RF takeover / net) only</div>
+          <div><b style="color:#ff6b78">red dashed circle</b> &mdash; scenario exclusion zone: selected modeled actions are excluded. Other actions still require appropriate authority and airspace coordination; this shape grants no permission</div>
           <div><b style="color:#8296ab">hatched dark wedge</b> &mdash; terrain mask: the ridge line (Point Loma, Franklin Mountains) blinds that sensor to LOW targets beyond it; elevated sensors and other angles cover the gap</div>
         </div>
       </div>
@@ -1341,7 +1446,7 @@
           <div><b>Basemap</b> &mdash; SAT &middot; EXTERNAL is the default and requests public Esri World Imagery. TACTICAL &middot; LOCAL remains available manually and is used automatically when imagery is unreachable.</div>
           <div><b>Weather</b> &mdash; CLEAR / WIND / RAIN: wind slows small UAS, rain shortens EO/IR and directed-energy reach</div>
           <div><b>Time of day</b> &mdash; AUTO follows the scenario clock; NIGHT darkens the plot and cuts EO/IR to 55% (watch its ring shrink)</div>
-          <div><b>Degrade comms</b> &mdash; DDIL inject: the COP goes stale (positions step every 2.5 s, TQ drops) and engagement orders add latency</div>
+          <div><b>Degrade comms</b> &mdash; delay inject: displayed positions update in steps. Observation, receipt, and displayed-sample ages are separate; modeled order delays are illustrative</div>
           <div><b>Demo audio</b> &mdash; presentation-only alert tones and callouts derived from recorded events (declaration, release, BDA, leaker, denial). It does not invent radio, fuel, or readiness state. Off by default.</div>
           <div><b>Audit Log &middot; J-SERIES</b> &mdash; the same event feed restated as stylized Link-16 J-series lines (demo flavor, not certified TADIL-J); switch back with LOG</div>
           <div><b>Click a track</b> &mdash; see its detail, track quality, time-to-impact, and engage it</div>
@@ -1353,7 +1458,7 @@
         <div class="aar-h">The one-click story</div>
         <div class="help-list">
           <div>Choose an <b>AutoBrief mission</b> and <b>duration</b>, then press <b>Auto-play brief</b>. It runs hands-free: detection, fusion, the track-quality gate, remote tasking, a visibly confirmed simulated WEAPONS FREE state, joint ground / air / naval engagement, continued waves for the selected time, and outcomes. Any click hands you control.</div>
-          <div>Flip <b>Architecture</b> to <b>Hub &amp; Spoke</b> to see the legacy model: fixed pairs, idle effectors, coverage gaps. Flip back and the gaps close.</div>
+          <div>In <b>Exercise Control</b>, Architecture compares a configured shared set with a restricted fixed-pair subset. Deliberately unequal availability shapes the result. Review the assumptions; this example does not prove comparative effectiveness.</div>
           <div>Sensing uses modality-aware notional rules: radar loses range against low flyers, RF cannot see comms-silent drones, and EO/IR needs a cue and degrades at night or in rain. EW is a soft-kill that can be resisted or recovered from; directed energy dwells one target at a time; every shot carries a notional cost and the AAR totals the exchange. Watch for decoys, ISR orbiters, and cruise profiles with dog-legs.</div>
         </div>
       </div>
@@ -1365,7 +1470,7 @@
           <div><b>?</b> &mdash; open this help</div>
           <div><b>?seed=N</b> &mdash; URL parameter: replay a run's laydown (the current seed is in the audit log)</div>
           <div><b>Preset links</b> &mdash; combine <b>?scn=</b>sandiego|elpaso|norfolk, <b>?arch=</b>HUB, <b>?wx=</b>RAIN, <b>?tod=</b>NIGHT, <b>?seed=</b>N to share an exact setup</div>
-          <div><b>AAR replay</b> &mdash; the After Action Review includes a timeline scrubber of the whole fight</div>
+          <div><b>AAR replay</b> &mdash; the After Action Review preserves the run time span, discloses sampled position history, and exports the complete recorded event ledger</div>
         </div>
       </div>
     </div>
@@ -1384,7 +1489,7 @@
       <div>
         <div class="aar-kicker">OPERATOR DECISION SUPPORT</div>
         <div class="aar-title" id="decisionDialogTitle">Selected track details</div>
-        <div class="aar-sub">Supporting evidence, feasible effectors, policy gates, and lifecycle state.</div>
+        <div class="aar-sub">Reported observations, uncertainty, source provenance, and lifecycle state.</div>
       </div>
       <button class="aar-x" id="decisionClose" aria-label="Close">&times;</button>
     </div>
@@ -1401,7 +1506,7 @@
   <div class="aar" role="dialog" aria-modal="true" aria-labelledby="auditTitle">
     <div class="aar-head">
       <div>
-        <div class="aar-kicker">IMMUTABLE EVENT FEED &middot; DEMONSTRATION</div>
+        <div class="aar-kicker">RECORDED EVENT FEED &middot; DEMONSTRATION</div>
         <div class="aar-title" id="auditTitle">Audit history</div>
         <div class="aar-sub">The operator rail shows only the two latest actionable events.</div>
       </div>
@@ -1414,13 +1519,19 @@
     <div class="log" id="log" hidden style="max-height:55vh"></div>
     <div class="log" id="logL16" style="max-height:55vh"></div>
     <div class="aar-foot">
-      <span class="aar-note">Complete history remains available without consuming the primary decision rail.</span>
+      <span class="aar-note">Latest 200 operator events shown. Export run JSON from AAR for the full operator and separately labeled instructor ledgers.</span>
       <span class="grow"></span>
       <button class="sbtn primary" id="auditDone">Close</button>
     </div>
   </div>
 </div>
 
+<div class="aar-back" id="reviewBack" hidden>
+  <div class="aar" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+    <div class="aar-head"><div><div class="aar-kicker">DEMONSTRATION REVIEW</div><div class="aar-title" id="reviewTitle"></div></div><button type="button" class="aar-x" id="reviewClose" aria-label="Close">&times;</button></div>
+    <div id="reviewBody"></div><div class="aar-foot"><span class="aar-note">Illustrative exercise. No real-world authority or validated performance is established.</span><span class="grow"></span><button type="button" class="sbtn" id="reviewDone">Close</button></div>
+  </div>
+</div>
 <script>
 (() => {
   "use strict";
@@ -2231,6 +2342,9 @@
   // ---- state ----
   const S = {
     tracks: new Map(),
+    runSerial: 0, runId: null, runInitial: null, reviewEndedAt: null, reviewEndReason: null, unresolvedExits: [],
+    reviewPanel: null, aarSnapshot: null, caseStudy: null, replayPoints: 0, replaySampled: false,
+    coordination: { authority: "Not requested", airspace: "Not requested", spectrum: "Not requested" },
     selected: null,
     selectedAsset: null,                       // {kind:"sensor"|"effector", id}
     role: "FIRE_CONTROL_AUTHORITY",
@@ -2663,7 +2777,11 @@
       const age = S.lastLiveUpdate == null ? null : Math.max(0, (perf() - S.lastLiveUpdate) / 1000);
       ageText = age == null ? "NO DATA" : `${age.toFixed(age < 10 ? 1 : 0)}s`;
       ageClass = age == null || age >= 5 ? "bad" : age >= 2 ? "warn" : "good";
-    } else if (S.degraded) { ageText = "STALE · 2.5s"; ageClass = "warn"; }
+    } else {
+      const ages = [...S.tracks.values()].filter(t => t.state !== "NEUTRALIZED").map(t => reportFreshness(t, false, missionNow()).displayed).filter(Number.isFinite);
+      ageText = ages.length ? `${Math.max(...ages).toFixed(1)}s MAX${S.degraded ? " · DELAY" : ""}` : "NO SAMPLE";
+      ageClass = !ages.length || S.degraded || Math.max(...ages) >= 2 ? "warn" : "good";
+    }
     $("cmdAge").textContent = ageText;
     $("cmdAge").className = "v " + ageClass;
     renderAlerts();
@@ -2671,9 +2789,18 @@
 
   function stableHTML(el, html, force = false) {
     if (!el || el._renderHTML === html) return false;
-    if (!force && el.contains(document.activeElement) && document.activeElement !== document.body) return false;
+    // Keyboard focus must not freeze track positions, source ages, or lifecycle
+    // text. Preserve the focused control's identity while updating the content.
+    const active = el.contains(document.activeElement) ? document.activeElement : null;
+    const keys = ["id", "data-track-select", "data-asset-kind", "data-asset-id", "data-page-delta", "data-review"];
+    const identity = active ? keys.filter(k => active.hasAttribute(k)).map(k => [k, active.getAttribute(k)]) : [];
     el.innerHTML = html;
     el._renderHTML = html;
+    if (active) {
+      const restored = identity.length && [...el.querySelectorAll("button, input, select, [tabindex]")].find(n => identity.every(([k, v]) => n.getAttribute(k) === v));
+      if (restored && !restored.disabled) restored.focus({ preventScroll: true });
+      else { el.tabIndex = -1; el.focus({ preventScroll: true }); }
+    }
     return true;
   }
 
@@ -2694,8 +2821,8 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const randi = (a, b) => a + Math.floor(rand() * (b - a + 1));
-  const COP_VERSION = "1.0.0";    // human-readable application release
-  const COP_BUILD = "aef58aa9";   // stamped by scripts/build_cop.py (content hash)
+  const COP_VERSION = "1.1.0";    // human-readable application release
+  const COP_BUILD = "7b1746e1";   // stamped by scripts/build_cop.py (content hash)
   $("appVersion").textContent = `v${COP_VERSION} · ${COP_BUILD}`;
   const IDENT_CODE = { HOSTILE: 0, SUSPECT: 1, FRIEND: 2, ASSUMED_FRIEND: 2, UNKNOWN: 3, NEUTRAL: 4 };
   const IDENT_COLOR = ["#ff4256", "#ffb02e", "#3da5ff", "#9aa7b5", "#46c66e"];
@@ -2757,7 +2884,7 @@
       fade: 1,
       jitter: rand() * 6.28,
       firstSeen: missionNow(),
-      lastUpdate: missionNow(),
+      lastUpdate: null, // no source observation until the model reports coverage
     };
     S.tracks.set(id, t);
     return t;
@@ -2853,7 +2980,7 @@
         if (evidenceSufficient && t.identity !== "HOSTILE") {
           t.identity = "HOSTILE"; t.declareAt = null;
           t.identityEvidence = `${contributors} correlated sensors \u00b7 TQ ${Math.floor(t.tq)} \u00b7 ${trackObjective(t).name} intercept geometry`;
-          logEvent("DECLARE", "DENY", `${t.trackId} declared HOSTILE \u00b7 evidence: ${t.identityEvidence}`);
+          logEvent("DECLARE", "DENY", `${t.trackId} scenario-rule declaration: HOSTILE · intent not independently established`);
         } else {
           t.declareAt = (missionNow() - t.firstSeen) + 5000;
           t.identityEvidence = `${contributors} contributor(s) \u00b7 TQ ${Math.floor(t.tq)} \u00b7 ${pred.cpaMeters.toFixed(0)}m CPA`;
@@ -2864,7 +2991,8 @@
       if (t.clutter) {
         const eoSees = t.contributingSensors.some((id) => (SENSORS.find((s) => s.sensorId === id) || {}).sensorType === "EO_IR");
         if (eoSees || missionNow() > t.clutterTtl) {
-          logEvent("INFO", "INFO", `${t.trackId} classified ${eoSees ? "by EO/IR" : "on time-out"} \u00b7 biological/clutter \u00b7 dropped`);
+          logEvent("INFO", "INFO", `${t.trackId} closed ${eoSees ? "by a simulated EO/IR classification" : "on report expiry; identity unresolved"} · illustrative track removed`);
+          if (!eoSees) S.unresolvedExits.push({ trackId: t.trackId, t: missionNow(), reason: "Report expired with identity unresolved" });
           S.tracks.delete(t.trackId);
           if (S.selected === t.trackId) selectTrack(null);
           continue;
@@ -2981,7 +3109,7 @@
           gx = t.wps[0].x; gy = t.wps[0].y;
           if (dist(t.x, t.y, gx, gy) < 220) {
             t.wps.shift();
-            if (!t.wps.length) logEvent("DECLARE", "DENY", `${t.trackId} terminal \u00b7 turning onto ${objective.name}`);
+            if (!t.wps.length) logEvent("DECLARE", "DENY", `${t.trackId} terminal \u00b7 turning onto ${objective.name}`, { audience: "INSTRUCTOR" });
           }
         } else if (t.profile === "cruise" && t.altMeters > 30) {
           t.altMeters = Math.max(20, t.altMeters - 35 * dt);   // terminal descent
@@ -2994,7 +3122,7 @@
       }
       // COP display position: under degraded comms the picture goes stale -
       // tracks render at their last bus-synced position, stepping every 2.5 s
-      if (!S.degraded || t.syncT == null || missionNow() - t.syncT > 2500) { t.dx = t.x; t.dy = t.y; t.syncT = missionNow(); }
+      if (!S.degraded || t.syncT == null || missionNow() - t.syncT > 2500) { t.dx = t.x; t.dy = t.y; t.syncT = missionNow(); t.displayObservedAt = t.lastUpdate ?? null; }
       // track trail history (throttled)
       t._tt = (t._tt || 0) + dt;
       if (t._tt > 0.15) { t._tt = 0; (t.trail || (t.trail = [])).push({ x: t.dx != null ? t.dx : t.x, y: t.dy != null ? t.dy : t.y }); if (t.trail.length > 18) t.trail.shift(); }
@@ -3027,7 +3155,7 @@
       }
       const covering = contrib.length;
       t.contributingSensors = contrib;
-      if (covering > 0) t.lastUpdate = missionNow();
+      if (covering > 0) { t.lastUpdate = missionNow(); if (!S.degraded || t.syncT === missionNow()) t.displayObservedAt = t.lastUpdate; }
       const tasked = t.taskedSensor && SENSORS.find((s) => s.sensorId === t.taskedSensor);
       const dwellObserved = !!(tasked && tasked.dwellUntil > missionNow() && tasked.dwellTrack === t.trackId && contrib.includes(tasked.sensorId));
       const target = Math.max(0, clamp(3 + covering * 3 + (dwellObserved ? 3 : 0), 0, dwellObserved ? 14 : covering >= 2 ? 11 : 7) - (S.degraded ? 3 : 0));
@@ -3049,19 +3177,19 @@
       const objective = trackObjective(t);
       if (!isBlue(t) && dist(t.x, t.y, objective.x, objective.y) < 250) {
         if (t.decoy) {
-          logEvent("INFO", "INFO", `${t.trackId} crossed the asset \u00b7 DECOY \u00b7 no warhead`);
+          logEvent("INFO", "INFO", `${t.trackId} crossed the asset \u00b7 DECOY \u00b7 no warhead`, { audience: "INSTRUCTOR" });
         } else {
           S.stats.leakers++;
           const hit = 6 + Math.floor(rand() * 7);   // 6-12% per leaker
           S.assetIntegrity = Math.max(0, S.assetIntegrity - hit);
-          logEvent("LEAKER", "LEAKER", `${t.trackId} reached ${objective.name} \u00b7 asset integrity -${hit}% (${S.assetIntegrity}%)`);
+          logEvent("LEAKER", "LEAKER", `${t.trackId} recorded at ${objective.name} in scenario \u00b7 illustrative score -${hit} points (${S.assetIntegrity}/100)`);
         }
         S.tracks.delete(t.trackId);
         if (S.selected === t.trackId) selectTrack(null);
       }
     }
     // replay recorder: compact snapshot every 0.5 s of sim time (feeds the
-    // AAR scrubber; capped at ~6 minutes)
+    // AAR scrubber; sampled when dense while retaining the full time span)
     S._repT = (S._repT == null ? 0 : S._repT) - dt;
     if (S._repT <= 0) {
       S._repT = 0.5;
@@ -3069,8 +3197,7 @@
       for (const t of S.tracks.values()) {
         snap.push([Math.round(t.dx != null ? t.dx : t.x), Math.round(t.dy != null ? t.dy : t.y), IDENT_CODE[t.identity] ?? 3, t.state === "NEUTRALIZED" ? 1 : 0]);
       }
-      (S.replay || (S.replay = [])).push({ clock: nowClock(), snap, defeated: S.stats.defeated, leakers: S.stats.leakers, integ: S.assetIntegrity });
-      if (S.replay.length > 720) S.replay.shift();
+      recordReplayFrame({ clock: nowClock(), t: missionNow(), snap, defeated: S.stats.defeated, leakers: S.stats.leakers, integ: S.assetIntegrity });
     }
     // TEWA auto-release: WEAPONS FREE means the C2 releases the top authorized
     // recommendation on a cadence; the operator supervises and can go to HOLD
@@ -3624,7 +3751,9 @@
         t.lastUpdate = perf(); t.receivedAt = perf();
         const producerAge = Number(tk.dataAgeSeconds);
         const observedMs = tk.timeObserved ? Date.parse(tk.timeObserved) : NaN;
-        t.sourceAgeAtReceipt = Number.isFinite(producerAge) ? Math.max(0, producerAge) : Number.isFinite(observedMs) ? Math.max(0, (Date.now() - observedMs) / 1000) : 0;
+        t.sourceTimeKnown = tk.dataAgeSeconds != null && Number.isFinite(producerAge) || Number.isFinite(observedMs);
+        t.sourceAgeAtReceipt = tk.dataAgeSeconds != null && Number.isFinite(producerAge) ? Math.max(0, producerAge) : Number.isFinite(observedMs) ? Math.max(0, (Date.now() - observedMs) / 1000) : 0;
+        t.identityEvidence = typeof tk.identityEvidence === "string" ? tk.identityEvidence : null;
         (t.trail || (t.trail = [])).push({ x: t.x, y: t.y }); if (t.trail.length > 18) t.trail.shift();
         seen.add(tk.trackId);
       }
@@ -3943,13 +4072,24 @@
     align = align || "center";
     ctx.font = font;
     const wpx = ctx.measureText(text).width;
-    const lh = 11;
+    const lh = Math.max(11, Number(font.match(/(\d+)px/)?.[1] || 9) + 3);
     const left = align === "center" ? -wpx / 2 : (align === "left" ? 0 : -wpx);
+    const paint = y => {
+      if (stableKey === "track:" + S.selected) {
+        ctx.fillStyle = "rgba(7,15,24,0.94)";
+        ctx.fillRect(ax + left - 4, y - lh + 1, wpx + 8, lh + 4);
+        ctx.strokeStyle = "#7fa6c5"; ctx.lineWidth = 0.75;
+        ctx.strokeRect(ax + left - 4, y - lh + 1, wpx + 8, lh + 4);
+      }
+      ctx.font = font; ctx.textAlign = align;
+      ctx.strokeStyle = "rgba(7,15,24,0.9)"; ctx.lineWidth = 3;
+      ctx.strokeText(text, ax, y);
+      ctx.fillStyle = color; ctx.fillText(text, ax, y);
+    };
     if (stableKey && _labelSlots.has(stableKey)) {
       const offsetY = _labelSlots.get(stableKey), y = ay + offsetY;
       _labelRects.push({ x0: ax + left - 1.5, x1: ax + left + wpx + 1.5, y0: y - lh + 2, y1: y + 3 });
-      ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align;
-      ctx.fillText(text, ax, y);
+      paint(y);
       return { x: ax, y, offsetY };
     }
     const candidates = [];
@@ -3970,15 +4110,13 @@
       if (!hit) {
         _labelRects.push(box);
         if (stableKey) _labelSlots.set(stableKey, oy);
-        ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align;
-        ctx.fillText(text, ax, y);
+        paint(y);
         return { x: ax, y, offsetY: oy };
       }
     }
     oy = stableKey && _labelSlots.has(stableKey) ? _labelSlots.get(stableKey) : 0;
     if (stableKey) _labelSlots.set(stableKey, oy);
-    ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align;
-    ctx.fillText(text, ax, ay + oy);
+    paint(ay + oy);
     return { x: ax, y: ay + oy, offsetY: oy };
   }
 
@@ -4094,7 +4232,7 @@
     placeLabel(ASSET.name, x, y + 25, "#aeb9c7", "10px " + MONO, "center");
     placeLabel(ASSET.sub, x, y + 36, "#5f7286", "8px " + MONO, "center");
     if (!S.live && integ < 100) {
-      placeLabel("INTEGRITY " + integ + "%", x, y + 47, ringCol, "8px " + MONO, "center");
+      placeLabel("SCENARIO SCORE " + integ + "/100", x, y + 47, ringCol, "9px " + MONO, "center");
     }
     ctx.restore();
   }
@@ -4889,7 +5027,7 @@
       const label = isBlue(t) && t.platform
         ? `${t.civil && t.transponder ? t.transponder.callsign + " " : ""}${t.platform}${(t.altMeters || 0) >= 5 ? " " + Math.round(t.altMeters) + "m" : ""}`
         : `${t.trackId.replace("TRK-", "")} TQ${Math.floor(t.tq)}`;
-      const labelPos = placeLabel(label, x + 10, y + 3, isBlue(t) ? "#86b9e8" : "#9fb0c4", "9px " + MONO, "left", "track:" + t.trackId);
+      const labelPos = placeLabel(label, x + 10, y + 3, sel ? "#eff7ff" : isBlue(t) ? "#86b9e8" : "#9fb0c4", (sel ? "bold 12px " : "10px ") + MONO, "left", "track:" + t.trackId);
       if (t.surface && labelPos) {
         ctx.save();
         ctx.strokeStyle = "rgba(134,185,232,0.55)"; ctx.lineWidth = 0.8;
@@ -4917,8 +5055,8 @@
   function systemLinkState(item) {
     if (item.geometryUnknown) return "NO GEO / LINK UNKNOWN";
     if (S.live && S.connectionState !== "LIVE") return S.connectionState;
-    if (S.degraded) return "DEGRADED / STORE-AND-FORWARD";
-    return "CONNECTED / SHARED COP";
+    if (S.degraded) return "DELAY INJECTED (SIM)";
+    return S.live ? "CONNECTED / SHARED COP" : "LOCAL MODEL / NO TRANSPORT TEST";
   }
   function systemC2Node(item) {
     if (item.coastalInset) return "ATLANTIC COASTAL RELAY";
@@ -4929,6 +5067,279 @@
     }
     return S.node;
   }
+  // ---- review model: pure reporting functions, never release policy ----
+  function reviewPercent(numerator, denominator) {
+    return denominator > 0 ? Math.round(100 * numerator / denominator) : null;
+  }
+  function reviewVerdict(d) {
+    if (d.live) return "LIVE SNAPSHOT · Mission completion is not supplied by this feed.";
+    if (!d.runEnded) return `INTERIM REVIEW · Run remains open · ${d.activeHostile} hostile, ${d.unresolved} unresolved, ${d.pending} pending outcome(s).`;
+    if (d.activeHostile || d.unresolved || d.pending) return `EXERCISE ENDED · REVIEW INCOMPLETE · ${d.activeHostile} hostile, ${d.unresolved} unresolved, ${d.pending} pending outcome(s).`;
+    if (d.leakers) return `EXERCISE ENDED · OBJECTIVES NOT MET · ${d.leakers} recorded arrival(s) at scenario objectives.`;
+    if (!d.defeated) return "EXERCISE ENDED · No defense outcome established by this run.";
+    return "EXERCISE OBJECTIVES MET · No remaining hostile or unresolved contacts, no pending outcomes, and no recorded arrivals at scenario objectives. Simulated result only.";
+  }
+  function reportFreshness(t, live, now) {
+    const seconds = stamp => Number.isFinite(stamp) ? Math.max(0, (now - stamp) / 1000) : null;
+    const received = live ? seconds(t.receivedAt) : seconds(t.syncT);
+    const observed = live
+      ? (t.sourceTimeKnown && received != null ? received + Math.max(0, t.sourceAgeAtReceipt || 0) : null)
+      : seconds(t.lastUpdate);
+    const displayed = live ? observed : seconds(t.displayObservedAt);
+    return { observed, received, displayed };
+  }
+  function sampleReplay(frames, maxFrames = 7200, maxPoints = 600000) {
+    let result = frames, sampled = false;
+    let points = result.reduce((n, f) => n + f.snap.length, 0);
+    while ((result.length > maxFrames || points > maxPoints) && result.length > 2) {
+      const last = result[result.length - 1];
+      result = result.filter((_, i) => i % 2 === 0);
+      if (result[result.length - 1] !== last) result.push(last);
+      points = result.reduce((n, f) => n + f.snap.length, 0);
+      sampled = true;
+    }
+    return { frames: result, points, sampled };
+  }
+  // ---- end pure review model ----
+
+  const REVIEW_VERSION = "2026-09-11.1";
+  const REVIEW_ASSUMPTIONS = [
+    ["Evidence", "Operator views show supplied reports and declarations. Scenario intent, assigned objectives, and scripted flight profiles are instructor facts. Neither a sensor count nor a scripted HOSTILE label establishes real intent."],
+    ["Freshness", "Observation age measures the source sample. Receipt age measures delivery to this display. Display age measures the source sample behind the rendered position. Unknown timestamps remain unavailable. SIM ages use simulation time; LIVE receipt ages use the local monotonic clock."],
+    ["Scenario score", "Illustrative score, 0–100 points. A scripted arrival subtracts 6–12 points. This is not measured damage, asset condition, or mission availability."],
+    ["Inventory fraction", "Current modeled units divided by configured capacity. Aggregates mix different unit types and are not a sustainment forecast. Peer-installation figures are preset examples with no connected feed."],
+    ["Cost assumptions", "Configured notional action costs and configured threat values only. Excludes acquisition, personnel, integration, sustainment, power infrastructure, collateral effects, and the value of the protected mission. This is not a total-cost or economic-effectiveness comparison."],
+    ["Architecture example", "NETWORKED enables the configured shared set. HUB restricts use to the explicitly configured fixed pairs and leaves other units idle. The displayed 2D geometric overlap ignores many real sensing and environmental constraints. Unequal configured availability drives this example; it is not a comparative effectiveness test."],
+    ["Interoperability", "Vendor and service counters describe metadata in this model. Federation and node-loss transitions are local simulation events. No adapter conformance, independent failover, real transport performance, or operational interoperability has been demonstrated by this page."],
+    ["Exercise objectives", "End the run explicitly, then account for all hostile and unresolved contacts and pending outcomes. No recorded arrival at a scenario objective is allowed for the illustrative objective-met result. An open run remains interim. LIVE feeds do not establish mission completion."],
+    ["Replay and reproducibility", "Position replay covers the run from its first frame. Dense or extended runs may be sampled while preserving the first and last frames; the AAR identifies this. The event ledger is retained separately. A seed reproduces a laydown, not timing-dependent outcomes. Export includes starting random-generator state, configuration changes, and event times."],
+    ["Authority and airspace", "Scenario geometry is not legal authority. Electronic or capture actions also require appropriate authority and coordination. The exercise coordination record never grants real permission. Command relationships, symbology, models, and procedures remain unvalidated."],
+  ];
+  const fmtAge = age => age == null ? "Unavailable" : `${age.toFixed(age < 10 ? 1 : 0)} s`;
+  const fmtPct = value => value == null ? "Not measured" : `${value}%`;
+  const runElapsed = () => Math.max(0, missionNow() - (S.runStart || 0));
+  const elapsedLabel = ms => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
+  function operatorEvents() { return S.events.filter(e => e.audience !== "INSTRUCTOR"); }
+  function referenceRange(t) { return dist(t.dx ?? t.x, t.dy ?? t.y, ASSET.x || 0, ASSET.y || 0); }
+  function reportedIdentityBasis(t) {
+    if (S.live) return t.identityEvidence || "Source declaration; supporting identity evidence not supplied.";
+    if (t.civil) return "Synthetic cooperative report; intent is not independently established.";
+    if (isBlue(t)) return "Configured friendly-force declaration.";
+    if (t.identity === "HOSTILE") return "Scenario-rule declaration; not an independent assessment of intent.";
+    return "Unresolved source declaration. Intent and assigned objective are unknown to this view.";
+  }
+  function recordReplayFrame(frame) {
+    S.replay.push(frame);
+    S.replayPoints = (S.replayPoints || 0) + frame.snap.length;
+    if (S.replay.length > 7200 || S.replayPoints > 600000) {
+      const sampled = sampleReplay(S.replay);
+      S.replay = sampled.frames; S.replayPoints = sampled.points; S.replaySampled = true;
+    }
+  }
+  function reviewMetadata() {
+    return {
+      runId: S.runId, build: COP_BUILD, applicationVersion: COP_VERSION, reviewVersion: REVIEW_VERSION,
+      scenario: S.scenario, source: S.live ? "LIVE FEED" : "EMBEDDED SIMULATION",
+      seed: SEED, initial: S.runInitial, startedAtMs: S.runStart, capturedAt: new Date().toISOString(), simulationClock: nowClock(),
+      elapsedMs: runElapsed(), endedAtMs: S.reviewEndedAt ?? null, endReason: S.reviewEndReason || null,
+      current: { architecture: S.arch, weather: S.wx, timeOfDay: S.tod, speed: S.timeScale },
+      replay: { frames: S.replay.length, firstMs: S.replay[0]?.t ?? null, lastMs: S.replay.at(-1)?.t ?? null, sampled: !!S.replaySampled },
+      coordination: { ...S.coordination }, assumptions: REVIEW_ASSUMPTIONS,
+      validation: "Illustrative model. Subject-matter, legal, human-factors, and integration validation not established.",
+    };
+  }
+  function captureReview() {
+    return { metadata: reviewMetadata(), metrics: aarData(), events: operatorEvents().map(e => ({ ...e })),
+      instructorEvents: S.events.filter(e => e.audience === "INSTRUCTOR").map(e => ({ ...e })),
+      inventory: inventoryRecords(), caseStudy: S.caseStudy ? JSON.parse(JSON.stringify(S.caseStudy)) : null,
+      replay: S.replay.slice() };
+  }
+  function downloadReview() {
+    const snapshot = S.aarSnapshot || captureReview();
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob), link = document.createElement("a");
+    link.href = url; link.download = `cuas-review-${snapshot.metadata.runId}.json`;
+    link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function renderMissionSummary() {
+    if (!$("missionSummary")) return;
+    const state = S.reviewEndedAt != null ? "ENDED" : S.paused ? "PAUSED" : "RUNNING";
+    const brief = S.autoplay.running ? ` · brief ${Math.max(0, Math.ceil((S.autoplay.deadline - perf()) / 1000))}s remaining (wall clock)` : "";
+    $("missionSummary").textContent = `${SCN.label} · ${nowClock()} Z · ${elapsedLabel(runElapsed())} elapsed · ${state} · ${S.timeScale}x${brief}`;
+    $("missionSummary").title = `Run ${S.runId || "initializing"} · seed ${SEED} · build ${COP_BUILD}`;
+    $("btnPauseTop").textContent = S.paused ? "Resume" : "Pause";
+    $("btnPauseTop").disabled = S.live || !!S.caseStudy?.running;
+    $("btnEndRun").disabled = S.live || !!S.caseStudy?.running;
+    document.querySelectorAll('[data-review="case"], [data-review="instructor"]').forEach(b => { b.disabled = S.live; });
+  }
+  function endReviewRun() {
+    if (S.live) return;
+    stopAutoplay(); S.reviewEndedAt = missionNow(); S.reviewEndReason = "Operator ended exercise";
+    setPaused(true); logEvent("INFO", "INFO", "Exercise ended by operator; unresolved contacts and outcomes remain in the review.");
+    showAAR(); renderMissionSummary();
+  }
+  function inventoryRecords() {
+    return [...SENSORS.map(item => ({ kind: "sensor", item })), ...S.effectors.map(item => ({ kind: "effector", item }))].map(({ kind, item }) => ({
+      kind, id: item.sensorId || item.effectorId, type: item.sensorType || item.effectorType,
+      service: item.service || "Unspecified", vendor: item.vendor || "Unspecified",
+      status: item.geometryUnknown ? "Geometry unavailable" : S.live ? (item.liveReadiness || item.readiness || "Not reported") : item.rearmT ? "Rearming (SIM)" : "Configured (SIM)",
+      inventory: kind === "effector" ? `${item.mag} / ${item.cap} ${item.unit || "units"}` : "n/a",
+      source: S.live && item.authoritative ? "Live materiel feed" : "Static scenario preset",
+    }));
+  }
+  function inventoryPanel() {
+    return `<p>Complete configured inventory. Select a row to inspect its status. Preset metadata does not establish readiness or interoperability.</p>
+      <label class="review-search">Search inventory <input id="inventorySearch" type="search" placeholder="ID, type, service, or vendor" autocomplete="off"></label>
+      <div id="inventoryCount" role="status"></div><div class="review-table-wrap"><table class="review-table"><thead><tr><th>System</th><th>Type</th><th>Service / vendor</th><th>Status / inventory</th><th>Source</th></tr></thead><tbody id="inventoryRows"></tbody></table></div>`;
+  }
+  function renderInventoryRows() {
+    const query = ($("inventorySearch")?.value || "").trim().toLowerCase();
+    const all = inventoryRecords(), rows = all.filter(r => Object.values(r).join(" ").toLowerCase().includes(query));
+    $("inventoryCount").textContent = `${rows.length} of ${all.length} systems · ${SENSORS.length} sensors · ${S.effectors.length} effectors`;
+    $("inventoryRows").innerHTML = rows.length ? rows.map(r => `<tr><td><button type="button" class="rail-tool" data-review-asset="${esc(r.id)}" data-kind="${r.kind}">${esc(r.id)}</button></td><td>${esc(r.type.replace(/_/g," "))}</td><td>${esc(r.service)} / ${esc(r.vendor)}</td><td>${esc(r.status)}<br>${esc(r.inventory)}</td><td>${esc(r.source)}</td></tr>`).join("") : '<tr><td colspan="5">No matching systems. Clear or change the search.</td></tr>';
+  }
+  function assumptionsPanel() {
+    return `<p>Version ${REVIEW_VERSION}. Sources explain limitations; they do not validate this simulation's parameters.</p>
+      <dl class="review-definitions">${REVIEW_ASSUMPTIONS.map(([term, definition]) => `<dt>${esc(term)}</dt><dd>${esc(definition)}</dd>`).join("")}</dl>
+      <p><a href="https://www.faa.gov/airports/new_entrants/uas_detection_mitigation_response" target="_blank" rel="noopener noreferrer">FAA: UAS detection, mitigation, and response at airports</a><br>
+      <a href="https://www.gao.gov/products/gao-22-105705" target="_blank" rel="noopener noreferrer">GAO: Counter-drone technology limitations (2022)</a></p>
+      <p>Public geography and scenario command labels are illustrative. No current legal authority, product-performance claim, or official command relationship is asserted.</p>`;
+  }
+  function instructorPanel() {
+    const t = S.selected && S.tracks.get(S.selected);
+    if (S.live) return "<p>Instructor truth is unavailable in LIVE mode.</p>";
+    return `<p class="review-notice">INSTRUCTOR TRUTH · Scenario authoring facts. These are not operator observations.</p>
+      ${t ? `<dl class="kv"><dt>Selected track</dt><dd>${esc(t.trackId)}</dd><dt>Scripted intent</dt><dd>${esc(t.intent || "Not assigned")}</dd><dt>Assigned objective</dt><dd>${esc(trackObjective(t).name)}</dd><dt>Flight profile</dt><dd>${esc(t.profile || "Not assigned")}</dd><dt>Emitter truth</dt><dd>${t.emitting === false ? "Silent in model" : "Emitting in model"}</dd></dl>` : "<p>Select a track in the COP to inspect its authoring facts here.</p>"}
+      <p>Scenario seed ${SEED}; run ${esc(S.runId)}. The classification and declaration rules remain illustrative. They are not validated identification methods.</p>
+      <div class="review-table-wrap"><table class="review-table"><thead><tr><th>Simulation time</th><th>Instructor event</th></tr></thead><tbody>${S.events.filter(e => e.audience === "INSTRUCTOR").map(e => `<tr><td>${esc(e.clock)}</td><td>${esc(e.msg)}</td></tr>`).join("") || '<tr><td colspan="2">No instructor events recorded.</td></tr>'}</tbody></table></div>`;
+  }
+  function coordinationPanel() {
+    const airport = SCN.civilAirport;
+    return `<p class="review-notice">EXERCISE RECORD ONLY · These entries never grant authority or change release policy.</p>
+      <p>${esc(SCN.label)} · airport context: ${esc(airport?.code || "No airport identified")}. Actual jurisdiction, approving authority, and airspace coordination have not been established by this demonstration.</p>
+      ${[["authority","Authority review"],["airspace","Airspace / airport liaison"],["spectrum","Spectrum / interference review"]].map(([key,label]) => `<label class="review-field">${label}<select data-coordination="${key}">${["Not requested","Pending exercise review","Reviewed for exercise only","Unresolved"].map(v => `<option ${S.coordination[key] === v ? "selected" : ""}>${v}</option>`).join("")}</select></label>`).join("")}
+      <p>A no-fire shape excludes selected modeled actions; it does not establish that another action is lawful or safe. Maintain a no-action or referral outcome while questions remain unresolved.</p>
+      <button type="button" class="sbtn" data-review-decision="Record no action / awaiting coordination">Record no action / awaiting coordination</button>`;
+  }
+  function showReviewPanel(kind) {
+    const content = { inventory: ["Complete system inventory", inventoryPanel], assumptions: ["Definitions, assumptions, and sources", assumptionsPanel], instructor: ["Instructor scenario facts", instructorPanel], coordination: ["Exercise coordination record", coordinationPanel], case: ["Five-minute evidence and coordination exercise", casePanel] }[kind];
+    if (!content) return;
+    // A single review surface avoids stacked dialogs and preserves focus return.
+    const open = openModalBack(); if (open) closeModal(open.id);
+    $("reviewTitle").textContent = content[0]; $("reviewBody").innerHTML = content[1]();
+    S.reviewPanel = kind; openModal("reviewBack", "reviewClose");
+    if (kind === "inventory") { renderInventoryRows(); $("inventorySearch").oninput = renderInventoryRows; }
+  }
+  const CASE_STEPS = [
+    [0, "Initial report", "EX-01 · unconfirmed small airborne object", "Source A, synthetic visual report. Identity, intent, and destination are unconfirmed.", "Request another observation. A detection alone does not establish intent."],
+    [60, "Conflicting descriptions", "Source A: possible drone. Source B: possible bird.", "Two synthetic reports disagree. Neither has supporting imagery available to the reviewer.", "Record the conflict and request clarification. Keep the assessment unresolved."],
+    [120, "Delivery interruption", "Source A has stopped updating.", "The last report remains visible with an increasing age. The case does not invent a new observation during the interruption.", "Acknowledge stale information and refer the coordination question."],
+    [180, "New evidence", "Source B supplies a revised report: likely biological object.", "A synthetic reviewer note provides a benign explanation; Source A's earlier report is retained in history.", "Review the revised evidence. Record a provisional no-action decision with its reason."],
+    [240, "Coordination review", "Airport liaison: exercise review pending.", "This is a fictional coordination record. It grants no real authority and issues no command.", "Record a no-action or referral outcome. Do not treat pending review as approval."],
+    [300, "After-action assessment", "Evidence exercise ended. Review the decisions and unresolved items.", "The full sequence is retained with source times and human review records. A lack of reviewer input remains visible.", "Explain what was known at each decision and what remains unverified."],
+  ];
+  const CASE_REPORTS = [
+    { source: "A", observedAt: 0, receivedAt: 0, description: "Unconfirmed airborne object" },
+    { source: "A", observedAt: 60000, receivedAt: 60000, description: "Possible drone; no imagery supplied" },
+    { source: "B", observedAt: 55000, receivedAt: 60000, description: "Possible bird; conflicts with A" },
+    { source: "B", observedAt: 175000, receivedAt: 180000, description: "Revised report: likely biological object" },
+  ];
+  function caseReportsHtml(c) {
+    return ["A", "B"].map(source => {
+      const report = c.reports.filter(r => r.source === source && r.receivedAt <= c.elapsedMs).at(-1);
+      return `<tr><td>Source ${source}</td><td>${report ? esc(report.description) : "No report received"}</td><td>${report ? fmtAge((c.elapsedMs - report.observedAt) / 1000) : "Unavailable"}</td><td>${report ? fmtAge((c.elapsedMs - report.receivedAt) / 1000) : "Unavailable"}</td></tr>`;
+    }).join("");
+  }
+  function caseStatus(c) { return `FICTIONAL REVIEW CASE · ${c.running ? c.paused ? "PAUSED" : "RUNNING" : "ENDED"} · ${elapsedLabel(c.elapsedMs)} / 5:00 · Underlying COP paused.`; }
+  function casePanel() {
+    const c = S.caseStudy;
+    if (!c) return `<p>A repeatable, fictional five-minute review case: ambiguous reports, disagreement, delayed delivery, a correction, and a no-action decision. It issues no tasking or release commands.</p><button type="button" class="sbtn primary" data-case-action="start">Start five-minute exercise</button>`;
+    const stage = CASE_STEPS.reduce((found, step, i) => c.elapsedMs >= step[0] * 1000 ? i : found, 0), step = CASE_STEPS[stage];
+    return `<p class="review-notice" id="caseStatus">${caseStatus(c)}</p>
+      <progress max="300000" value="${c.elapsedMs}" aria-label="Evidence exercise progress"></progress>
+      <h3>${stage + 1}. ${step[1]}</h3><p><strong>${step[2]}</strong></p><p>${step[3]}</p>
+      <table class="review-table"><thead><tr><th>Source</th><th>Latest received report</th><th>Observation age</th><th>Receipt age</th></tr></thead><tbody id="caseReports">${caseReportsHtml(c)}</tbody></table>
+      <p><strong>Reviewer prompt:</strong> ${step[4]}</p>
+      <div class="review-actions">${c.running ? `<button type="button" class="sbtn" data-case-action="pause">${c.paused ? "Resume case" : "Pause case"}</button><button type="button" class="sbtn" data-case-action="next">Advance to next checkpoint</button><button type="button" class="sbtn" data-case-action="stop">End case</button>` : '<button type="button" class="sbtn" data-case-action="start">Restart case</button>'}</div>
+      <label class="review-search">Decision reason <input id="caseReason" type="text" value="${esc(c.reason || "")}" maxlength="500" placeholder="What evidence supports your decision?"></label>
+      <div class="review-actions">${["Request clarification","Record conflicting evidence","Record no action","Refer for coordination"].map(action => `<button type="button" class="sbtn" data-case-decision="${action}">${action}</button>`).join("")}</div>
+      <p>${c.decisions.length ? `${c.decisions.length} human review decision(s) recorded.` : "No human review decisions recorded. Review remains incomplete."}</p>
+      <ol>${c.decisions.map(d => `<li>${elapsedLabel(d.t)} · ${esc(d.action)} · ${esc(d.reason)} · operator input</li>`).join("")}</ol>
+      <p>Full case timeline and decisions are included in the run JSON export. This case demonstrates evidence handling; it establishes no real-world identity or effectiveness.</p><button type="button" class="sbtn" data-case-export="1">Export case and run record</button>`;
+  }
+  let caseTimer = null;
+  function tickCase() {
+    const c = S.caseStudy; if (!c?.running) return;
+    const now = perf(); if (!c.paused) c.elapsedMs = Math.min(300000, c.elapsedMs + now - c.lastTick);
+    c.lastTick = now;
+    const priorStage = c.stage;
+    for (let i = c.stage + 1; i < CASE_STEPS.length && c.elapsedMs >= CASE_STEPS[i][0] * 1000; i++) {
+      c.stage = i; c.events.push({ t: CASE_STEPS[i][0] * 1000, source: "SCRIPTED CASE", message: CASE_STEPS[i][1] });
+    }
+    if (c.elapsedMs >= 300000) { c.running = false; clearInterval(caseTimer); caseTimer = null; logEvent("INFO", "INFO", "Evidence case ended; review recorded decisions and unresolved coordination."); }
+    if (S.reviewPanel === "case" && !$("reviewBack").hidden) {
+      // Update ages every second without replacing the reviewer's text input.
+      if (c.stage !== priorStage) {
+        const focused = document.activeElement;
+        const focusId = focused?.id, action = focused?.dataset?.caseAction, decision = focused?.dataset?.caseDecision;
+        const start = focused?.selectionStart, end = focused?.selectionEnd;
+        $("reviewBody").innerHTML = casePanel();
+        const restore = focusId ? $(focusId) : [...$("reviewBody").querySelectorAll("button")].find(b => action && b.dataset.caseAction === action || decision && b.dataset.caseDecision === decision);
+        if (restore) { restore.focus(); if (start != null && restore.setSelectionRange) restore.setSelectionRange(start, end); }
+      } else {
+        $("caseStatus").textContent = caseStatus(c);
+        $("reviewBody").querySelector("progress").value = c.elapsedMs;
+        $("caseReports").innerHTML = caseReportsHtml(c);
+      }
+    }
+  }
+  function caseAction(action) {
+    if (S.live) return;
+    if (action === "start") {
+      stopAutoplay(); setPaused(true);
+      if (caseTimer) clearInterval(caseTimer);
+      S.caseStudy = { version: REVIEW_VERSION, running: true, paused: false, elapsedMs: 0, stage: 0, lastTick: perf(), reason: "", reports: CASE_REPORTS.map(r => ({ ...r })), checkpoints: CASE_STEPS, decisions: [], events: [{ t: 0, source: "SCRIPTED CASE", message: CASE_STEPS[0][1] }] };
+      logEvent("INFO", "INFO", "Five-minute fictional evidence case started. Underlying COP paused; no commands issued.");
+      caseTimer = setInterval(tickCase, 1000);
+    } else if (S.caseStudy) {
+      const c = S.caseStudy;
+      if (action === "pause") { tickCase(); c.paused = !c.paused; c.lastTick = perf(); }
+      if (action === "next") { c.elapsedMs = Math.min(300000, (Math.floor(c.elapsedMs / 60000) + 1) * 60000); c.lastTick = perf(); c.events.push({ t: c.elapsedMs, source: "OPERATOR", message: "Advanced checkpoint" }); tickCase(); }
+      if (action === "stop") { c.running = false; c.events.push({ t: c.elapsedMs, source: "OPERATOR", message: "Ended case before/at completion" }); clearInterval(caseTimer); caseTimer = null; }
+    }
+    $("reviewBody").innerHTML = casePanel(); $("reviewClose").focus(); renderMissionSummary();
+  }
+  function bindReviewControls() {
+    $("reviewClose").onclick = $("reviewDone").onclick = () => { closeModal("reviewBack"); S.reviewPanel = null; };
+    $("btnInventory").onclick = () => showReviewPanel("inventory");
+    $("btnPauseTop").onclick = togglePause;
+    $("aarExport").onclick = downloadReview;
+    document.addEventListener("input", e => {
+      if (e.target.id === "caseReason" && S.caseStudy) S.caseStudy.reason = e.target.value;
+      const key = e.target.dataset?.coordination;
+      if (key && Object.hasOwn(S.coordination, key)) {
+        S.coordination[key] = e.target.value;
+        logEvent("INFO", "INFO", `Exercise coordination: ${key} = ${e.target.value}; no operational authority granted.`);
+      }
+    });
+    document.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.review) showReviewPanel(b.dataset.review);
+      if (b.dataset.reviewAsset) { closeModal("reviewBack"); S.reviewPanel = null; setWorkspace("COP"); selectAsset(b.dataset.kind, b.dataset.reviewAsset); }
+      if (b.dataset.reviewDecision) { logEvent("INFO", "INFO", `Human exercise review: ${b.dataset.reviewDecision}`); b.textContent = "No-action review recorded"; }
+      if (b.dataset.caseAction) caseAction(b.dataset.caseAction);
+      if (b.dataset.caseDecision && S.caseStudy) {
+        S.caseStudy.decisions.push({ t: S.caseStudy.elapsedMs, action: b.dataset.caseDecision, reason: S.caseStudy.reason.trim() || "Reason not supplied; rationale requires review", source: "OPERATOR" });
+        S.caseStudy.reason = "";
+        $("reviewBody").innerHTML = casePanel(); $("reviewClose").focus();
+      }
+      if (b.dataset.caseExport) { S.aarSnapshot = null; downloadReview(); }
+      if (b.id === "btnSystemDetails") { $("decisionDialogTitle").textContent = `${S.selectedAsset?.id || "System"} · full status`; openModal("decisionBack", "decisionClose"); }
+      if (b.id === "btnEndRun") endReviewRun();
+    });
+  }
+
+
   function renderSystemCard(selection, body) {
     const item = selection.kind === "sensor"
       ? SENSORS.find((s) => s.sensorId === selection.id)
@@ -4963,14 +5374,20 @@
         <dt>Architecture</dt><dd>${esc(S.arch)} \u00b7 SHARED TRACK / WEAPON DATA</dd>
         <dt>Position source</dt><dd>${S.live && item.authoritative ? "LIVE MATERIEL FEED" : "STATIC NOTIONAL LAYDOWN"}</dd>
       </dl>
-      <div class="decision-section"><div class="decision-h">Data-sharing path</div><div>${esc(id)} \u2192 ${esc(systemC2Node(item))} \u2192 ${esc(SCN.dataMesh ? SCN.dataMesh.label : S.node)} \u2192 SHARED COP</div></div>`;
-    stableHTML(body, html, true);
+      <div class="decision-section"><div class="decision-h">Data-sharing path</div><div>${[id, systemC2Node(item), SCN.dataMesh ? SCN.dataMesh.label : S.node, "SHARED COP"].filter((part, i, parts) => i === 0 || part !== parts[i-1]).map(esc).join(" → ")}</div></div>`;
+    stableHTML($("decisionDetailBody"), html);
+    const shortHtml = `<div class="system-glance"><div class="selected-title"><span class="trk-id">${esc(id)}</span><span class="idpill">${isSensor ? "SENSOR" : "EFFECTOR"}</span></div>
+      <div class="decision-status ${ready ? "go" : "hold"}">${esc(status)} · ${S.live ? "SOURCE REPORT" : "SIMULATED"}</div>
+      <dl class="kv"><dt>Type</dt><dd>${esc((item.sensorType || item.effectorType).replace(/_/g," "))}</dd><dt>Link</dt><dd>${esc(systemLinkState(item))}</dd><dt>${isSensor ? "Reported tracks" : "Modeled units"}</dt><dd>${isSensor ? tracked : `${item.mag} / ${item.cap}`}</dd><dt>Source</dt><dd>${S.live && item.authoritative ? "Materiel feed" : "Scenario preset"}</dd></dl>
+      <div class="decision-actions"><button type="button" class="btn full wide" id="btnSystemDetails">Full system status</button><button type="button" class="btn full wide" data-review="inventory">Complete inventory</button></div></div>`;
+    stableHTML(body, shortHtml);
     body.dataset.decisionState = `${selection.kind}|${id}|${status}|${systemLinkState(item)}`;
   }
 
   // ---- render split operator wings ----
   function renderRail() {
     renderScoreboard();
+    renderMissionSummary();
     renderFederation();
     renderCommandState();
     $("envChip").textContent = (isNight() ? "NIGHT" : "DAY") + " \u00b7 " + S.wx;
@@ -4988,7 +5405,7 @@
       const rank = (e) => (S.live && (e.readiness !== "READY" || e.geometryUnknown)) ? 0 : e.rearmT ? 1 : e.mag <= 0 ? 2 : 3;
       return rank(a) - rank(b) || (a.mag / Math.max(1, a.cap)) - (b.mag / Math.max(1, b.cap));
     });
-    const effShown = effOrdered.slice(0, 6);
+    const effShown = effOrdered.slice(0, window.innerHeight < 900 ? 3 : 6);
     stableHTML($("effList"), effShown.map((e) => {
       const liveUnavailable = S.live && (e.readiness !== "READY" || e.geometryUnknown);
       const c = liveUnavailable ? "var(--hostile)" : e.rearmT ? "var(--suspect)" : e.mag > 0 ? "var(--neutral)" : "var(--faint)";
@@ -4996,7 +5413,7 @@
       return `<button type="button" class="eff asset-eff-row" data-asset-kind="effector" data-asset-id="${esc(e.effectorId)}" aria-current="${S.selectedAsset && S.selectedAsset.kind === "effector" && S.selectedAsset.id === e.effectorId ? "true" : "false"}"><span class="dot" style="background:${c}"></span>
         <span class="nm">${esc(e.effectorId)}<small>${esc(e.effectorType.replace(/_/g, " "))} &middot; ${esc(e.vendor)} &middot; ${esc(e.service || "USA")} &middot; ${fmtCost(SHOT_COST[e.effectorType] || 10000)}/shot</small></span>
         <span class="mag">${liveUnavailable ? esc(e.geometryUnknown ? "NO GEO" : e.readiness) : e.rearmT ? "REARM" : pct + "%"}</span></button>`;
-    }).join("") + (S.effectors.length > effShown.length ? `<div class="track-list-note">Showing 6 priority effectors of ${S.effectors.length}. Full inventory remains in AAR and the source feed.</div>` : ""));
+    }).join("") + (S.effectors.length > effShown.length ? `<div class="track-list-note">Showing ${effShown.length} priority effectors of ${S.effectors.length}. Open Inventory for the complete searchable list.</div>` : ""));
 
     const t = S.selected && S.tracks.get(S.selected);
     const body = $("trackBody");
@@ -5021,130 +5438,76 @@
   }
 
   function renderDecisionCard(t, body) {
-    const col = COLORS[t.identity] || COLORS.UNKNOWN;
-    const objective = trackObjective(t), rng = Math.round(trackObjectiveRange(t));
-    const tqi = Math.floor(t.tq);
-    const kin = trackPrediction(t);
-    const etaSec = !isBlue(t) && t.intent === "attack" ? kin.interceptSec : null;
-    const etaStr = etaSec == null ? "\u2014" : etaSec >= 60
-      ? `${Math.floor(etaSec / 60)}:${String(Math.round(etaSec % 60)).padStart(2, "0")} min`
-      : `${Math.round(etaSec)} s`;
-    const etaColor = etaSec != null && etaSec < 25 ? "color:var(--hostile)" : etaSec != null && etaSec < 60 ? "color:var(--suspect)" : "";
-    const eff = bestEffector(t);
-    const minNeed = eff ? MIN_TQ[eff.effectorType] : 8;
-    const segs = Array.from({ length: 15 }, (_, i) => `<div class="tq-seg ${i < tqi ? "on" : ""} ${i + 1 === minNeed ? "thr" : ""}"></div>`).join("");
+    const col = COLORS[t.identity] || COLORS.UNKNOWN, tqi = Math.floor(t.tq);
+    const ages = reportFreshness(t, S.live, missionNow()), age = ages.displayed;
+    const ageColor = age == null ? "var(--muted)" : age >= 5 ? "var(--hostile)" : age >= 2 ? "var(--suspect)" : "var(--text)";
+    const xpdr = t.civil && t.transponder ? t.transponder : null;
     const a = t.state === "ACTIVE" ? authorize(t) : { ok: false, code: t.state, detail: `track state is ${t.state}` };
     const linkReady = !S.live || S.connectionState === "LIVE";
     const canTask = ROLES_TASK.has(S.role) && t.state === "ACTIVE" && linkReady;
     const canEngage = !!(a.ok && linkReady && t.state === "ACTIVE");
-    const engLabel = canEngage ? `Authorize release \u00b7 ${a.eff.effectorId}` : `Release unavailable \u00b7 ${a.code || S.connectionState}`;
-    const age = S.live
-      ? Math.max(0, Number(t.sourceAgeAtReceipt || 0) + (perf() - (t.receivedAt != null ? t.receivedAt : perf())) / 1000)
-      : Math.max(0, (missionNow() - (t.lastUpdate != null ? t.lastUpdate : t.firstSeen || missionNow())) / 1000);
-    const xpdr = t.civil && t.transponder ? t.transponder : null;
-    const uncertainty = Number.isFinite(t.positionUncertainty) ? Math.round(t.positionUncertainty) : Math.round(25 + Math.max(0, 15 - tqi) * 35 + (S.degraded ? 180 : 0));
-    const sensors = (t.contributingSensors || []).map((id) => {
-      const s = SENSORS.find((x) => x.sensorId === id);
-      return s ? `${id} \u00b7 ${s.sensorType.replace(/_/g, "/")} \u00b7 ${s.vendor}` : id;
+    const eff = bestEffector(t), minNeed = eff ? MIN_TQ[eff.effectorType] : 8;
+    const segs = Array.from({ length: 15 }, (_, i) => `<div class="tq-seg ${i < tqi ? "on" : ""} ${i + 1 === minNeed ? "thr" : ""}"></div>`).join("");
+    const uncertainty = Number.isFinite(t.positionUncertainty) ? `${Math.round(t.positionUncertainty)} m (${S.live ? "source reported; confidence level unspecified" : "illustrative"})` : S.live ? "Not supplied" : "Not independently estimated";
+    const sources = (t.contributingSensors || []).map(id => {
+      const sensor = SENSORS.find(s => s.sensorId === id);
+      return sensor ? `${id} · ${sensor.sensorType.replace(/_/g,"/")} · ${sensor.vendor}` : id;
     });
-    const evidence = sensors.length ? sensors : ["NO CURRENT SENSOR CONTRIBUTOR"];
-    const idBasis = isBlue(t)
-      ? (t.civil ? "cooperative civil declaration (notional)" : "cooperative force identity (notional)")
-      : t.identity === "HOSTILE" ? (t.identityEvidence || "hostile identity supplied by source; evidence record unavailable")
-      : t.identity === "SUSPECT" ? "behavioral concern; hostile declaration not yet established" : "identity unresolved";
-    const threatText = isBlue(t) ? "Protected / non-engageable identity"
-      : t.intent === "transit" ? `Transit profile \u00b7 predicted CPA ${(kin.cpaMeters / 1000).toFixed(1)} km`
-      : t.profile === "isr" ? `Standoff orbit \u00b7 predicted CPA ${(kin.cpaMeters / 1000).toFixed(1)} km`
-      : etaSec != null ? `${objective.name} intercept predicted \u00b7 ${etaStr}`
-      : `No valid closing solution \u00b7 CPA ${(kin.cpaMeters / 1000).toFixed(1)} km`;
-    const feasible = feasibleEffectors(t).sort((x, y) => {
-      const xa = tqi >= MIN_TQ[x.effectorType] ? 0 : 1, ya = tqi >= MIN_TQ[y.effectorType] ? 0 : 1;
-      return xa - ya || dist(t.x, t.y, x.x, x.y) - dist(t.x, t.y, y.x, y.y);
-    }).slice(0, 3);
-    const candidates = feasible.length ? feasible.map((e) => {
-      const need = MIN_TQ[e.effectorType], ready = tqi >= need;
-      return `<div class="candidate"><span><strong>${esc(e.effectorId)}</strong> \u00b7 ${esc(e.effectorType.replace(/_/g, " "))}</span><span>${(dist(t.x,t.y,e.x,e.y)/1000).toFixed(1)}km \u00b7 TQ ${need} \u00b7 ${Math.round(100*e.mag/e.cap)}% \u00b7 ${fmtCost(SHOT_COST[e.effectorType] || 10000)}${ready ? "" : " \u00b7 HOLD"}</span></div>`;
-    }).join("") : '<div class="empty">No feasible effector in the current geometry.</div>';
-    const authChecks = [
-      [S.wcs !== "WEAPONS_HOLD", `WCS ${S.wcs.replace("WEAPONS_", "")}`],
-      [ROLES_RELEASE.has(S.role), `Release authority ${S.role.replace(/_/g, " ")}`],
-      [ENGAGEABLE.has(t.identity) && !(S.wcs === "WEAPONS_TIGHT" && t.identity !== "HOSTILE"), `Identity / ROE ${t.identity}`],
-      [feasibleEffectors(t).length > 0, "Effector geometry and safety"],
-      [!!bestEffector(t), `Track quality ${tqi} / 15`],
-      [linkReady, S.live ? `C2 link ${S.connectionState}` : "Local simulation control"],
-    ];
-    const detailHtml = `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span class="trk-id">${esc(t.trackId)}</span>
-        <span style="display:flex;gap:6px">
-          ${!isBlue(t) && t.emitting === false ? '<span class="idpill" style="color:var(--suspect);background:#241a08;border:1px solid #6b4a12">SILENT</span>' : ""}
-          ${S.degraded ? '<span class="idpill" style="color:var(--hostile);background:#240a10;border:1px solid #6b1420">STALE</span>' : ""}
-          <span class="idpill" style="color:${col};background:${col}22;border:1px solid ${col}55">${esc(t.identity)}</span>
-        </span>
-      </div>
-      <dl class="kv">
-        <dt>Platform</dt><dd>${esc(t.platform || (t.classificationType || "UNKNOWN").replace(/_/g, " "))}</dd>
-        ${xpdr ? `<dt>Callsign / flight plan</dt><dd>${esc(xpdr.callsign)} \u00b7 ${esc(t.flightPlan || "CIVIL TRANSIT")}</dd>
-        <dt>Mode S / ICAO address</dt><dd>${esc(xpdr.mode)} \u00b7 ${esc(xpdr.icao24)}</dd>
-        <dt>Squawk / ADS-B quality</dt><dd>${esc(xpdr.squawk)} \u00b7 NACp ${esc(xpdr.nacp)} \u00b7 SIL ${esc(xpdr.sil)}</dd>` : ""}
-        <dt>Service</dt><dd>${esc(t.service || "\u2014")}</dd>
-        <dt>Altitude</dt><dd>${Math.round(t.altMeters || 0)} m \u00b7 ${esc(t.altitudeDatum || "datum unspecified")}</dd>
-        <dt>Signature</dt><dd>${isBlue(t) ? (t.civil ? (xpdr ? `${esc(xpdr.source)} \u00b7 ${esc(xpdr.status)}` : "ADS-B / AIS") : "IFF / cooperative") : t.emitting === false ? "comms-silent (RF-blind)" : "RF emitting"}</dd>
-        <dt>Flight profile</dt><dd>${isBlue(t) ? (t.civil ? (t.surface ? "surface transit (AIS)" : "civil corridor (ADS-B)") : "patrol") : ({ direct: "direct attack", lowIngress: "low ingress", cruise: "cruise / OWA", isr: "ISR standoff orbit", clutter: "erratic / low-slow" }[t.profile] || "\u2014")}</dd>
-        ${isBlue(t) && !t.civil ? `<dt>Mission action</dt><dd>${esc(t.actionRole || "ON-STATION / MONITORING")}${t.actionTarget ? ` \u00b7 ${esc(t.actionTarget)}` : ""}</dd>` : ""}
-        <dt>Assigned objective</dt><dd>${esc(objective.name)}</dd>
-        <dt>Range to objective</dt><dd>${(rng / 1000).toFixed(1)} km</dd>
-        <dt>Predicted intercept</dt><dd style="${etaColor}">${etaStr}</dd>
-        <dt>Closing / CPA</dt><dd>${kin.closingMps.toFixed(0)} m/s \u00b7 ${(kin.cpaMeters/1000).toFixed(1)} km</dd>
-        <dt>Data age</dt><dd style="color:${age >= 5 ? "var(--hostile)" : age >= 2 ? "var(--suspect)" : "var(--neutral)"}">${age.toFixed(age < 10 ? 1 : 0)} s</dd>
-        <dt>Position uncertainty</dt><dd>\u00b1${uncertainty} m \u00b7 illustrative</dd>
-        <dt>Source</dt><dd>${S.live ? "LIVE FEED" : "SIM MODEL"} \u00b7 STATIC LAYDOWN</dd>
-        <dt>Engagement lifecycle</dt><dd>${esc(t.engagementState || t.state)}</dd>
-        <dt>Recommended pairing</dt><dd>${isBlue(t) ? "n/a (protected)" : (eff ? esc(eff.effectorId + " \u00b7 " + eff.vendor) : "\u2014")}</dd>
-      </dl>
-      <div class="tq"><div class="tq-top"><span>Track quality</span><b>${tqi} / 15</b></div><div class="tq-bar">${segs}</div><div class="tq-note">${tqi >= minNeed ? "meets engagement threshold" : `needs TQ \u2265 ${minNeed} for in-range effector`}</div></div>
-      <div class="decision-section"><div class="decision-h">Threat assessment</div><div>${esc(threatText)}</div><div class="tq-note">Identity basis: ${esc(idBasis)}</div></div>
-      <div class="decision-section"><div class="decision-h">Supporting evidence</div><div class="evidence">${evidence.map((x) => `<span>${esc(x)}</span>`).join("")}</div></div>
-      <div class="decision-section"><div class="decision-h">Candidate effectors \u00b7 feasibility / quality / range</div><div class="candidate-list">${candidates}</div></div>
-      <div class="decision-section"><div class="decision-h">Release criteria</div><div class="auth-checks">${authChecks.map(([ok,label]) => `<div class="auth-check ${ok ? "" : "fail"}"><b>${ok ? "\u2713" : "\u00d7"}</b><span>${esc(label)}</span></div>`).join("")}</div>${a.ok ? '<div class="tq-note">All local criteria satisfied; LIVE mode is revalidated by c2-core.</div>' : `<div class="tq-note">Hold reason: ${esc(a.detail || a.code || "not releasable")}</div>`}</div>
-    `;
+    const signature = isBlue(t) ? (xpdr ? `${xpdr.source} · ${xpdr.status}` : "Cooperative declaration")
+      : (t.contributingSensors || []).some(id => SENSORS.find(s => s.sensorId === id)?.sensorType === "RF")
+        ? "RF contribution reported; emitter identity unverified" : "No RF contribution reported; silence is not established";
+    const basis = reportedIdentityBasis(t);
+    const detailHtml = `<div class="review-notice">${S.live ? "SOURCE REPORT" : "SIMULATED REPORT"} · Observations, assessments, and unknowns are distinct.</div>
+      <div class="review-evidence-grid">
+        <section><h3>Reported observations</h3><dl class="kv">
+          <dt>Track</dt><dd>${esc(t.trackId)}</dd><dt>Reported class</dt><dd>${esc((t.classificationType || "UNKNOWN").replace(/_/g," "))} · unvalidated</dd>
+          ${xpdr ? `<dt>Callsign / flight plan</dt><dd>${esc(xpdr.callsign)} · ${esc(t.flightPlan || "Not supplied")}</dd><dt>Mode S / ICAO address</dt><dd>${esc(xpdr.mode)} · ${esc(xpdr.icao24)}</dd><dt>Squawk / ADS-B quality</dt><dd>${esc(xpdr.squawk)} · NACp ${esc(xpdr.nacp)} · SIL ${esc(xpdr.sil)}</dd>` : ""}
+          <dt>Reported altitude</dt><dd>${Number.isFinite(t.altMeters) ? Math.round(t.altMeters) + " m" : "Not supplied"} · ${esc(t.altitudeDatum || "datum unspecified")}</dd>
+          <dt>Signature evidence</dt><dd>${esc(signature)}</dd>
+          <dt>Site reference</dt><dd>${esc(ASSET.name)} · reference point, not an assigned target</dd>
+          <dt>Displayed range to reference</dt><dd>${(referenceRange(t)/1000).toFixed(1)} km</dd>
+          <dt>Observation age</dt><dd>${fmtAge(ages.observed)}</dd><dt>Receipt age</dt><dd>${fmtAge(ages.received)}</dd><dt>Displayed sample age</dt><dd>${fmtAge(ages.displayed)}</dd>
+          <dt>Position uncertainty</dt><dd>${esc(uncertainty)}</dd>
+          <dt>Source</dt><dd>${S.live ? "LIVE TRACK FEED" : "SIMULATED SENSOR MODEL"}</dd>
+        </dl><div class="evidence">${sources.length ? sources.map(s => `<span>${esc(s)}</span>`).join("") : "No current sensor contributor reported."}</div></section>
+        <section><h3>Assessment and unknowns</h3><dl class="kv">
+          <dt>Supplied identity</dt><dd style="color:${col}">${esc(t.identity)}</dd><dt>Identity basis</dt><dd>${esc(basis)}</dd>
+          <dt>Declaring source</dt><dd>${S.live ? "Source feed; declaring authority not supplied" : "Scenario configuration / illustrative rule"}</dd>
+          <dt>Identity confidence</dt><dd>Not calibrated or independently validated</dd><dt>Intent / destination</dt><dd>Not established by these reports</dd>
+          <dt>Flight-profile assessment</dt><dd>Not independently assessed</dd><dt>Track quality</dt><dd>${tqi} / 15 · ${S.live ? "source scale" : "illustrative model scale"}; not probability of correct identity</dd>
+          <dt>Lifecycle</dt><dd>${esc(t.engagementState || t.state)}</dd>
+          <dt>Configured pairing</dt><dd>${isBlue(t) ? "Protected identity" : eff ? esc(eff.effectorId) : "None"} · ${S.live ? "subject to backend policy" : "simulation only"}</dd>
+        </dl><p>Absence of an RF report does not prove a silent emitter. Scenario-assigned objectives and true intent appear only in Exercise Control → Instructor facts.</p>
+        <p><strong>Authority / coordination:</strong> not established by this page. An exercise checkbox or geometric constraint does not grant permission.</p></section>
+      </div><div class="decision-section"><div class="decision-h">${S.live ? "Prototype policy status" : "Simulation policy status"}</div>
+      <p>${esc(a.ok ? "Configured model criteria satisfied; this is not an operational authorization." : a.detail || a.code || "Unavailable")}</p>
+      <button type="button" class="rail-tool" data-review="coordination">Exercise coordination record</button> <button type="button" class="rail-tool" data-review="assumptions">Definitions and sources</button></div>`;
     stableHTML($("decisionDetailBody"), detailHtml);
-    const releaseStatus = a.ok
-      ? `RELEASE CRITERIA SATISFIED \u00b7 ${a.eff.effectorId}`
-      : `HOLD \u00b7 ${a.detail || a.code || "not releasable"}`;
-    const html = `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span class="trk-id">${esc(xpdr ? xpdr.callsign : t.trackId)}</span>
-        <span class="idpill" style="color:${col};background:${col}22;border:1px solid ${col}55">${esc(t.identity)}</span>
-      </div>
+    const releaseStatus = a.ok ? `SIM CRITERIA MET · ${a.eff.effectorId}` : `HOLD · ${a.detail || a.code || "not releasable"}`;
+    const html = `<div class="selected-title"><span class="trk-id">${esc(xpdr ? xpdr.callsign : t.trackId)}</span><span class="idpill" style="color:${col};background:${col}22;border:1px solid ${col}55">${esc(t.identity)}</span></div>
       <div class="decision-glance">
-        <div class="g"><div class="k">Range</div><div class="v">${(rng / 1000).toFixed(1)} km</div></div>
-        <div class="g"><div class="k">Intercept</div><div class="v" style="${etaColor}">${etaStr}</div></div>
+        <div class="g"><div class="k">Site range</div><div class="v">${(referenceRange(t)/1000).toFixed(1)} km</div></div>
+        <div class="g"><div class="k">Display age</div><div class="v" style="color:${ageColor}">${fmtAge(age)}</div></div>
         <div class="g"><div class="k">Track quality</div><div class="v">${tqi} / 15</div></div>
-        <div class="g"><div class="k">Data age</div><div class="v" style="color:${age >= 5 ? "var(--hostile)" : age >= 2 ? "var(--suspect)" : "var(--neutral)"}">${age.toFixed(age < 10 ? 1 : 0)} s</div></div>
         <div class="g"><div class="k">Lifecycle</div><div class="v">${esc(t.engagementState || t.state)}</div></div>
-        <div class="g"><div class="k">Recommended</div><div class="v">${isBlue(t) ? "PROTECTED" : (eff ? esc(eff.effectorId) : "NONE")}</div></div>
-      </div>
-      <div class="tq"><div class="tq-bar">${segs}</div></div>
-      <div class="decision-status ${a.ok ? "go" : "hold"}">${esc(releaseStatus)}</div>
-      <div class="tq-note">${esc(threatText)} \u00b7 ${esc(idBasis)}</div>
+      </div><div class="tq"><div class="tq-bar">${segs}</div></div>
+      <div class="decision-status ${a.ok ? "go" : "hold"}">${esc(S.live && a.ok ? "BACKEND REVALIDATION REQUIRED" : releaseStatus)}</div>
+      <div class="tq-note identity-summary">${esc(S.live ? "Source identity; evidence may be incomplete." : t.identity === "UNKNOWN" || t.identity === "SUSPECT" ? "Identity unresolved. Intent not established." : "Scenario declaration; intent not independently established.")}</div>
       <div class="decision-actions">
         <button class="btn task" id="btnTask" ${canTask ? "" : "disabled"}>Task sensor</button>
         <button class="btn engage" id="btnEngage" ${canEngage ? "" : "disabled"}>${canEngage ? "Authorize release" : "Release unavailable"}</button>
-        ${t.state === "AUTHORIZING" && S.live ? '<button class="btn abort wide" id="btnReconcile">RECONCILE ORDER \u00b7 SAME REQUEST</button>' : ""}
-        ${t.state === "ENGAGING" || t.state === "ASSESSING" ? `<button class="btn abort wide" id="btnAbort">${t.abortRequestPending ? "ABORT PENDING \u00b7 RECONCILE" : "HOLD / ABORT ENGAGEMENT"}</button>` : ""}
-        <button class="btn full" id="btnDecisionDetails">Full details</button>
+        ${t.state === "AUTHORIZING" && S.live ? '<button class="btn abort wide" id="btnReconcile">RECONCILE ORDER · SAME REQUEST</button>' : ""}
+        ${t.state === "ENGAGING" || t.state === "ASSESSING" ? `<button class="btn abort wide" id="btnAbort">${t.abortRequestPending ? "ABORT PENDING · RECONCILE" : "HOLD / ABORT ENGAGEMENT"}</button>` : ""}
+        <button class="btn full wide" id="btnDecisionDetails">Evidence and full details</button>
       </div>`;
     const stateKey = `${t.trackId}|${t.state}|${t.engagementState || ""}`;
-    const stateChanged = !!body.dataset.decisionState && body.dataset.decisionState !== stateKey;
-    if (stableHTML(body, html, stateChanged)) {
+    const changed = !!body.dataset.decisionState && body.dataset.decisionState !== stateKey;
+    if (stableHTML(body, html, changed)) {
       body.dataset.decisionState = stateKey;
-      $("btnTask").onclick = taskSensor;
-      $("btnEngage").onclick = engage;
-      $("btnDecisionDetails").onclick = showDecisionDetails;
+      $("btnTask").onclick = taskSensor; $("btnEngage").onclick = engage; $("btnDecisionDetails").onclick = showDecisionDetails;
       if ($("btnAbort")) $("btnAbort").onclick = () => abortEngagement(t);
       if ($("btnReconcile")) $("btnReconcile").onclick = () => liveEngage(t);
-      if (stateChanged) requestAnimationFrame(() => ($("btnAbort") || $("btnReconcile") || $("trackCard")).focus());
+      if (changed) requestAnimationFrame(() => ($("btnAbort") || $("btnReconcile") || $("trackCard")).focus());
     }
   }
 
@@ -5154,7 +5517,7 @@
     const decisionRank = (t) => (t.state === "ENGAGING" || t.state === "ASSESSING" || t.state === "AUTHORIZING") ? -1 : (priority[t.identity] ?? 5);
     const urgency = (t) => trackPrediction(t).interceptSec ?? (trackObjectiveRange(t) / Math.max(1, t.speed || 1));
     const ordered = all.slice().sort((a, b) => decisionRank(a) - decisionRank(b) || urgency(a) - urgency(b) || dist(a.x,a.y,0,0) - dist(b.x,b.y,0,0));
-    const pageSize = 6, pages = Math.max(1, Math.ceil(ordered.length / pageSize));
+    const pageSize = S.workspace === "SENSORS" ? 4 : 6, pages = Math.max(1, Math.ceil(ordered.length / pageSize));
     S.trackPage = clamp(S.trackPage || 0, 0, pages - 1);
     const tracks = ordered.slice(S.trackPage * pageSize, (S.trackPage + 1) * pageSize);
     const el = $("trackList");
@@ -5163,7 +5526,7 @@
       tracks.map((t) => {
         const ident = t.civil && t.transponder ? `${t.transponder.callsign} \u00b7 ${t.identity}` : `${t.trackId} \u00b7 ${t.identity}`;
         const transponder = t.civil && t.transponder ? `, Mode S ${t.transponder.icao24}, squawk ${t.transponder.squawk}` : "";
-        const objectiveRange = trackObjectiveRange(t);
+        const objectiveRange = referenceRange(t);
         return `<button type="button" class="track-list-row" data-track-select="${esc(t.trackId)}" aria-current="${S.selected === t.trackId ? "true" : "false"}" aria-label="Select ${esc(t.trackId)}, ${esc(t.identity)}, ${esc((t.classificationType || "unknown").replace(/_/g," "))}${esc(transponder)}, track quality ${Math.floor(t.tq)}, range ${(objectiveRange/1000).toFixed(1)} kilometers"><span class="ident" style="color:${COLORS[t.identity] || COLORS.UNKNOWN}">${esc(ident)}</span><span>${esc((t.classificationType || "UNK").replace(/UAS_GROUP_/g,"G"))}</span><span class="num">${Math.floor(t.tq)}</span><span class="num">${(objectiveRange/1000).toFixed(1)}km</span></button>`;
       }).join("") +
       `<div class="track-pager"><button type="button" data-page-delta="-1" ${S.trackPage === 0 ? "disabled" : ""}>Previous</button><span>Tracks ${S.trackPage * pageSize + 1}\u2013${S.trackPage * pageSize + tracks.length} of ${all.length} \u00b7 page ${S.trackPage + 1}/${pages}</span><button type="button" data-page-delta="1" ${S.trackPage >= pages - 1 ? "disabled" : ""}>Next</button></div>`;
@@ -5171,12 +5534,13 @@
   }
 
   function renderSensorPosture() {
-    const html = SENSORS.map((s) => {
+    const sensorLimit = window.innerHeight < 900 ? 3 : 8;
+    const html = SENSORS.slice(0, sensorLimit).map((s) => {
       const dwelling = s.dwellUntil && missionNow() < s.dwellUntil;
       const tracked = [...S.tracks.values()].filter((t) => (t.contributingSensors || []).includes(s.sensorId)).length;
       return `<button type="button" class="sensor-row" data-asset-kind="sensor" data-asset-id="${esc(s.sensorId)}" aria-current="${S.selectedAsset && S.selectedAsset.kind === "sensor" && S.selectedAsset.id === s.sensorId ? "true" : "false"}"><span class="dot" style="background:${s.geometryUnknown ? "var(--hostile)" : dwelling ? "var(--suspect)" : "var(--neutral)"}"></span><span>${esc(s.sensorId)}<span class="meta">${esc(s.sensorType.replace(/_/g,"/"))} \u00b7 ${esc(s.vendor)} \u00b7 ${esc(s.service || "USA")}</span></span><span>${s.geometryUnknown ? "NO GEO" : dwelling ? `DWELL ${esc(s.dwellTrack || "")}` : `${esc(s.liveReadiness || "READY")} \u00b7 ${tracked} TRK`}</span></button>`;
     }).join("");
-    stableHTML($("sensorPosture"), html);
+    stableHTML($("sensorPosture"), html + `<p class="track-list-note">${Math.min(SENSORS.length, sensorLimit)} of ${SENSORS.length} sensors. Open Inventory for all systems.</p>`);
   }
 
   // ---- threat evaluation & weapon assignment (TEWA) ----
@@ -5203,7 +5567,7 @@
         const recStr = auth.ok ? `\u2192 ${esc(rec.effectorId)}` : `<span style="color:var(--faint)">${esc(auth.code.replace(/_/g, " ").toLowerCase())}</span>`;
         return `<div class="eff">
           <span class="dot" style="background:${col}"></span>
-          <button type="button" class="queue-select" data-sel="${esc(t.trackId)}" aria-label="Inspect ${esc(t.trackId)}"><span class="nm">${esc(t.trackId)}<small>${esc((t.classificationType || "").replace(/_/g, " "))} \u00b7 predicted intercept ${etaStr} \u00b7 ${recStr}</small></span></button>
+          <button type="button" class="queue-select" data-sel="${esc(t.trackId)}" aria-label="Inspect ${esc(t.trackId)}"><span class="nm">${esc(t.trackId)}<small>${esc((t.classificationType || "").replace(/_/g, " "))} \u00b7 scenario estimate ${etaStr} \u00b7 ${recStr}</small></span></button>
           <button class="fire-release" data-tid="${esc(t.trackId)}" ${auth.ok && S.wcs !== "WEAPONS_FREE" ? "" : "disabled"} aria-label="${auth.ok ? "Authorize release of " + esc(rec.effectorId) + " against " + esc(t.trackId) : "Release unavailable for " + esc(t.trackId)}" title="${auth.ok ? "Authorize release " + esc(rec.effectorId) : esc(auth.detail)}">RELEASE</button>
         </div>`;
       }).join("");
@@ -5241,7 +5605,8 @@
   $("effList").addEventListener("click", handleAssetListClick);
   function selectTrack(id) {
     S.transportInfoOpen = false;
-    S.selected = id;
+    S.selected = S.tracks.has(id) ? id : null;
+    if (id && !S.selected) toast("info", `${id} is no longer in the current picture. Its recorded history remains available.`);
     S.selectedAsset = null;
     document.querySelectorAll("[data-track-select]").forEach((b) => b.setAttribute("aria-current", b.dataset.trackSelect === id ? "true" : "false"));
     document.querySelectorAll("[data-asset-kind][data-asset-id]").forEach((b) => b.setAttribute("aria-current", "false"));
@@ -5490,16 +5855,21 @@
   function renderEventTicker() {
     const ticker = $("eventTicker");
     if (!ticker || !S.events) return;
-    const actionable = S.events.filter((e) => e.decision !== "INFO");
-    const rows = (actionable.length ? actionable : S.events).slice(-2).reverse();
+    const visibleEvents = operatorEvents();
+    const actionable = visibleEvents.filter((e) => e.decision !== "INFO");
+    const rows = (actionable.length ? actionable : visibleEvents).slice(-2).reverse();
     ticker.innerHTML = rows.length ? rows.map((e) => {
       const severity = e.decision === "LEAKER" ? "critical" : e.decision === "DENY" || e.decision === "MISS" ? "warning" : "";
       return `<div class="event-line ${severity}"><span class="t">${esc(e.clock)}</span><span class="d">${esc(e.decision)}</span><span class="m">${esc(e.msg)}</span></div>`;
     }).join("") : '<div class="empty">No recorded events.</div>';
   }
-  function logEvent(decision, cls, msg) {
+  function logEvent(decision, cls, msg, meta = {}) {
     const clock = nowClock();
     const log = $("log");
+    if (meta.audience === "INSTRUCTOR") {
+      S.events.push(Object.freeze({ clock, t: missionNow(), decision, cls, msg, audience: "INSTRUCTOR" }));
+      return;
+    }
     appendLogRow(log, clock, decision, cls, String(msg));
 
     appendLogRow($("logL16"), clock, J_CODE[decision] || "J28.2", cls, `#${String(++S.tdlSeq).padStart(4, "0")} \u00b7 ${String(msg).toUpperCase()}`);
@@ -5510,8 +5880,7 @@
 
     // mirror into the structured timeline that feeds the After Action Review
     if (S.events) {
-      S.events.push({ clock, t: missionNow(), decision, cls, msg });
-      while (S.events.length > 400) S.events.shift();
+      S.events.push(Object.freeze({ clock, t: missionNow(), decision, cls, msg, audience: "OPERATOR" }));
     }
     renderEventTicker();
   }
@@ -5560,12 +5929,12 @@
     const st = S.stats;
     const times = st.defeatTimes.slice().sort((a, b) => a - b);
     const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : null;
-    const xvPct = st.engagements ? Math.round((100 * st.crossVendor) / st.engagements) : 0;
-    const xsPct = st.engagements ? Math.round((100 * st.crossService) / st.engagements) : 0;
+    const xvPct = reviewPercent(st.crossVendor, st.engagements);
+    const xsPct = reviewPercent(st.crossService, st.engagements);
     // effectors employed: unique effector IDs that appear in engagement events
     const used = new Set();
     for (const e of S.events) {
-      const m = e.msg.match(/EFF-[A-Z]+-\d+/g);
+      const m = e.msg.match(/EFF-(?:[A-Z]+-)+\d+/g);
       if (m && (e.decision === "PERMIT" || e.decision === "COMPLETE")) m.forEach((x) => used.add(x));
     }
     const totalThreats = st.defeated + st.leakers + [...S.tracks.values()].filter(isRed).length;
@@ -5573,6 +5942,10 @@
     const pending = Math.max(statePending, S.pendingEng.size, Math.max(0, st.engagements - st.defeated - (st.misses || 0) - (st.unconfirmedEffects || 0) - (st.partialEffects || 0) - (st.aborts || 0)));
     return {
       scenario: SCN.label, asset: ASSET.name, arch: S.arch,
+      live: S.live, runEnded: S.reviewEndedAt != null,
+      activeHostile: [...S.tracks.values()].filter(t => t.identity === "HOSTILE" && t.state !== "NEUTRALIZED").length,
+      unresolved: [...S.tracks.values()].filter(t => ["UNKNOWN", "SUSPECT"].includes(t.identity) && t.state !== "NEUTRALIZED").length + S.unresolvedExits.length,
+      unresolvedExits: S.unresolvedExits.map(item => ({ ...item })),
       defeated: st.defeated, leakers: st.leakers,
       engagements: st.engagements, airKills: st.airKills || 0,
       xvPct, xsPct, crossVendor: st.crossVendor, crossService: st.crossService,
@@ -5581,61 +5954,54 @@
       federated: !!(S.echelon.bn || S.echelon.rgt),
       nodeLost: !!S.nodeLost, totalThreats,
       misses: st.misses || 0, unconfirmedEffects: st.unconfirmedEffects || 0, partialEffects: st.partialEffects || 0, aborts: st.aborts || 0, pending,
-      observedDefeatPct: st.engagements ? Math.round((100 * st.defeated) / st.engagements) : 0,
+      observedDefeatPct: reviewPercent(st.defeated, st.engagements),
       assetIntegrity: S.assetIntegrity != null ? S.assetIntegrity : 100,
       costSpent: st.costSpent || 0, threatValue: st.threatValue || 0,
-      cheapPct: st.defeated ? Math.round((100 * (st.cheapKills || 0)) / st.defeated) : 0,
+      cheapPct: reviewPercent(st.cheapKills || 0, st.defeated),
     };
   }
 
-  function buildAAR() {
-    const d = aarData();
-    const success = d.leakers === 0 && d.defeated > 0 && d.pending === 0;
-    const nothing = d.engagements === 0 && d.defeated === 0 && d.airKills === 0;
-    const inProgress = !nothing && d.pending > 0;
+  function buildAAR(snapshot = null) {
+    const d = snapshot ? snapshot.metrics : aarData();
     const v = $("aarVerdict");
-    v.className = "aar-verdict" + (success ? "" : ((d.leakers > 0 || inProgress) ? " warn" : ""));
-    v.textContent = nothing
-      ? "NO ENGAGEMENTS RECORDED \u2014 run the auto-play brief or engage a threat, then reopen the AAR."
-      : inProgress
-        ? `ENGAGEMENTS IN PROGRESS \u2014 ${d.engagements} initiated, ${d.pending} effect/BDA outcome(s) pending.`
-        : (success
-          ? `MISSION SUCCESS \u2014 ${d.defeated} threats defeated, 0 leakers. Defended asset ${d.asset} secure.`
-          : `PARTIAL \u2014 ${d.defeated} defeated, ${d.leakers} leaker(s) past the defense. Review coverage and pairing.`);
-
-    $("aarSub").textContent = `${d.scenario} \u00b7 ${d.asset} \u00b7 ${d.arch === "HUB" ? "Hub-and-spoke" : "Networked any-sensor/any-shooter"} \u00b7 ${nowClock()} Z`;
+    v.className = "aar-verdict" + (!d.runEnded || d.activeHostile || d.unresolved || d.pending || d.leakers ? " warn" : "");
+    v.textContent = reviewVerdict(d);
+    const meta = snapshot ? snapshot.metadata : reviewMetadata();
+    $("aarRecord").textContent = `Snapshot ${meta.simulationClock} Z · run ${meta.runId} · build ${meta.build} · seed ${meta.seed} · review ${meta.reviewVersion}. Replay ${meta.replay.frames} frames, ${meta.replay.firstMs == null ? "not yet recorded" : elapsedLabel(meta.replay.firstMs) + "–" + elapsedLabel(meta.replay.lastMs)}${meta.replay.sampled ? " (sampled positions; full event ledger retained)" : ""}. ${snapshot ? snapshot.events.length : operatorEvents().length} operator events. Export preserves assumptions, inventory, coordination, and both labeled event ledgers.`;
+    $("aarSub").textContent = `${d.scenario} \u00b7 ${d.asset} \u00b7 ${d.arch === "HUB" ? "Configured fixed subset" : "Configured shared set"} \u00b7 ${meta.simulationClock} Z`;
 
     const fmt = (s) => s == null ? "\u2014" : s.toFixed(1) + "s";
     const cells = [
       ["Threats defeated", d.defeated, d.defeated > 0 ? "good" : ""],
       ["Leakers", d.leakers, d.leakers > 0 ? "bad" : "good"],
-      ["Asset integrity", d.assetIntegrity + "%", d.assetIntegrity > 66 ? "good" : d.assetIntegrity > 33 ? "" : "bad"],
+      ["Scenario score (illustrative)", d.live ? "Unavailable" : d.assetIntegrity + " / 100", ""],
+      ["Active hostile / identity unresolved", `${d.activeHostile} / ${d.unresolved}`, ""],
       ["Defeats / leakers", `${d.defeated} <small>/ ${d.leakers}</small>`, d.leakers === 0 && d.defeated > 0 ? "good" : ""],
       ["Engagement attempts / misses", `${d.engagements} <small>/ ${d.misses}</small>`, ""],
-      ["Observed defeats / engagement", d.observedDefeatPct + "%", ""],
+      ["Observed defeats / engagement", fmtPct(d.observedDefeatPct), ""],
       ["Pending effect / BDA", d.pending, d.pending ? "" : "good"],
       ["Unconfirmed / partial / aborts", `${d.unconfirmedEffects} <small>/ ${d.partialEffects} / ${d.aborts}</small>`, ""],
       ["Air intercepts", d.airKills, ""],
       ["Avg time-to-defeat", fmt(d.avg), ""],
       ["Effectors employed", `${d.effUsed} <small>/ ${d.effTotal}</small>`, ""],
-      ["Mixed-vendor provenance (illustrative)", d.xvPct + "%", ""],
-      ["Mixed-service provenance (illustrative)", d.xsPct + "%", ""],
+      ["Mixed-vendor provenance (illustrative)", fmtPct(d.xvPct), ""],
+      ["Mixed-service provenance (illustrative)", fmtPct(d.xsPct), ""],
       ["Notional effect cost committed", fmtCost(d.costSpent), ""],
       ["Notional threat value defeated", fmtCost(d.threatValue), ""],
-      ["Cost exchange", !d.costSpent ? "\u2014" : d.threatValue >= d.costSpent ? "favorable" : (d.costSpent / Math.max(1, d.threatValue)).toFixed(1) + ":1 against", !d.costSpent ? "" : d.threatValue >= d.costSpent ? "good" : "bad"],
-      ["Low-cost-layer kills (EW/DE/net)", d.cheapPct + "%", d.cheapPct >= 50 ? "good" : ""],
+      ["Assumed cost / threat-value ratio", !d.costSpent || !d.threatValue ? "Not measured" : (d.costSpent / d.threatValue).toFixed(2) + " : 1", ""],
+      ["Low-cost-layer kills (EW/DE/net)", fmtPct(d.cheapPct), d.cheapPct >= 50 ? "good" : ""],
       ["Echelon federation", d.federated ? "BN + RGT" : "Site only", d.federated ? "good" : ""],
-      ["C2 resilience", d.nodeLost ? "Node loss survived" : "Nominal", ""],
+      ["Node-loss exercise", d.nodeLost ? "Transition simulated" : "Not exercised", ""],
     ];
     $("aarGrid").innerHTML = cells.map(([k, val, cls]) =>
       `<div class="aar-cell"><div class="k">${esc(k)}</div><div class="v ${cls}">${val}</div></div>`).join("");
 
     // timeline: milestone events only, relative to run start
-    const t0 = S.runStart != null ? S.runStart : (S.events[0] ? S.events[0].t : 0);
-    const milestones = S.events.filter((e) =>
+    const t0 = meta.startedAtMs ?? 0;
+    const milestones = (snapshot ? snapshot.events : operatorEvents()).filter((e) =>
       e.decision === "PERMIT" || e.decision === "GRANTED" || e.decision === "LEAKER" ||
       /raid|swarm|node|vendor|federat|architecture|brief|second wave/i.test(e.msg));
-    const tl = milestones.slice(-40).map((e) => {
+    const tl = milestones.map((e) => {
       const rel = Math.max(0, (e.t - t0) / 1000);
       const mm = String(Math.floor(rel / 60)).padStart(2, "0") + ":" + String(Math.floor(rel % 60)).padStart(2, "0");
       return `<div class="aar-tl-row"><span class="tt">T+${mm}</span><span class="mm">${esc(e.msg)}</span></div>`;
@@ -5646,36 +6012,45 @@
     const a = [];
     if (d.engagements > 0) a.push(`Illustrative pairing logic selected feasible effectors from the configured shared picture across ${d.effUsed} of ${d.effTotal} effectors; this is not operational TEWA validation.`);
     if (d.xvPct > 0 || d.xsPct > 0) a.push(`Configured metadata indicates ${d.xvPct}% mixed-vendor and ${d.xsPct}% mixed-service provenance. These illustrative counters do not prove interoperability.`);
-    if (d.airKills > 0) a.push(`Air assets contributed ${d.airKills} intercept(s) as shooters, not just sensors \u2014 the same picture cued armed CAP and ground effectors alike.`);
-    if (d.federated) a.push(`Rapid up-echelon federation to Battalion and Regiment shared the Red+Blue COP with no bespoke integration.`);
-    if (d.nodeLost) a.push(`C2 resilience demonstrated: a node was lost mid-fight and a second node continued from the shared COP.`);
-    if (d.arch === "HUB") a.push(`Run was in HUB-AND-SPOKE: fixed pairs left effectors idle and coverage gaps exposed \u2014 contrast with NETWORKED.`);
-    if (d.leakers > 0) a.push(`${d.leakers} leaker(s) reached the asset \u2014 examine sensor coverage, track-quality gating, and effector availability along that axis.`);
+    if (d.airKills > 0) a.push(`The local model recorded ${d.airKills} air intercept(s). These events do not validate real air-to-ground coordination or performance.`);
+    if (d.federated) a.push(`Echelon sharing was represented in the local model. Adapter integration and transport interoperability were not tested.`);
+    if (d.nodeLost) a.push(`A node-loss transition was simulated. Independent process failover, data reconciliation, and transport resilience were not verified.`);
+    if (d.arch === "HUB") a.push(`HUB mode used the configured fixed-pair subset. Other units were deliberately unavailable; the comparison does not establish architectural effectiveness.`);
+    if (d.leakers > 0) a.push(`${d.leakers} contact(s) arrived at assigned scenario objectives. This records a scripted result, not measured damage.`);
     if (!a.length) a.push("Run the auto-play brief for a full any-sensor/any-shooter vignette, then reopen this review.");
+    a.push("Scenario score is an illustrative point score, not measured asset damage. Cost figures exclude acquisition, integration, sustainment, collateral effects, and protected-mission value.");
+    a.push("Coordination and authority remain exercise records only. Unresolved identity, source disagreements, and pending outcomes require review.");
+    if (d.unresolvedExits.length) a.push(`${d.unresolvedExits.length} report(s) expired with identity unresolved. Removing a symbol does not resolve the underlying review item.`);
     $("aarAssess").innerHTML = "<ul>" + a.map((x) => `<li>${esc(x)}</li>`).join("") + "</ul>";
 
     return d;
   }
 
   function aarPlainText() {
-    const d = aarData();
+    const snapshot = S.aarSnapshot || captureReview();
+    const d = snapshot.metrics;
     const fmt = (s) => s == null ? "n/a" : s.toFixed(1) + "s";
     const L = [];
     L.push("AFTER ACTION REVIEW (NOTIONAL / FOR DEMONSTRATION ONLY)");
     L.push(`Scenario: ${d.scenario} - ${d.asset}`);
+    L.push(reviewVerdict(d));
+    L.push(`Run: ${snapshot.metadata.runId}; build ${snapshot.metadata.build}; seed ${snapshot.metadata.seed}; review ${snapshot.metadata.reviewVersion}; snapshot ${snapshot.metadata.simulationClock} Z`);
     L.push(`Architecture: ${d.arch === "HUB" ? "Hub-and-spoke" : "Networked any-sensor/any-shooter"}`);
     L.push("");
     L.push(`Threats defeated: ${d.defeated}    Leakers: ${d.leakers}`);
-    L.push(`Asset integrity: ${d.assetIntegrity}%`);
+    L.push(`Illustrative scenario score: ${d.live ? "Unavailable" : d.assetIntegrity + " / 100"}`);
+    L.push(`Remaining hostile: ${d.activeHostile}    Unresolved: ${d.unresolved}`);
     L.push(`Engagement attempts: ${d.engagements}    Misses: ${d.misses}    Pending effect/BDA: ${d.pending}`);
-    L.push(`Observed defeats / engagement: ${d.observedDefeatPct}%    Unconfirmed effects: ${d.unconfirmedEffects}    Partial effects: ${d.partialEffects}    Aborts: ${d.aborts}`);
+    L.push(`Observed defeats / engagement: ${fmtPct(d.observedDefeatPct)}    Unconfirmed effects: ${d.unconfirmedEffects}    Partial effects: ${d.partialEffects}    Aborts: ${d.aborts}`);
     L.push(`Air intercepts: ${d.airKills}    Avg time-to-defeat: ${fmt(d.avg)} (fastest ${fmt(d.fastest)}, slowest ${fmt(d.slowest)})`);
     L.push(`Effectors employed: ${d.effUsed}/${d.effTotal}`);
-    L.push(`Mixed-vendor provenance (illustrative): ${d.xvPct}%    Mixed-service provenance (illustrative): ${d.xsPct}%`);
-    L.push(`Echelon federation: ${d.federated ? "BN + RGT" : "Site only"}    C2 resilience: ${d.nodeLost ? "node loss survived" : "nominal"}`);
+    L.push(`Mixed-vendor provenance (illustrative): ${fmtPct(d.xvPct)}    Mixed-service provenance (illustrative): ${fmtPct(d.xsPct)}`);
+    L.push(`Echelon federation: ${d.federated ? "BN + RGT" : "Site only"}    Node-loss exercise: ${d.nodeLost ? "transition simulated" : "not exercised"}`);
     L.push("");
     L.push("Assessment:");
     document.querySelectorAll("#aarAssess li").forEach((li) => L.push("- " + li.textContent));
+    L.push("", "Definitions and assumptions:");
+    snapshot.metadata.assumptions.forEach(([term, definition]) => L.push(`${term}: ${definition}`));
     return L.join("\n");
   }
 
@@ -5694,7 +6069,7 @@
     for (const z of SCN.noFire || []) { c2.beginPath(); c2.arc(mx(z.x), my(z.y), z.r * sc, 0, Math.PI * 2); c2.stroke(); }
     c2.setLineDash([]);
     c2.strokeStyle = "#cdd9e6"; c2.beginPath(); c2.arc(w / 2, h / 2, 4, 0, Math.PI * 2); c2.stroke();
-    const rep = S.replay || [];
+    const rep = S.aarSnapshot ? S.aarSnapshot.replay : (S.replay || []);
     const f = rep[i];
     if (!f) {
       c2.fillStyle = "#4b586b"; c2.font = "11px " + MONO; c2.textAlign = "center";
@@ -5708,7 +6083,7 @@
       c2.beginPath(); c2.arc(mx(x), my(y), 2.2, 0, Math.PI * 2); c2.fill();
     }
     c2.fillStyle = "#76859b"; c2.font = "10px " + MONO; c2.textAlign = "left";
-    c2.fillText(`${f.defeated} defeated \u00b7 ${f.leakers} leakers \u00b7 integrity ${f.integ}%`, 8, h - 8);
+    c2.fillText(`${f.defeated} defeated \u00b7 ${f.leakers} leakers \u00b7 scenario score ${f.integ}/100`, 8, h - 8);
     $("repClock").textContent = f.clock;
   }
   let _modalReturn = null;
@@ -5722,7 +6097,7 @@
   }
   function closeModal(backId) {
     $(backId).hidden = true;
-    const anotherOpen = ["aarBack", "regBack", "helpBack", "decisionBack", "auditBack"].some((id) => !$(id).hidden);
+    const anotherOpen = ["aarBack", "regBack", "helpBack", "decisionBack", "auditBack", "reviewBack"].some((id) => !$(id).hidden);
     if (!anotherOpen) {
       $("cuas").inert = false;
       $("cuas").removeAttribute("aria-hidden");
@@ -5730,7 +6105,7 @@
       if (target && target.isConnected) requestAnimationFrame(() => target.focus());
     }
   }
-  function openModalBack() { return ["aarBack", "regBack", "helpBack", "decisionBack", "auditBack"].map($).find((el) => !el.hidden) || null; }
+  function openModalBack() { return ["aarBack", "regBack", "helpBack", "decisionBack", "auditBack", "reviewBack"].map($).find((el) => !el.hidden) || null; }
   function trapModalFocus(event) {
     if (_tourEl && event.key === "Tab") {
       const focusable = [..._tourEl.querySelectorAll("button:not([disabled])")];
@@ -5752,8 +6127,9 @@
   }
 
   function showAAR() {
-    buildAAR();
-    const rep = S.replay || [];
+    S.aarSnapshot = captureReview();
+    buildAAR(S.aarSnapshot);
+    const rep = S.aarSnapshot.replay;
     const sl = $("repSlider");
     sl.max = String(Math.max(0, rep.length - 1));
     sl.value = sl.max;
@@ -5769,10 +6145,12 @@
   // ---- pause / speed (presentation controls; SIM only) -----------------------
   function setPaused(p) {
     S.paused = !!p;
+    if (!p && S.reviewEndedAt != null) { S.reviewEndedAt = null; S.reviewEndReason = null; logEvent("INFO", "INFO", "Exercise resumed; subsequent reviews are interim until the run is ended again."); }
     const b = $("btnPause");
     if (b) { b.classList.toggle("on", S.paused); b.textContent = S.paused ? "\u25b6 Resume" : "\u275a\u275a Pause"; }
     const badge = $("pauseBadge");
     if (badge) badge.hidden = !S.paused;
+    renderMissionSummary();
   }
   function togglePause() { if (!S.live) setPaused(!S.paused); }
 
@@ -5834,7 +6212,7 @@
       alert.textContent = `\u26a0 THEATER ALERT \u2014 ${a.name} UNDER ATTACK \u2014 ${a.inbound} ${a.inbound === 1 ? "TRACK" : "TRACKS"} INBOUND FROM ${compass(a.poo)} (${Math.round(a.poo)}\u00b0)`;
     } else {
       alert.className = "reg-alert clear";
-      alert.textContent = `ALL CLEAR \u2014 ${a.name} nominal \u2014 no active tracks. Theater posture green.`;
+      alert.textContent = `SITE SNAPSHOT · ${a.name}: no red-labeled tracks reported. Peer installations have no connected feed.`;
     }
 
     // Scenario metadata labels the relevant approach without implying a validated
@@ -5845,26 +6223,27 @@
 
     $("regHq").innerHTML =
       `<span class="badge">${esc(theater.badge)}</span><span class="name">${esc(theater.hq)}</span>` +
-      `<span class="roll">${underAttack ? '<span style="color:#ff8a98;font-weight:700">1 BASE UNDER ATTACK</span>' : '<span style="color:#6fe39a">all installations nominal</span>'}</span>`;
+      `<span class="roll">${underAttack ? '<span style="color:#ff8a98;font-weight:700">1 BASE UNDER ATTACK</span>' : '<span>site snapshot only; peer feeds unavailable</span>'}</span>`;
 
-    const baseCard = (b, attack) => {
+    const baseCard = (b, attack, preset = false) => {
       const pct = Math.round(b.sustain * 100);
       const bar = pct < 35 ? "low" : pct < 70 ? "mid" : "";
       const wcls = b.wReady < b.wTot * 0.5 ? "bad" : b.wReady < b.wTot ? "warn" : "";
       return `<div class="reg-base${attack ? " attack" : ""}">
         <div class="top"><span class="nm">${esc(b.name)}</span><span class="svc">${esc(b.svc)}</span>
-          <span class="reg-pill ${attack ? "atk" : "ok"}">${attack ? "UNDER ATTACK" : "NOMINAL"}</span></div>
+          <span class="reg-pill ${preset ? "preset" : attack ? "atk" : "ok"}">${preset ? "PRESET / NO FEED" : attack ? "RED TRACKS" : "NO RED TRACKS"}</span></div>
+        <div class="reg-source">${preset ? "STATIC PRESET · current status unavailable" : S.live ? "ACTIVE SOURCE FEED · " + esc($("cmdAge").textContent) : "ACTIVE SIMULATION · " + nowClock() + " Z"}</div>
         <div class="metrics">
-          <div class="m"><div class="mk">Inbound</div><div class="mv ${b.inbound ? "bad" : ""}">${b.inbound}</div></div>
-          <div class="m"><div class="mk">Weapons</div><div class="mv ${wcls}">${b.wReady}<span style="font-size:11px;color:#76859b">/${b.wTot}</span></div></div>
-          <div class="m"><div class="mk">Sustain</div><div class="mv">${pct}%</div></div>
+          <div class="m"><div class="mk">${preset ? "Current inbound" : "Red tracks"}</div><div class="mv ${b.inbound ? "bad" : ""}">${preset ? "Unavailable" : b.inbound}</div></div>
+          <div class="m"><div class="mk">${preset ? "Preset units" : "Modeled available"}</div><div class="mv ${wcls}">${b.wReady}<span style="font-size:11px;color:#76859b">/${b.wTot}</span></div></div>
+          <div class="m"><div class="mk">${preset ? "Preset fraction" : "Inventory fraction"}</div><div class="mv">${pct}%</div></div>
         </div>
         <div class="reg-bar"><span class="${bar}" style="width:${pct}%"></span></div>
       </div>`;
     };
 
     const cards = [baseCard({ name: a.name, svc: a.svc, inbound: a.inbound, wReady: a.wReady, wTot: a.wTot, sustain: a.sustain }, underAttack)]
-      .concat(theater.peers.map((p) => baseCard({ name: p.name, svc: p.svc, inbound: 0, wReady: p.wReady, wTot: p.wTot, sustain: p.sustain }, false)));
+      .concat(theater.peers.map((p) => baseCard({ name: p.name, svc: p.svc, inbound: 0, wReady: p.wReady, wTot: p.wTot, sustain: p.sustain }, false, true)));
     $("regBases").innerHTML = cards.join("");
 
     $("regPoo").innerHTML = underAttack
@@ -5926,7 +6305,7 @@
         }
         $(segId).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", "false"));
         b.setAttribute("aria-pressed", "true");
-        S[key] = b.dataset.v;
+        applySeg(segId, key, b.dataset.v);
         if (after) after();
         renderRail();
       });
@@ -6007,7 +6386,7 @@
     S.degraded = !S.degraded;
     $("optDegrade").textContent = S.degraded ? "Restore comms" : "Degrade comms";
     if (S.degraded) {
-      logEvent("DENY", "DENY", "COMMS DEGRADED \u00b7 bus latency injected \u00b7 COP stale (positions step, TQ -3, orders +1.5 s)");
+      logEvent("DENY", "DENY", "COMMS DELAY INJECTED · positions update in steps; inspect displayed-sample age. Transport performance is not validated.");
       toast("deny", "Comms degraded \u00b7 COP is stale");
     } else {
       logEvent("INFO", "INFO", "Comms restored \u00b7 COP current");
@@ -6054,7 +6433,8 @@
   document.querySelectorAll("#spdSeg button").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll("#spdSeg button").forEach((x) => x.setAttribute("aria-pressed", "false"));
     b.setAttribute("aria-pressed", "true");
-    S.timeScale = parseFloat(b.dataset.v) || 1;
+    applySeg("spdSeg", "timeScale", parseFloat(b.dataset.v) || 1);
+    renderMissionSummary();
   }));
   $("aarClose").onclick = hideAAR;
   $("aarDone").onclick = hideAAR;
@@ -6081,6 +6461,7 @@
       else if (!$("helpBack").hidden) hideHelp();
       else if (!$("decisionBack").hidden) hideDecisionDetails();
       else if (!$("auditBack").hidden) hideAuditHistory();
+      else if (!$("reviewBack").hidden) { closeModal("reviewBack"); S.reviewPanel = null; }
       else if (!$("displayCard").hidden) { $("displayCard").hidden = true; $("btnDisplaySettings").setAttribute("aria-expanded", "false"); $("btnDisplaySettings").focus(); }
       return;
     }
@@ -6171,7 +6552,7 @@
     const times = S.stats.defeatTimes;
     const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
     const eng = S.stats.engagements, xv = S.stats.crossVendor;
-    const pct = eng ? Math.round((100 * xv) / eng) : 0;
+    const pct = reviewPercent(xv, eng);
     const integ = S.assetIntegrity;
     const integColor = integ > 66 ? "var(--neutral)" : integ > 33 ? "var(--suspect)" : "var(--hostile)";
     const pending = Math.max(S.pendingEng.size, [...S.tracks.values()].filter((t) => t.state === "ENGAGING" || t.state === "ASSESSING").length);
@@ -6181,7 +6562,7 @@
       '<div class="sb-grid">' +
       tile(S.stats.defeated > 0 ? "good" : "", S.stats.defeated, "Defeated") +
       tile(!S.live && S.stats.leakers > 0 ? "bad" : "", S.live ? "\u2014" : S.stats.leakers, "Leakers") +
-      `<div class="sb-tile"><div class="n" style="color:${integColor}">${S.live ? "\u2014" : integ + "%"}</div><div class="l">Integrity</div></div>` +
+      `<div class="sb-tile"><div class="n" style="color:${integColor}">${S.live ? "\u2014" : integ + "/100"}</div><div class="l">Scenario score</div></div>` +
       tile(pending ? "" : "good", pending, "Pending BDA") +
       tile("", inflight, "Active hostile") +
       tile("", avg ? avg.toFixed(0) + "s" : "\u2014", "Avg TTD") +
@@ -6189,13 +6570,13 @@
       tile(S.stats.airKills ? "good" : "", S.stats.airKills || 0, "Air defeats") +
       '</div>' +
       '<div class="sb-detail">' +
-      `<div class="sb-row"><span class="l">2D overlap (net/hub)</span><span class="n"><span style="color:var(--neutral)">${(S.coverage || {}).netPct ?? 0}%</span> / <span style="color:var(--hostile)">${(S.coverage || {}).hubPct ?? 0}%</span></span></div>` +
-      `<div class="sb-row"><span class="l">Effectors (net/hub)</span><span class="n"><span style="color:var(--neutral)">${S.effectors.length}</span> / <span style="color:var(--hostile)">${HUB_EFFECTORS.size}</span></span></div>` +
-      `<div class="sb-row"><span class="l">Committed / threat value</span><span class="n">${fmtCost(S.stats.costSpent || 0)} / <span style="color:${(S.stats.threatValue || 0) >= (S.stats.costSpent || 0) ? "var(--neutral)" : "var(--hostile)"}">${fmtCost(S.stats.threatValue || 0)}</span></span></div>` +
+      `<div class="sb-row"><span class="l">Configured 2D overlap</span><span class="n"><span style="color:var(--neutral)">${(S.coverage || {}).netPct ?? 0}%</span> / <span style="color:var(--hostile)">${(S.coverage || {}).hubPct ?? 0}%</span></span></div>` +
+      `<div class="sb-row"><span class="l">Enabled units (net/fixed)</span><span class="n"><span style="color:var(--neutral)">${S.effectors.length}</span> / <span style="color:var(--hostile)">${HUB_EFFECTORS.size}</span></span></div>` +
+      `<div class="sb-row"><span class="l">Assumed cost / value</span><span class="n">${fmtCost(S.stats.costSpent || 0)} / <span style="color:${(S.stats.threatValue || 0) >= (S.stats.costSpent || 0) ? "var(--neutral)" : "var(--hostile)"}">${fmtCost(S.stats.threatValue || 0)}</span></span></div>` +
       '</div>' +
       '<div class="sb-xv"><div class="l">Mixed-vendor provenance (illustrative)</div>' +
-      `<div class="big">${pct}%</div>` +
-      `<div class="sub">${xv} of ${eng} attempts reference different configured vendor metadata</div></div>`;
+      `<div class="big">${fmtPct(pct)}</div>` +
+      `<div class="sub">${xv} of ${eng} attempts reference different configured vendor metadata</div></div><button type="button" class="rail-tool" data-review="assumptions">Metric definitions / assumptions</button>`;
   }
 
   // ---- echelon federation (Battalion / Regiment) ----
@@ -6223,7 +6604,7 @@
     await sleep(650);
     S.echelon.rgt = true; renderFederation();
     logEvent("GRANTED", "GRANTED", "RGT-3 (Regiment) LINKED \u00B7 regiment COP synced");
-    toast("ok", "RGT-3 linked \u00B7 federated in ~1.2s (conformance, not bespoke integration)");
+    toast("ok", "RGT-3 local sharing transition simulated; adapter conformance and network performance untested");
   }
 
   // ---- auto-play vignette ----
@@ -6286,7 +6667,9 @@
     if ($("autoDurationSel")) $("autoDurationSel").disabled = false;
   }
   function applySeg(segId, key, v) {
+    const prior = S[key];
     S[key] = v;
+    if (S.runId && prior !== v && ["arch", "wx", "tod", "timeScale"].includes(key)) logEvent("INFO", "INFO", `Exercise configuration: ${key} changed from ${prior} to ${v}`);
     if (key === "wcs") S.autoReleaseArmed = v === "WEAPONS_FREE";
     $(segId).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x.dataset.v === v ? "true" : "false"));
   }
@@ -6384,7 +6767,7 @@
       autoGuard();
 
       if (mode.resilience) {
-        setNarrator("08 / Echelon", "Rapidly integrating with Battalion and Regiment / one common interface");
+        setNarrator("08 / Echelon", "Illustrative Battalion and Regiment sharing / local state transition / integration untested");
         await integrateEchelon();
         await autoSleep(3000); autoGuard();
         setNarrator("09 / Resilience", "Simulating C2 node loss while autonomous joint defense remains supervised");
@@ -6427,7 +6810,9 @@
       await sleep(Math.max(1000, S.autoplay.deadline - perf())); autoGuard();
       setNarrator(null, null);
       logEvent("INFO", "INFO", `AUTO-PLAY ${selection.label} complete / ${selection.minutes} minute limit / After Action Review available in the tray`);
-      // The AAR is optional: surfaced on demand via the tray button, not forced open.
+      S.reviewEndedAt = missionNow(); S.reviewEndReason = "AutoBrief reached its configured end";
+      if (!S.live) setPaused(true);
+      // The AAR is a snapshot, never an unconditional success claim.
       toast("ok", "After Action Review ready \u2014 open it from the tray");
     } catch (e) {
       /* stopped by user */
@@ -6437,6 +6822,12 @@
   }
 
   function resetScenario() {
+    if (caseTimer) clearInterval(caseTimer); caseTimer = null;
+    S.caseStudy = null; S.aarSnapshot = null; S.reviewEndedAt = null; S.reviewEndReason = null; S.unresolvedExits = [];
+    S.coordination = { authority: "Not requested", airspace: "Not requested", spectrum: "Not requested" };
+    S.runId = `${SEED}-${++S.runSerial}-${Date.now().toString(36)}`;
+    S.runInitial = { scenario: S.scenario, architecture: S.arch, weather: S.wx, timeOfDay: S.tod, speed: S.timeScale, rngState: _rs, simulationEpoch: S.t0 };
+    S.replayPoints = 0; S.replaySampled = false;
     S.simTimeMs = 0; S.simEvents = []; S.simEventSeq = 0; S.trackPage = 0;
     S.transportInfoOpen = false;
     S.alerts = []; S.alertSeq = 0;
@@ -6523,7 +6914,7 @@
   // ---- guided tour: six spotlight steps for first-time viewers ----
   const TOUR_STEPS = [
     { sel: "#cuas", workspace: "COP", title: "The Common Operating Picture", text: "One correlated Red + Blue picture from configured sensors. SAT EXTERNAL is the default basemap; TACTICAL LOCAL remains available and takes over automatically when external imagery is unreachable." },
-    { sel: "#scoreboard", workspace: "COP", title: "Engagement outcomes", text: "Observed defeats, leakers, pending BDA, asset integrity, and clearly notional cost figures." },
+    { sel: "#scoreboard", workspace: "COP", title: "Engagement outcomes", text: "Recorded defeats, arrivals at scenario objectives, pending outcomes, an illustrative score, and defined cost assumptions." },
     { sel: "#queueCard", workspace: "FIRES", title: "Fire-control queue", text: "Ranked threats, evidence, release criteria, and feasible effectors. WEAPONS FREE requires deliberate confirmation and visibly arms auto-release." },
     { sel: "#roleSeg", workspace: "FIRES", title: "Authority gates", text: "Role, WCS, track quality, identity evidence, geometry, and safety are shown before release. LIVE authority is read-only from c2-core." },
     { sel: "#btnExercise", workspace: "FIRES", title: "Exercise control is isolated", text: "Scenario injection, node loss, communications degradation, and reset are kept behind a separate exercise-control workspace." },
@@ -6554,8 +6945,8 @@
     const below = r.bottom + 190 < innerHeight;
     _tourEl.innerHTML = `
       <div style="position:fixed;left:${Math.max(4, r.left - 6)}px;top:${Math.max(4, r.top - 6)}px;width:${Math.min(r.width + 12, innerWidth - 8)}px;height:${r.height + 12}px;border:1.5px solid #39a0c4;border-radius:6px;box-shadow:0 0 0 4000px rgba(3,6,10,0.55);pointer-events:none"></div>
-      <div style="position:fixed;left:${Math.min(Math.max(12, r.left), innerWidth - 340)}px;top:${below ? r.bottom + 14 : Math.max(12, r.top - 180)}px;width:320px;background:#10151d;border:1px solid #1f2937;border-radius:8px;padding:14px 16px;font:12px ${MONO};color:#c2cedd">
-        <div id="tourTitle" style="font:600 13px ${MONO};color:#e7eef7;margin-bottom:6px">${st.title} <span style="color:#8290a5;font-weight:400">\u00b7 ${_tourStep + 1}/${TOUR_STEPS.length}</span></div>
+      <div style="position:fixed;left:${Math.min(Math.max(12, r.left), innerWidth - 340)}px;top:${below ? r.bottom + 14 : Math.max(12, r.top - 180)}px;width:320px;background:#10151d;border:1px solid #1f2937;border-radius:8px;padding:14px 16px;font:12px var(--mono);color:#c2cedd">
+        <div id="tourTitle" style="font:600 13px var(--mono);color:#e7eef7;margin-bottom:6px">${st.title} <span style="color:#8290a5;font-weight:400">\u00b7 ${_tourStep + 1}/${TOUR_STEPS.length}</span></div>
         <div style="line-height:1.5">${st.text}</div>
         <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
           <button class="sbtn" id="tourSkip">Skip</button>
@@ -6602,6 +6993,7 @@
   // ---- boot ----
   async function boot() {
     configureSplitRails();
+    bindReviewControls();
     S.t0 = Date.UTC(2026, 5, 26, randi(5, 21), randi(0, 59), 0);   // start clock varies per run
     const qs = new URLSearchParams(location.search);
     S.basemapExplicit = qs.has("basemap");
@@ -6646,7 +7038,7 @@
     setInterval(renderRail, 750);   // preserve workstation focus while command state remains current
     // optional debug seam (gated by ?debug=1) for scripted demos / automated checks
     if (typeof location !== "undefined" && location.search.indexOf("debug") !== -1) {
-      window.__CUAS__ = { S, autoplay, stopAutoplay, autoplaySelection, spawnAutoplayWave, selectTrack, selectAsset, systemDataPath, systemLinkState, systemScreenPoints, setWorkspace, taskSensor, engage, abortEngagement, liveTask, liveEngage, liveAbortEngagement, livePollEngagements, processLiveEngagementStatus, persistentRequestKey, setDelegatedDefense, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, resetMapView, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, trackPrediction, engageTrack, airDefense, navalDefense, weaponsFreeActive, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay, toast, latchAlert, acknowledgeAlert, setConnectionState, scenarioPointOnLand, pointInPolygon, aoRadius, currentScenario: () => SCN, mapView: () => ({ centerX: S.mapView.centerX, centerY: S.mapView.centerY, zoom: S.mapView.zoom }), labelOffset: (trackId) => _labelSlots.get("track:" + trackId), plotPoint: (track) => ({ x: sx(track.dx != null ? track.dx : track.x), y: sy(track.dy != null ? track.dy : track.y) }), transportPoints: () => { const g = SCN.gnb || { x: 900, y: -900 }, b = SCN.networkBackhaul; return { gnb: { x: sx(g.x), y: sy(g.y) }, backhaul: b ? { x: sx(b.x), y: sy(b.y) } : null }; } };
+      window.__CUAS__ = { reviewVerdict, reportFreshness, recordReplayFrame, reviewMetadata, captureReview, showReviewPanel, caseAction, endReviewRun, renderMissionSummary, S, autoplay, stopAutoplay, autoplaySelection, spawnAutoplayWave, selectTrack, selectAsset, systemDataPath, systemLinkState, systemScreenPoints, setWorkspace, taskSensor, engage, abortEngagement, liveTask, liveEngage, liveAbortEngagement, livePollEngagements, processLiveEngagementStatus, persistentRequestKey, setDelegatedDefense, bestEffector, authorize, showAAR, buildAAR, aarData, showRegional, hideRegional, buildRegional, activeBaseStatus, applyScenario, resetScenario, resetMapView, setPaused, togglePause, showHelp, hideHelp, spawnThreat, spawnHostile, feasibleEffectors, noFireZoneAt, threatQueue, trackPrediction, engageTrack, airDefense, navalDefense, weaponsFreeActive, spawnClutter, spawnCivAir, spawnCivBoat, integrateEchelon, toggleNode, sensorMasked, startTour, endTour, renderReplay, toast, latchAlert, acknowledgeAlert, setConnectionState, scenarioPointOnLand, pointInPolygon, aoRadius, currentScenario: () => SCN, mapView: () => ({ centerX: S.mapView.centerX, centerY: S.mapView.centerY, zoom: S.mapView.zoom }), labelOffset: (trackId) => _labelSlots.get("track:" + trackId), plotPoint: (track) => ({ x: sx(track.dx != null ? track.dx : track.x), y: sy(track.dy != null ? track.dy : track.y) }), transportPoints: () => { const g = SCN.gnb || { x: 900, y: -900 }, b = SCN.networkBackhaul; return { gnb: { x: sx(g.x), y: sy(g.y) }, backhaul: b ? { x: sx(b.x), y: sy(b.y) } : null }; } };
     }
     // first-visit tour (skipped in automated/debug runs; ?tour=1 forces it)
     let tourDone = true;

@@ -4,6 +4,27 @@ This file is the plain-language history of the C-UAS C2 application. Newest
 changes are listed first. For the exact code-level history, see the
 [GitHub commits](https://github.com/AzJester/C-UASC2/commits/main/).
 
+## 2026-09-11
+
+### Desktop evidence review, version 1.1
+
+- Separated operator reports and uncertainty from instructor-only scenario facts.
+- Replaced unconditional AAR success with open/ended status and accounting for
+  remaining hostile contacts, unresolved reports, and pending outcomes.
+- Added fixed AAR snapshots and JSON exports with build/run/seed identifiers,
+  configuration changes, labeled event history, assumptions, and case decisions.
+- Retained the full replay time span with disclosed sampling for dense runs.
+- Defined illustrative score, cost, inventory, and architecture comparisons;
+  marked disconnected regional peers as preset data rather than current status.
+- Separated observation, receipt, and displayed-sample ages. Unknown source
+  timestamps remain unavailable. Focused controls no longer freeze displayed data.
+- Added searchable complete inventories, compact sensor/effector cards, readable
+  dialogs, a persistent mission summary/pause control, and selected-map labels.
+- Moved architecture/weather/time controls into Exercise Control, and added a
+  five-minute fictional evidence/coordination case with recorded decision reasons.
+- Added reporting, replay, desktop layout, review, export, and focus regressions.
+  Existing simulation mechanics and backend release policy were preserved.
+
 ## 2026-07-13
 
 ### Airport perimeter defense and contextual data paths
