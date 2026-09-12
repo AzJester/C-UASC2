@@ -17,6 +17,7 @@ from urllib.request import urlopen
 import pytest
 
 pytest.importorskip("playwright.sync_api")
+from playwright.sync_api import expect
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -86,7 +87,7 @@ def create_room(page):
     page.fill("#createRoomName", "Shared evidence proof")
     page.fill("#createParticipantName", "Morgan")
     page.click("#dialogSubmitButton")
-    page.wait_for_function("document.querySelector('#participantName').textContent.includes('Morgan')")
+    expect(page.locator("#participantName")).to_have_text("Morgan")
 
 
 def invite_participant(page, name="Alex", role="reviewer"):
@@ -114,7 +115,7 @@ def test_shared_report_acknowledgment_resolution_and_refresh(page, service):
     link = invite_participant(page)
     reviewer = page.context.new_page()
     reviewer.goto(link)
-    reviewer.wait_for_function("document.querySelector('#participantName').textContent.includes('Alex')")
+    expect(reviewer.locator("#participantName")).to_have_text("Alex")
     assert "invite=" not in reviewer.url
     add_report(page)
     reviewer.locator(".report-item").filter(has_text="Training observation").wait_for()
@@ -127,9 +128,9 @@ def test_shared_report_acknowledgment_resolution_and_refresh(page, service):
     reviewer.locator('[data-request-action="resolve"]').first.click()
     reviewer.fill("#resolutionReason", "Reviewed; the evidence is insufficient for a firm identification.")
     reviewer.click("#dialogSubmitButton")
-    page.wait_for_function("document.querySelector('#requestList').textContent.toLowerCase().includes('resolved')")
+    expect(page.locator("#requestList")).to_contain_text("RESOLVED")
     page.reload()
-    page.wait_for_function("document.querySelector('#participantName').textContent.includes('Morgan')")
+    expect(page.locator("#participantName")).to_have_text("Morgan")
     assert "Training observation" in page.locator("#reportList").inner_text()
     assert "resolved" in page.locator("#requestList").inner_text().lower()
     reviewer.close()
@@ -160,7 +161,7 @@ def test_observer_cannot_mutate_and_dialog_focus_survives_poll(page):
     link = invite_participant(page, "Taylor", "observer")
     observer = page.context.new_page()
     observer.goto(link)
-    observer.wait_for_function("document.querySelector('#participantName').textContent.includes('Taylor')")
+    expect(observer.locator("#participantName")).to_have_text("Taylor")
     assert observer.locator("#newReportButton").is_disabled()
     assert observer.locator("#inviteButton").is_disabled()
     assert observer.locator("#clockButton").is_disabled()
