@@ -6,6 +6,20 @@ changes are listed first. For the exact code-level history, see the
 
 ## 2026-09-11
 
+### Shared exercise rooms and optional TAK exchange, version 1.2
+
+- Added a desktop Exercise room with terrain imagery by default, named
+  participants, persistent source reports, corrections, assigned reviews,
+  acknowledgments, controller handover, historical snapshots, and JSON export.
+- Added an isolated SQLite-backed exercise service with invitation-bound
+  sessions, role checks, conflict detection, and source-preserving revisions.
+- Added optional manual training-marker exchange over certificate-verified TLS,
+  plus a private local connection-package setup tool and XML review export.
+  Transport status does not claim actual WinTAK client receipt.
+- Kept the public static page as an explicit read-only preview; saved shared
+  rooms run through the exercise service. Existing simulation mechanics remain
+  unchanged.
+
 ### Desktop evidence review, version 1.1
 
 - Separated operator reports and uncertainty from instructor-only scenario facts.

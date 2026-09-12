@@ -20,3 +20,16 @@ env/
 # Local env / secrets (never commit)
 .env
 *.local
+
+# Private exercise state, invitations, and TAK credentials
+work/
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3-shm
+*.sqlite3-wal
+*.p12
+*.pfx
+*.pem
+*.key

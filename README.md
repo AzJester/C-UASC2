@@ -76,7 +76,21 @@ WEAPONS FREE, fires eligible joint effectors, and adds bounded waves until the
 selected time limit before presenting outcomes.
 Preset links: `?scn=guam&arch=NETWORKED&wx=WIND&tod=NIGHT&seed=N`.
 
-Version 1.1 adds an evidence-review workflow for desktop use:
+Version 1.2 adds **Exercise room**, a separate desktop workspace for shared,
+persistent fictional evidence and coordination. Named participants can preserve
+source reports, record corrections, assign and acknowledge reviews, transfer
+controller responsibility, and replay the record. Terrain imagery remains the
+default; Tactical is an explicit map choice.
+
+The [public Exercise room preview](https://cuas.insightfuldefense.com/exercise.html)
+shows the interface. Run `python scripts/run_exercise.py` after installing
+`services/exercise_service/requirements.txt` to use saved rooms locally. The
+optional TAK adapter manually sends labeled training report markers using a
+privately configured certificate connection. It does not stream simulation
+targets or operational commands, and a TLS write does not verify WinTAK receipt.
+See [Shared exercise setup and walkthrough](docs/10-shared-exercises.md).
+
+Version 1.1 added an evidence-review workflow for desktop use:
 
 - Operator details distinguish reports, declarations, and unknowns. Scripted
   intent, assigned objectives, and flight profiles appear in **Exercise Control

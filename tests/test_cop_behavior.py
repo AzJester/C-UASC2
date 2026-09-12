@@ -448,7 +448,7 @@ def test_washington_airports_coast_and_every_effector_share_the_data_mesh(page):
     assert "DATA-SHARING PATH" in out["sensorDetails"] and "SHARED COP" in out["sensorDetails"]
     assert "MAGAZINE DEPTH" in out["effectorDetails"] and "COMMS LINK" in out["effectorDetails"]
     assert out["selected"]["kind"] == "effector"
-    assert out["version"].startswith("v1.1.0") and out["versionPx"] >= 9
+    assert out["version"].startswith("v1.2.0") and out["versionPx"] >= 9
 
 
 def test_washington_joint_air_package_joins_a_ground_started_weapons_free_mission(page):

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Shared fictional exercise workspace for evidence review, coordination, and TAK training report exchange.">
+  <title>C-UAS | Shared Exercise</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="exercise.css">
+  <script src="exercise.js" defer></script>
+</head>
+<body>
+<div id="exerciseApp">
+  <div class="training-banner">FICTIONAL TRAINING DATA <span>•</span> HUMAN COORDINATION EXERCISE <span>•</span> NO OPERATIONAL FEED</div>
+  <header class="app-header">
+    <a class="brand" href="./index.html" title="Return to the simulation">C-UAS <span>EXERCISE ROOM</span></a>
+    <div class="room-heading"><span class="eyebrow">SHARED INCIDENT</span><strong id="roomName">Evidence and coordination</strong></div>
+    <div class="header-state"><span id="connectionStatus" class="pill warn">CONNECTING</span><span id="connectionAge">Checking local service</span></div>
+    <div class="identity"><strong id="participantName">Visitor</strong><span id="participantRole">Read-only preview</span></div>
+    <button id="sessionButton" type="button">Join / create</button>
+  </header>
+  <div id="connectionBanner" class="connection-banner" role="status">Checking for the shared exercise service…</div>
+  <nav class="commandbar" aria-label="Exercise commands">
+    <div class="clock"><span class="eyebrow">EXERCISE CLOCK</span><strong id="exerciseClock">00:00</strong><span id="roomStatus" class="pill">PREVIEW</span></div>
+    <div class="command-group" aria-label="Controller actions">
+      <button id="clockButton" type="button" disabled>Start exercise</button>
+      <button id="advanceButton" type="button" disabled>Next case checkpoint</button>
+      <button id="endButton" type="button" class="danger" disabled>End</button>
+    </div>
+    <span id="checkpointLabel" class="muted">Fictional evidence case</span>
+    <div class="command-group right">
+      <button id="participantsButton" type="button">Participants</button>
+      <button id="inviteButton" type="button" disabled>Invite</button>
+      <button id="replayButton" type="button" disabled>Review history</button>
+      <button id="exportButton" type="button" disabled>Export record</button>
+    </div>
+  </nav>
+  <div id="replayBanner" class="replay-banner" hidden><strong>HISTORICAL SNAPSHOT</strong><span id="replayLabel"></span><button id="exitReplayButton" type="button">Return to current incident</button></div>
+  <main class="workspace">
+    <aside class="left-rail" aria-label="Reports and requests">
+      <section class="panel queue-panel">
+        <div class="panel-heading"><h1>Evidence inbox</h1><span id="reportCount" class="count">0</span><button id="newReportButton" type="button" class="small primary" disabled>+ Report</button></div>
+        <label class="search-label" for="reportSearch"><span class="sr-only">Filter evidence reports</span><input id="reportSearch" type="search" placeholder="Filter report, source, or ID" autocomplete="off"></label>
+        <div id="reportList" class="report-list" role="list" aria-label="Evidence reports"></div>
+      </section>
+      <section class="panel request-panel">
+        <div class="panel-heading"><h2>Review requests</h2><span id="requestCount" class="count">0</span></div>
+        <div id="requestList" class="request-list"></div>
+      </section>
+      <section class="panel tak-panel">
+        <div class="panel-heading"><h2>TAK exchange</h2><span id="takStatus" class="pill">MANUAL</span></div>
+        <p id="takSummary">Training report markers only. No operational commands.</p>
+        <div class="button-row"><button id="takExportButton" type="button" disabled>Export XML</button><button id="takSendButton" type="button" disabled>Send to server</button><button id="takDetailsButton" type="button" class="small">Details</button></div>
+      </section>
+    </aside>
+    <section class="map-panel" aria-label="Geographic context">
+      <div class="map-toolbar"><div><span class="eyebrow">GEOGRAPHIC CONTEXT</span><strong id="mapSelection">Fictional Washington-area exercise</strong></div><label>Map <select id="basemapSelect"><option value="imagery" selected>Terrain imagery</option><option value="tactical">Tactical</option></select></label></div>
+      <div class="map-surface"><canvas id="exerciseMap" tabindex="0" role="img" aria-label="Geographic context map. Drag or use arrow keys to pan. Plus and minus zoom. Select evidence from the inbox for accessible details."></canvas><div class="map-controls"><button id="zoomInButton" type="button" aria-label="Zoom in">+</button><button id="zoomOutButton" type="button" aria-label="Zoom out">−</button><button id="fitMapButton" type="button" aria-label="Center on reports">⌖</button></div><div class="map-notice">TRAINING REPORT LOCATIONS<br><span>Reported points, not validated tracks</span></div><div id="mapTileStatus" class="tile-status" hidden>Imagery unavailable. Select Tactical or retry your connection.</div><div class="map-bottom"><span id="mapCoordinate">38.8900° N · 77.0350° W</span><span id="mapScale">5 km</span></div></div>
+      <div class="map-attribution"><span id="mapAttribution">Imagery © Esri and its data providers. Imagery is not an elevation model.</span><span>Drag to pan · Scroll to zoom</span></div>
+      <section class="incident-summary"><div><span class="eyebrow">CURRENT CHECKPOINT</span><strong id="caseTitle">Shared evidence review</strong><p id="caseSummary">Review conflicting reports, record human decisions, and preserve the history available at each step.</p></div><div class="summary-numbers"><div><strong id="activeParticipantCount">0</strong><span>Participants</span></div><div><strong id="openRequestCount">0</strong><span>Unresolved requests</span></div></div></section>
+    </section>
+    <aside class="right-rail" aria-label="Selected evidence and history">
+      <section class="panel evidence-panel"><div class="panel-heading"><h2>Evidence review</h2><span id="selectedReportVersion" class="pill">REPORT</span></div><div id="evidenceDetail" class="evidence-detail"></div><div class="evidence-actions"><button id="reviseReportButton" type="button" disabled>Record correction</button><button id="requestReviewButton" type="button" class="primary" disabled>Request review</button></div></section>
+      <section class="panel timeline-panel"><div class="panel-heading"><h2>Incident ledger</h2><span id="eventCount" class="count">0</span><button id="handoverButton" type="button" class="small" disabled>Handover</button></div><div id="handoverNotice"></div><div id="eventList" class="event-list"></div></section>
+    </aside>
+  </main>
+  <footer><span>TRAINING ONLY <span class="separator">/</span> Shared state and source corrections remain attributable</span><span id="footerState">Public preview · No shared service connected</span></footer>
+</div>
+<dialog id="exerciseDialog" aria-labelledby="dialogTitle"><form id="dialogForm"><div class="dialog-heading"><div><span id="dialogEyebrow" class="eyebrow">SHARED EXERCISE</span><h2 id="dialogTitle">Exercise</h2></div><button id="dialogCloseButton" type="button" class="icon-button" aria-label="Close dialog">×</button></div><div id="dialogBody" class="dialog-body"></div><p id="dialogError" class="form-error" role="alert" hidden></p><div id="dialogActions" class="dialog-actions"><button id="dialogCancelButton" type="button">Cancel</button><button id="dialogSubmitButton" type="submit" class="primary">Save</button></div></form></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
