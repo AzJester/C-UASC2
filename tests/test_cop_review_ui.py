@@ -152,6 +152,13 @@ def test_case_records_reports_reason_and_no_command_in_export(page, tmp_path):
 @pytest.mark.parametrize("width,height", [(1280, 720), (1920, 1080)])
 def test_desktop_glance_cards_do_not_clip_controls(page, workspace, width, height):
     page.set_viewport_size({"width": width, "height": height})
+    # Chromium exposes the new innerHeight before the app's resize event has
+    # refitted its explicitly sized root. Wait for that fit, otherwise the
+    # tall-screen inventory can be rendered into the previous 720px layout.
+    page.wait_for_function(
+        "size => document.querySelector('#cuas').dataset.viewportCss === size",
+        arg=f"{width}x{height}",
+    )
     select_unknown(page)
     page.evaluate("value => window.__CUAS__.setWorkspace(value)", workspace)
     clipped = page.evaluate("""() => [...document.querySelectorAll('.rail-scroll > .card')]
